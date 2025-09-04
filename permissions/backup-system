@@ -1,0 +1,25 @@
+# HOMESERVER Backup System Permissions
+# Professional backup system access control
+
+# Allow backup system operations
+www-data ALL=(root) NOPASSWD: /usr/bin/systemctl start homeserver-backup.timer
+www-data ALL=(root) NOPASSWD: /usr/bin/systemctl stop homeserver-backup.timer
+www-data ALL=(root) NOPASSWD: /usr/bin/systemctl enable homeserver-backup.timer
+www-data ALL=(root) NOPASSWD: /usr/bin/systemctl disable homeserver-backup.timer
+www-data ALL=(root) NOPASSWD: /usr/bin/systemctl is-active homeserver-backup.timer
+www-data ALL=(root) NOPASSWD: /usr/bin/systemctl list-timers homeserver-backup.timer
+
+# Allow backup CLI execution
+www-data ALL=(root) NOPASSWD: /usr/bin/python3 /opt/homeserver-backup/homeserver_backup_service.py
+
+# Allow configuration file access
+www-data ALL=(root) NOPASSWD: /usr/bin/cp /opt/homeserver-backup/config.yaml*
+www-data ALL=(root) NOPASSWD: /usr/bin/tail /var/log/homeserver-backup/backup.log
+
+# Allow directory creation and management
+www-data ALL=(root) NOPASSWD: /usr/bin/mkdir -p /opt/homeserver-backup
+www-data ALL=(root) NOPASSWD: /usr/bin/mkdir -p /tmp/homeserver-backups
+www-data ALL=(root) NOPASSWD: /usr/bin/mkdir -p /var/log/homeserver-backup
+www-data ALL=(root) NOPASSWD: /usr/bin/chown -R www-data\:www-data /opt/homeserver-backup
+www-data ALL=(root) NOPASSWD: /usr/bin/chown -R www-data\:www-data /tmp/homeserver-backups
+www-data ALL=(root) NOPASSWD: /usr/bin/chown -R www-data\:www-data /var/log/homeserver-backup

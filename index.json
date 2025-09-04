@@ -1,0 +1,41 @@
+{
+  "name": "backupTab",
+  "version": "1.0.0",
+  "config": {
+    "repository": {
+        "url": "https://github.com/homeserversltd/backupTab.git",
+        "branch": "master"
+    },
+    "git_managed": false
+  },
+  "files": {
+    "config": "homeserver.patch.json",
+    "readme": "README.md",
+    "backend": {
+      "index": "backend/index.json",
+      "requirements": "backend/requirements.txt", 
+      "blueprint": "backend/routes.py",
+      "init": "backend/__init__.py"
+    },
+    "frontend": {
+      "index": "frontend/index.json",
+      "package": "frontend/package.patch.json",
+      "BackupCard": "frontend/components/BackupCard.tsx",
+      "RepositoryCard": "frontend/components/RepositoryCard.tsx",
+      "useBackupControls": "frontend/hooks/useBackupControls.ts",
+      "default": "frontend/images/default.png",
+      "PortalCard": "frontend/PortalCard.css",
+      "types": "frontend/types.ts",
+      "entry": "frontend/index.tsx"
+    },
+    "permissions": {
+      "sudoers": "permissions/backup-system"
+    },
+    "system": {
+      "dependencies": "system/dependencies.json",
+      "service": "system/homeserver-backup.service",
+      "timer": "system/homeserver-backup.timer",
+      "installer": "system/install-backup-service.sh"
+    }
+  }
+}
