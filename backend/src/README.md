@@ -12,6 +12,7 @@ The HOMESERVER Backup System is a comprehensive, enterprise-grade backup solutio
 - **EnhancedBackupCLI** (`backup`) - Main CLI utility with full provider support
 - **BackupService** (`src/service/backup_service.py`) - Systemd service integration
 - **Provider System** (`src/providers/`) - Modular storage provider architecture
+- **Logger Utility** (`src/utils/logger.py`) - Centralized logging with file rotation
 - **Installer** (`src/installer/install_backup_service.py`) - Automated service management
 
 ### Provider Architecture
@@ -34,7 +35,7 @@ The HOMESERVER Backup System is a comprehensive, enterprise-grade backup solutio
 ### Security Features
 - **FAK Encryption** - PBKDF2 key derivation from skeleton.key
 - **Systemd Security** - Restricted permissions and sandboxing
-- **Comprehensive Logging** - Detailed audit trail in `/var/log/homeserver/backup.log`
+- **Comprehensive Logging** - Detailed audit trail with file rotation
 - **Random Delay** - Load distribution via random cron delays
 
 ### Service Integration
@@ -42,6 +43,13 @@ The HOMESERVER Backup System is a comprehensive, enterprise-grade backup solutio
 - **Cron Scheduling** - Daily backups with random delay (0-3600 seconds)
 - **Automated Installation** - One-command service setup and configuration
 - **Graceful Degradation** - Continues operation when optional dependencies unavailable
+
+### Logging System
+- **Centralized Logger** - Singleton pattern for consistent logging across components
+- **File Rotation** - Automatic log rotation with configurable size limits
+- **Dual Output** - Console and file logging for different use cases
+- **Structured Logging** - Specialized methods for backup operations and provider actions
+- **Configurable Levels** - Adjustable log levels and formatting via settings.json
 
 ## Installation
 
@@ -200,9 +208,45 @@ python3 src/service/backup_service.py --cleanup
   "timestamp_chains": {
     "enabled": true,
     "format": "%Y%m%d_%H%M%S"
+  },
+  "logging": {
+    "enabled": true,
+    "log_file": "/var/log/homeserver/backup.log",
+    "log_level": "INFO",
+    "max_file_size_mb": 10,
+    "backup_count": 5,
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   }
 }
 ```
+
+### Logging Configuration
+
+#### Logger Settings
+```json
+{
+  "logging": {
+    "enabled": true,
+    "log_file": "/var/log/homeserver/backup.log",
+    "log_level": "INFO",
+    "max_file_size_mb": 10,
+    "backup_count": 5,
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  }
+}
+```
+
+#### Log Levels
+- **DEBUG** - Detailed diagnostic information
+- **INFO** - General operational messages
+- **WARNING** - Warning messages for potential issues
+- **ERROR** - Error messages for failed operations
+- **CRITICAL** - Critical errors that may cause system failure
+
+#### Log Rotation
+- **File Size Limit** - Logs rotate when reaching `max_file_size_mb`
+- **Backup Count** - Keeps `backup_count` number of rotated files
+- **Automatic Cleanup** - Old log files are automatically removed
 
 ### Provider Configuration
 
@@ -289,6 +333,9 @@ src/
 │   ├── __init__.py
 │   ├── backup_service.py        # Main service class
 │   └── homeserver-backup.cron   # Cron job template
+├── utils/                       # Utility modules
+│   ├── __init__.py
+│   └── logger.py                # Centralized logging utility
 ├── installer/                   # Installation utilities
 │   ├── __init__.py
 │   └── install_backup_service.py
@@ -314,10 +361,12 @@ src/
 - `ReadWritePaths` explicitly defines writable locations
 
 ### Logging
-- Comprehensive audit trail in `/var/log/homeserver/backup.log`
-- Structured logging with timestamps and severity levels
-- Error tracking and debugging information
-- Service integration with systemd journal
+- **Centralized Logger** - Singleton pattern ensures consistent logging across all components
+- **File Rotation** - Automatic log rotation prevents disk space issues
+- **Structured Logging** - Specialized methods for backup operations, provider actions, and credential management
+- **Dual Output** - Console logging for CLI operations, file logging for service operations
+- **Configurable Levels** - Adjustable verbosity and formatting via settings.json
+- **Audit Trail** - Comprehensive tracking of all backup operations and system events
 
 ## Troubleshooting
 
@@ -378,6 +427,24 @@ python3 src/service/backup_service.py --test
 2. Implement required methods: `upload`, `download`, `list_files`, `delete`, `test_connection`
 3. Add provider to `PROVIDERS` registry in `src/providers/__init__.py`
 4. Update configuration schema in service classes
+
+### Using the Logger
+```python
+from src.utils import get_logger
+
+# Get logger instance
+logger = get_logger()
+
+# Basic logging
+logger.info("Operation completed successfully")
+logger.error("Operation failed: {error_details}")
+
+# Specialized backup logging
+logger.log_backup_start(backup_items, enabled_providers)
+logger.log_backup_success(backup_path, upload_results)
+logger.log_provider_operation(provider_name, "upload", success, details)
+logger.log_credential_operation(provider_name, "set", success)
+```
 
 ### Testing
 ```bash

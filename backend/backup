@@ -25,10 +25,12 @@ sys.path.insert(0, str(src_dir))
 try:
     # Try relative import first (when used as module)
     from .src.providers import get_provider, PROVIDERS
+    from .src.utils import get_logger, CronManager, ConfigManager, EncryptionManager
 except ImportError:
     try:
         # Fall back to absolute import (when run as script)
         from src.providers import get_provider, PROVIDERS
+        from src.utils import get_logger, CronManager, ConfigManager, EncryptionManager
     except ImportError as e:
         print(f"ERROR: Failed to import providers: {e}")
         print(f"Current directory: {current_dir}")
@@ -40,90 +42,30 @@ class EnhancedBackupCLI:
     
     def __init__(self, config_file: Optional[str] = None):
         self.config_file = config_file or "src/config/settings.json"
-        self.fak_path = Path("/root/key/skeleton.key")
         self.temp_dir = Path("/tmp/homeserver-backup-cli-enhanced")
         self.backup_dir = Path("/var/www/homeserver/backup")
+        
+        # Initialize utilities
+        self.logger = get_logger()
+        self.cron_manager = CronManager()
+        self.config_manager = ConfigManager(self.config_file)
+        self.encryption_manager = EncryptionManager()
         
         # Ensure directories exist
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.backup_dir.mkdir(parents=True, exist_ok=True)
         
         # Load configuration
-        self.config = self._load_config()
+        self.config = self.config_manager.load_config()
+        
+        # Configure file logging
+        if 'logging' in self.config:
+            self.logger.configure_file_logging(self.config['logging'])
         
         # Initialize providers
         self.providers = {}
         self._initialize_providers()
     
-    def _load_config(self) -> Dict[str, Any]:
-        """Load enhanced backup configuration."""
-        default_config = {
-            "backup_items": [
-                "/var/www/homeserver/src",
-                "/var/lib/gogs",
-                "/etc/homeserver"
-            ],
-            "providers": {
-                "local": {
-                    "enabled": True,
-                    "path": "/var/www/homeserver/backup"
-                },
-                "aws_s3": {
-                    "enabled": False,
-                    "bucket": "homeserver-backups",
-                    "region": "us-east-1",
-                    "access_key": "",
-                    "secret_key": ""
-                },
-                "google_drive": {
-                    "enabled": False,
-                    "credentials_file": "",
-                    "token_file": "token.json",
-                    "folder_id": ""
-                },
-                "dropbox": {
-                    "enabled": False,
-                    "access_token": "",
-                    "folder_path": "/HOMESERVER Backups"
-                },
-                "backblaze": {
-                    "enabled": False,
-                    "application_key_id": "",
-                    "application_key": "",
-                    "bucket": "homeserver-backups"
-                }
-            },
-            "encryption": {
-                "enabled": True,
-                "fak_path": "/root/key/skeleton.key"
-            },
-            "compression": {
-                "enabled": True,
-                "level": 6
-            },
-            "timestamp_chains": {
-                "enabled": True,
-                "format": "%Y%m%d_%H%M%S"
-            }
-        }
-        
-        if Path(self.config_file).exists():
-            try:
-                with open(self.config_file, 'r') as f:
-                    config = json.load(f)
-                # Merge with defaults
-                for key, value in default_config.items():
-                    if key not in config:
-                        config[key] = value
-                return config
-            except Exception as e:
-                print(f"WARNING: Failed to load config, using defaults: {e}")
-        
-        # Create default config file
-        with open(self.config_file, 'w') as f:
-            json.dump(default_config, f, indent=2)
-        
-        return default_config
     
     def _initialize_providers(self):
         """Initialize enabled providers."""
@@ -136,29 +78,6 @@ class EnhancedBackupCLI:
                 except Exception as e:
                     print(f"WARNING: Failed to initialize provider {provider_name}: {e}")
     
-    def _get_fak_key(self) -> Optional[bytes]:
-        """Get Factory Access Key from skeleton.key."""
-        try:
-            with open(self.fak_path, "r") as f:
-                fak_text = f.read().strip()
-            
-            from cryptography.fernet import Fernet
-            from cryptography.hazmat.primitives import hashes
-            from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-            import base64
-            
-            # Convert FAK to encryption key using PBKDF2
-            kdf = PBKDF2HMAC(
-                algorithm=hashes.SHA256(),
-                length=32,
-                salt=b'homeserver_backup_salt',
-                iterations=100000,
-            )
-            key = base64.urlsafe_b64encode(kdf.derive(fak_text.encode()))
-            return key
-        except Exception as e:
-            print(f"ERROR: Failed to get FAK key: {e}")
-            return None
     
     def _create_backup_metadata(self, backup_items: List[str], timestamp: str) -> Dict[str, Any]:
         """Create metadata for backup package."""
@@ -226,22 +145,14 @@ class EnhancedBackupCLI:
         
         print("Encrypting backup package...")
         
-        fak_key = self._get_fak_key()
-        if not fak_key:
-            print("ERROR: Failed to get FAK key, cannot encrypt backup")
+        if not self.encryption_manager.is_encryption_available():
+            print("ERROR: FAK key not available, cannot encrypt backup")
             return None
         
-        from cryptography.fernet import Fernet
-        fernet = Fernet(fak_key)
-        
-        # Read and encrypt the package
-        with open(package_path, "rb") as f:
-            encrypted_data = fernet.encrypt(f.read())
-        
-        # Write encrypted package
-        encrypted_path = package_path.with_suffix('.encrypted')
-        with open(encrypted_path, "wb") as f:
-            f.write(encrypted_data)
+        encrypted_path = self.encryption_manager.encrypt_file(package_path)
+        if not encrypted_path:
+            print("ERROR: Failed to encrypt backup package")
+            return None
         
         # Clean up unencrypted package
         package_path.unlink()
@@ -254,39 +165,35 @@ class EnhancedBackupCLI:
         backup_items = items or self.config["backup_items"]
         timestamp = datetime.now().strftime(self.config["timestamp_chains"]["format"])
         
-        print(f"Creating backup with timestamp: {timestamp}")
-        print(f"Backup items: {backup_items}")
-        print(f"Enabled providers: {list(self.providers.keys())}")
+        self.logger.log_backup_start(backup_items, list(self.providers.keys()))
         
         # Create backup package
         package_path = self._create_backup_package(backup_items, timestamp)
         if not package_path:
+            self.logger.log_backup_failure("Failed to create backup package")
             return None
         
         # Encrypt if enabled
         if self.config["encryption"]["enabled"]:
             encrypted_path = self._encrypt_backup(package_path)
             if not encrypted_path:
+                self.logger.log_backup_failure("Failed to encrypt backup package")
                 return None
             package_path = encrypted_path
         
         # Upload to all enabled providers
         upload_results = {}
         for provider_name, provider in self.providers.items():
-            print(f"Uploading to {provider_name}...")
+            self.logger.info(f"Uploading to {provider_name}...")
             success = provider.upload(package_path, package_path.name)
             upload_results[provider_name] = success
-            if success:
-                print(f"  ✓ Uploaded to {provider_name}")
-            else:
-                print(f"  ✗ Failed to upload to {provider_name}")
+            self.logger.log_provider_operation(provider_name, "upload", success)
         
         # Move to local backup directory
         local_path = self.backup_dir / package_path.name
         shutil.move(str(package_path), str(local_path))
         
-        print(f"Backup created: {local_path}")
-        print(f"Upload results: {upload_results}")
+        self.logger.log_backup_success(str(local_path), upload_results)
         return local_path
     
     def list_backups(self, provider_name: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -376,6 +283,87 @@ class EnhancedBackupCLI:
         
         print("Backup cycle test completed")
         return True
+    
+    def set_provider_credentials(self, provider_name: str, username: str, password: str) -> bool:
+        """Set credentials for a specific provider."""
+        updates = {"username": username, "password": password}
+        success = self.config_manager.update_provider_config(provider_name, updates)
+        
+        if success:
+            self.logger.log_credential_operation(provider_name, "set", True)
+            print(f"Credentials updated for {provider_name}")
+        else:
+            print(f"ERROR: Provider '{provider_name}' not found")
+        
+        return success
+    
+    def get_provider_credentials(self, provider_name: str) -> Optional[Dict[str, str]]:
+        """Get credentials for a specific provider."""
+        provider_config = self.config_manager.get_provider_config(provider_name)
+        
+        if not provider_config:
+            print(f"ERROR: Provider '{provider_name}' not found")
+            return None
+        
+        return {
+            "username": provider_config.get("username", ""),
+            "password": provider_config.get("password", "")
+        }
+    
+    def enable_provider(self, provider_name: str) -> bool:
+        """Enable a specific provider."""
+        success = self.config_manager.enable_provider(provider_name)
+        
+        if success:
+            self.logger.info(f"Provider '{provider_name}' enabled")
+            print(f"Provider '{provider_name}' enabled")
+        else:
+            print(f"ERROR: Provider '{provider_name}' not found")
+        
+        return success
+    
+    def disable_provider(self, provider_name: str) -> bool:
+        """Disable a specific provider."""
+        success = self.config_manager.disable_provider(provider_name)
+        
+        if success:
+            self.logger.info(f"Provider '{provider_name}' disabled")
+            print(f"Provider '{provider_name}' disabled")
+        else:
+            print(f"ERROR: Provider '{provider_name}' not found")
+        
+        return success
+    
+    def set_backup_schedule(self, schedule: str) -> bool:
+        """Set the backup cron schedule."""
+        success = self.cron_manager.set_schedule(schedule)
+        if success:
+            print(f"Backup schedule updated to: {schedule}")
+        else:
+            print(f"ERROR: Failed to set backup schedule")
+        return success
+    
+    def get_backup_schedule(self) -> Optional[str]:
+        """Get the current backup cron schedule."""
+        schedule = self.cron_manager.get_schedule()
+        if schedule:
+            print(f"Current backup schedule: {schedule}")
+        else:
+            print("No backup schedule found")
+        return schedule
+    
+    def disable_backup_schedule(self) -> bool:
+        """Disable the backup cron schedule."""
+        success = self.cron_manager.disable_schedule()
+        if success:
+            print("Backup schedule disabled")
+        else:
+            print("ERROR: Failed to disable backup schedule")
+        return success
+    
+    def enable_backup_schedule(self, schedule: str = "0 2 * * *") -> bool:
+        """Enable the backup cron schedule with default daily at 2 AM."""
+        return self.set_backup_schedule(schedule)
 
 def main():
     """Main CLI entry point."""
@@ -408,6 +396,38 @@ def main():
     
     # List available providers
     subparsers.add_parser("list-providers", help="List available providers")
+    
+    # Set provider credentials command
+    set_creds_parser = subparsers.add_parser("set-credentials", help="Set credentials for a provider")
+    set_creds_parser.add_argument("provider", help="Provider name")
+    set_creds_parser.add_argument("--username", "-u", required=True, help="Username/access key")
+    set_creds_parser.add_argument("--password", "-p", required=True, help="Password/secret key")
+    
+    # Get provider credentials command
+    get_creds_parser = subparsers.add_parser("get-credentials", help="Get credentials for a provider")
+    get_creds_parser.add_argument("provider", help="Provider name")
+    
+    # Enable provider command
+    enable_parser = subparsers.add_parser("enable-provider", help="Enable a provider")
+    enable_parser.add_argument("provider", help="Provider name")
+    
+    # Disable provider command
+    disable_parser = subparsers.add_parser("disable-provider", help="Disable a provider")
+    disable_parser.add_argument("provider", help="Provider name")
+    
+    # Set backup schedule command
+    schedule_parser = subparsers.add_parser("set-schedule", help="Set backup cron schedule")
+    schedule_parser.add_argument("schedule", help="Cron schedule (e.g., '0 2 * * *' for daily at 2 AM)")
+    
+    # Get backup schedule command
+    subparsers.add_parser("get-schedule", help="Get current backup schedule")
+    
+    # Enable backup schedule command
+    enable_schedule_parser = subparsers.add_parser("enable-schedule", help="Enable backup schedule")
+    enable_schedule_parser.add_argument("--schedule", "-s", default="0 2 * * *", help="Cron schedule (default: daily at 2 AM)")
+    
+    # Disable backup schedule command
+    subparsers.add_parser("disable-schedule", help="Disable backup schedule")
     
     args = parser.parse_args()
     
@@ -449,6 +469,40 @@ def main():
             for provider_name in PROVIDERS.keys():
                 status = "enabled" if provider_name in cli.providers else "disabled"
                 print(f"  {provider_name} ({status})")
+        elif args.command == "set-credentials":
+            success = cli.set_provider_credentials(args.provider, args.username, args.password)
+            if not success:
+                sys.exit(1)
+        elif args.command == "get-credentials":
+            creds = cli.get_provider_credentials(args.provider)
+            if creds:
+                print(f"Provider: {args.provider}")
+                print(f"Username: {creds['username']}")
+                print(f"Password: {'*' * len(creds['password']) if creds['password'] else '(empty)'}")
+            else:
+                sys.exit(1)
+        elif args.command == "enable-provider":
+            success = cli.enable_provider(args.provider)
+            if not success:
+                sys.exit(1)
+        elif args.command == "disable-provider":
+            success = cli.disable_provider(args.provider)
+            if not success:
+                sys.exit(1)
+        elif args.command == "set-schedule":
+            success = cli.set_backup_schedule(args.schedule)
+            if not success:
+                sys.exit(1)
+        elif args.command == "get-schedule":
+            cli.get_backup_schedule()
+        elif args.command == "enable-schedule":
+            success = cli.enable_backup_schedule(args.schedule)
+            if not success:
+                sys.exit(1)
+        elif args.command == "disable-schedule":
+            success = cli.disable_backup_schedule()
+            if not success:
+                sys.exit(1)
     
     except KeyboardInterrupt:
         print("\nOperation cancelled by user")

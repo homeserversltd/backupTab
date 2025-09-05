@@ -6,25 +6,45 @@
       "aws_s3": {
         "enabled": false,
         "credentials_key": "aws_s3",
-        "bucket": "homeserver-backups"
+        "container": "homeserver-backups",
+        "container_type": "bucket",
+        "username": "",
+        "password": ""
       },
       "google_drive": {
         "enabled": false,
         "credentials_key": "google_drive",
-        "folder": "HOMESERVER Backups"
+        "container": "HOMESERVER Backups",
+        "container_type": "folder",
+        "username": "",
+        "password": ""
       },
       "dropbox": {
         "enabled": false,
         "credentials_key": "dropbox",
-        "folder": "/HOMESERVER Backups"
+        "container": "/HOMESERVER Backups",
+        "container_type": "folder",
+        "username": "",
+        "password": ""
       },
       "backblaze": {
         "enabled": false,
         "credentials_key": "backblaze",
-        "bucket": "homeserver-backups"
+        "container": "homeserver-backups",
+        "container_type": "bucket",
+        "username": "",
+        "password": ""
       }
     },
     "retention_days": 30,
-    "encryption_enabled": true
+    "encryption_enabled": true,
+    "logging": {
+      "enabled": true,
+      "log_file": "/var/log/homeserver/backup.log",
+      "log_level": "INFO",
+      "max_file_size_mb": 10,
+      "backup_count": 5,
+      "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    }
   }
   

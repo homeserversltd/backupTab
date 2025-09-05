@@ -19,7 +19,6 @@ def install_backup_service():
     # Define paths
     source_dir = Path(__file__).parent.parent.parent  # Go up to backend directory
     install_dir = Path("/var/www/homeserver/backup")
-    service_file = Path("/etc/systemd/system/homeserver-backup.service")
     cron_file = Path("/etc/cron.d/homeserver-backup")
     
     try:
@@ -50,10 +49,6 @@ def install_backup_service():
         os.chmod(install_dir / "backup", 0o755)
         os.chmod(install_dir / "src" / "service" / "backup_service.py", 0o755)
         
-        # Install systemd service
-        shutil.copy2(source_dir / "src" / "config" / "homeserver-backup.service", service_file)
-        print(f"Installed systemd service: {service_file}")
-        
         # Install cron job
         with open(cron_file, 'w') as f:
             f.write("# HOMESERVER Backup Cron Job\n")
@@ -66,14 +61,6 @@ def install_backup_service():
         log_dir.mkdir(parents=True, exist_ok=True)
         os.chown(log_dir, 33, 33)  # www-data user/group
         print(f"Created log directory: {log_dir}")
-        
-        # Reload systemd
-        subprocess.run(["systemctl", "daemon-reload"], check=True)
-        print("Reloaded systemd daemon")
-        
-        # Enable service
-        subprocess.run(["systemctl", "enable", "homeserver-backup.service"], check=True)
-        print("Enabled homeserver-backup.service")
         
         # Test service
         print("Testing backup service...")
@@ -100,25 +87,11 @@ def uninstall_backup_service():
     print("Uninstalling HOMESERVER Backup Service...")
     
     try:
-        # Stop and disable service
-        subprocess.run(["systemctl", "stop", "homeserver-backup.service"], check=False)
-        subprocess.run(["systemctl", "disable", "homeserver-backup.service"], check=False)
-        
-        # Remove service file
-        service_file = Path("/etc/systemd/system/homeserver-backup.service")
-        if service_file.exists():
-            service_file.unlink()
-            print("Removed systemd service file")
-        
         # Remove cron job
         cron_file = Path("/etc/cron.d/homeserver-backup")
         if cron_file.exists():
             cron_file.unlink()
             print("Removed cron job")
-        
-        # Reload systemd
-        subprocess.run(["systemctl", "daemon-reload"], check=True)
-        print("Reloaded systemd daemon")
         
         print("Backup service uninstalled successfully!")
         return True
