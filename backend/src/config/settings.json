@@ -3,6 +3,10 @@
       "/tmp/test.txt"
     ],
     "providers": {
+      "local": {
+        "enabled": false,
+        "path": "/var/www/homeserver/backup"
+      },
       "aws_s3": {
         "enabled": false,
         "credentials_key": "aws_s3",
@@ -33,7 +37,19 @@
         "container": "homeserver-backups",
         "container_type": "bucket",
         "username": "",
-        "password": ""
+        "password": "",
+        "application_key_id": "",
+        "application_key": "",
+        "region": "us-west-000",
+        "max_retries": 3,
+        "retry_delay": 1.0,
+        "timeout": 300,
+        "max_bandwidth": null,
+        "upload_chunk_size": 104857600,
+        "encryption_enabled": false,
+        "encryption_key": null,
+        "encryption_salt": null,
+        "connection_pool_size": 5
       }
     },
     "retention_days": 30,
