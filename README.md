@@ -1,165 +1,187 @@
 # HOMESERVER Backup Tab
 
-Professional-grade 3-2-1 backup system with encryption and cloud upload for HOMESERVER infrastructure.
-
 ## Overview
 
-This premium tab provides a comprehensive web interface for managing the HOMESERVER backup system. It integrates with the backup CLI backend to provide:
-
-- **Repository Management**: Discover and select repositories for backup
-- **Backup Operations**: Run manual backups with different retention policies
-- **Cloud Integration**: Test and manage cloud provider connections
-- **Schedule Management**: Control automated backup scheduling
-- **History & Monitoring**: View backup history and system status
-- **Configuration**: Manage backup settings and policies
+The HOMESERVER Backup Tab provides a professional 3-2-1 backup solution for your HOMESERVER infrastructure. This system ensures your critical data is protected with multiple copies across different storage media and locations.
 
 ## Features
 
-### Repository Management
-- Automatic discovery of Gogs repositories
-- Repository status monitoring (active/inactive)
-- Selective backup targeting
-- Repository metadata display (size, last commit)
-
-### Backup Operations
-- Manual backup execution (daily, weekly, monthly, yearly)
-- Real-time backup progress monitoring
-- Backup result tracking and error reporting
-- Integration with retention policies
-
-### Cloud Provider Integration
-- Connection testing for all configured providers
-- Support for Nextcloud, Proton Drive, Backblaze B2
-- Upload status monitoring
-- Provider-specific configuration management
-
-### Schedule Management
-- Systemd timer integration
-- Start/stop/enable/disable schedule controls
-- Next run and last run time display
-- Schedule configuration viewing
-
-### System Monitoring
-- Overall system status (configured/partial/not_configured)
-- Service status monitoring
-- Configuration validation
-- Log file access and display
-
-## Architecture
-
-### Backend Components
-- **Routes**: RESTful API endpoints for all backup operations
-- **Integration**: Direct integration with backup CLI service
-- **Security**: Proper permission management and input validation
-- **Error Handling**: Comprehensive error reporting and logging
-
-### Frontend Components
-- **React Interface**: Modern, responsive web interface
-- **Real-time Updates**: Live status and progress monitoring
-- **Professional UI**: Clean, system administrator-focused design
-- **Mobile Responsive**: Works on all device sizes
-
-### Integration Points
-- **Backup CLI**: Direct integration with `homeserver_backup_service.py`
-- **Systemd Services**: Timer and service management
-- **Configuration Files**: YAML-based configuration management
-- **Log Files**: Structured logging and log viewing
+- **3-2-1 Backup Strategy**: 3 copies, 2 different media types, 1 offsite
+- **Automated Daily Backups**: Runs daily at 2 AM with randomization
+- **Cloud Integration**: Support for 4 major cloud storage providers
+- **FAK Encryption**: All backups encrypted with your Factory Access Key
+- **Keyman Integration**: Secure credential management
+- **Self-Contained**: Cronjob-based scheduling, no complex systemd dependencies
 
 ## Installation
 
-This tab integrates with the existing HOMESERVER backup system:
+1. Run the installation script as root:
+   ```bash
+   sudo ./system/install-backup-service.sh
+   ```
 
-1. **Backend Installation**: The backup CLI must be installed at `/opt/homeserver-backup/`
-2. **Service Setup**: Systemd timer service must be configured
-3. **Permissions**: Proper sudo permissions for backup operations
-4. **Configuration**: Valid configuration file at `/opt/homeserver-backup/config.yaml`
+2. Configure your backup settings in `/var/www/homeserver/backup/backup_config.json`
+
+3. Set up cloud provider credentials using the keyman suite:
+   ```bash
+   /vault/keyman/newkey.sh aws_s3 <username> <password>
+   /vault/keyman/newkey.sh google_drive <username> <password>
+   /vault/keyman/newkey.sh dropbox <username> <password>
+   /vault/keyman/newkey.sh backblaze <username> <password>
+   ```
+
+4. Enable providers in the configuration file and test:
+   ```bash
+   sudo -u www-data python3 /var/www/homeserver/backup/backup_service.py
+   ```
 
 ## Configuration
 
-### Required Configuration
-- **Backup Directory**: `/opt/homeserver-backup/`
-- **Config File**: `/opt/homeserver-backup/config.yaml`
-- **State File**: `/opt/homeserver-backup/backup_state.json`
-- **Log File**: `/var/log/homeserver-backup/backup.log`
+### Backup Items
 
-### API Endpoints
-- `GET /api/backup/status` - System status and configuration
-- `GET /api/backup/repositories` - List available repositories
-- `POST /api/backup/backup/run` - Execute backup operation
-- `POST /api/backup/cloud/test` - Test cloud connections
-- `GET /api/backup/config` - Get configuration
-- `POST /api/backup/config` - Update configuration
-- `GET /api/backup/history` - Get backup history
-- `GET /api/backup/schedule` - Get schedule information
-- `POST /api/backup/schedule` - Update schedule
+Configure what gets backed up by editing the `backup_items` list in `backup_config.json`:
+
+```json
+{
+  "backup_items": [
+    "/var/www/homeserver/src",
+    "/var/lib/gogs",
+    "/etc/homeserver",
+    "/var/log/homeserver"
+  ]
+}
+```
+
+### Cloud Providers
+
+Supported providers:
+- **AWS S3**: `aws_s3` credentials key
+- **Google Drive**: `google_drive` credentials key  
+- **Dropbox**: `dropbox` credentials key
+- **Backblaze B2**: `backblaze` credentials key
+
+Enable providers in `backup_config.json`:
+```json
+{
+  "providers": {
+    "aws_s3": {
+      "enabled": true,
+      "credentials_key": "aws_s3",
+      "bucket": "homeserver-backups"
+    }
+  }
+}
+```
+
+### Scheduling
+
+The system uses a simple cronjob for daily backups:
+- **Daily**: 2:00 AM with 0-59 minute randomization
+- **Cronjob**: Self-contained file that can be easily managed
+- **Manual**: Run anytime with the Python script
 
 ## Security
 
-### Permission Management
-- Dedicated sudo permissions for backup operations
-- Restricted access to system commands
-- Secure configuration file handling
-- No direct file system access from web interface
+- **FAK Encryption**: All backups encrypted using `/root/key/skeleton.key`
+- **Keyman Integration**: Credentials managed through existing keyman suite
+- **Secure Processing**: Temporary files cleaned up after processing
+- **No Plaintext**: No sensitive data stored in plaintext
 
-### Data Protection
-- All sensitive data (passwords, keys) redacted in API responses
-- Secure configuration file backup before updates
-- Proper error handling without information leakage
-- Input validation and sanitization
+## Monitoring
 
-## Usage
+Check backup status:
+```bash
+# View cronjob
+cat /etc/cron.d/homeserver-backup
 
-### Basic Operations
-1. **System Overview**: Check system status and configuration
-2. **Repository Selection**: Choose repositories for backup
-3. **Backup Execution**: Run manual backups with selected repositories
-4. **Cloud Testing**: Verify cloud provider connections
-5. **Schedule Management**: Control automated backup scheduling
+# View recent logs
+tail -f /var/log/homeserver/backup.log
 
-### Advanced Features
-- **Configuration Management**: Update backup settings via web interface
-- **History Monitoring**: View detailed backup history and logs
-- **Error Diagnostics**: Comprehensive error reporting and troubleshooting
-- **Status Monitoring**: Real-time system and service status
+# Check backup directory
+ls -la /var/www/homeserver/backup/
 
-## Professional Features
-
-### System Administrator Focus
-- No hand-holding or "easy mode" interfaces
-- Comprehensive error handling and reporting
-- Detailed logging and monitoring capabilities
-- Professional-grade security and permissions
-
-### HOMESERVER Integration
-- Designed for self-hosted infrastructure
-- Integrates with existing Gogs setup
-- Respects network boundaries and security policies
-- Never exposes unencrypted data
-
-### Enterprise-Grade Reliability
-- Atomic operations and transaction-like behavior
-- Comprehensive state tracking and management
-- Automatic cleanup and maintenance
-- Professional monitoring and alerting
+# Manual backup test
+sudo -u www-data python3 /var/www/homeserver/backup/backup_service.py
+```
 
 ## Troubleshooting
 
 ### Common Issues
-1. **Service Not Running**: Check systemd timer status
-2. **Configuration Missing**: Verify config file exists and is valid
-3. **Permission Denied**: Check sudo permissions for backup operations
-4. **Cloud Connection Failed**: Verify provider credentials and network access
 
-### Debug Information
-- System status provides comprehensive diagnostic information
-- Log files accessible through the web interface
-- Error messages include specific failure details
-- Configuration validation with detailed feedback
+1. **Permission Errors**
+   - Ensure www-data owns backup directory
+   - Check FAK file permissions at `/root/key/skeleton.key`
 
-## License
+2. **Upload Failures**
+   - Verify cloud provider credentials in keyman
+   - Check provider configuration in backup_config.json
+   - Review logs for specific error messages
 
-This tool is designed for system administrators who understand the value of digital sovereignty. Use responsibly and maintain your own security practices.
+3. **Encryption Errors**
+   - Verify FAK file exists and is readable
+   - Check Python cryptography library installation
 
----
+### Manual Operations
 
-*"18 fewer backdoors for corporations to exploit"* - HOMESERVER Backup Tab
+```bash
+# Run manual backup
+sudo -u www-data python3 /var/www/homeserver/backup/backup_service.py
+
+# Remove cronjob
+sudo rm /etc/cron.d/homeserver-backup
+
+# Reinstall cronjob
+sudo cp system/homeserver-backup.cron /etc/cron.d/homeserver-backup
+```
+
+## File Structure
+
+```
+/var/www/homeserver/backup/
+├── backup_service.py          # Main backup script
+├── backup_config.json         # Configuration file
+└── logs/                      # Backup logs
+
+/tmp/homeserver-backups/       # Temporary backup processing
+/var/log/homeserver/backup.log # Main log file
+/etc/cron.d/homeserver-backup  # Cronjob file
+```
+
+## Integration Points
+
+### Keyman Suite
+- Uses `exportkey.sh` to get decrypted credentials
+- Credentials stored in `/mnt/keyexchange/` (ramdisk)
+- Automatic cleanup after 15 seconds of inactivity
+
+### Adblock Module Pattern
+- Follows same structure as adblock module
+- Self-contained Python scripts
+- JSON configuration files
+- Cronjob-based scheduling
+
+### FAK Encryption
+- Uses `/root/key/skeleton.key` as encryption key
+- PBKDF2 key derivation for security
+- Fernet encryption for backup packages
+
+## Advanced Configuration
+
+### Custom Backup Items
+Add any file or directory to the `backup_items` list in `backup_config.json`.
+
+### Provider Configuration
+Each provider can have custom settings like bucket names, folder paths, etc.
+
+### Retention Policies
+Configure retention in `backup_config.json`:
+```json
+{
+  "retention_days": 30,
+  "compression_level": 6
+}
+```
+
+## Support
+
+This is a professional-grade backup system designed for HOMESERVER infrastructure. The system integrates seamlessly with existing HOMESERVER components and follows established patterns for maintainability and security.

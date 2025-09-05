@@ -1,0 +1,4 @@
+# HOMESERVER Backup Cron Job
+# Daily backup at 2 AM with random delay (0-59 minutes)
+# This file can be appended to /etc/crontab or managed via cron.d
+0 2 * * * www-data sleep $((RANDOM % 3600)) && /usr/bin/python3 /var/www/homeserver/backup/backup_service.py >> /var/log/homeserver/backup.log 2>&1

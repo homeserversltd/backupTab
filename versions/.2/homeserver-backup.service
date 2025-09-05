@@ -1,15 +1,14 @@
 [Unit]
 Description=HOMESERVER Backup Service - Professional 3-2-1 backup system
 Documentation=https://github.com/homeserversltd/homeserver-backup
-After=network.target gogs.service
-Wants=network.target
+After=network.target
 
 [Service]
 Type=oneshot
-User=homeserver
-Group=homeserver
-WorkingDirectory=/opt/homeserver-backup
-ExecStart=/usr/bin/python3 /opt/homeserver-backup/homeserver_backup_service.py --backup-type daily
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/homeserver/backup
+ExecStart=/usr/bin/python3 /var/www/homeserver/backup/backup_service.py
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=homeserver-backup
@@ -19,7 +18,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/homeserver-backup /tmp/homeserver-backups /var/lib/gogs
+ReadWritePaths=/var/www/homeserver/backup /tmp/homeserver-backups /var/lib/gogs /vault/.keys
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true

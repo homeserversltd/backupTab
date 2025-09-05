@@ -1,1 +1,2 @@
-# HOMESERVER Backup Tab Backend Module
+# Backup Premium Tab Blueprint Registration
+from .routes import bp
