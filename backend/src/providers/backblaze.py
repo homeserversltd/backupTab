@@ -278,17 +278,39 @@ class BackblazeProvider(BaseProvider):
         try:
             self.logger.info(f"Listing files with prefix '{prefix}' (max: {max_files})")
             
-            for file_info in self.bucket.ls(prefix=prefix, max_files=max_files):
+            # B2 SDK ls() method doesn't take parameters directly
+            # We'll filter the results after getting them
+            for file_info in self.bucket.ls():
+                # Debug: check what type of object we're getting
+                self.logger.debug(f"File info type: {type(file_info)}, content: {file_info}")
+                
+                # Handle different return types from B2 SDK
+                if isinstance(file_info, tuple):
+                    # If it's a tuple, we need to extract the file object
+                    file_obj = file_info[0] if len(file_info) > 0 else None
+                    if not file_obj:
+                        continue
+                else:
+                    file_obj = file_info
+                
+                # Apply prefix filtering
+                if prefix and not file_obj.file_name.startswith(prefix):
+                    continue
+                
+                # Apply max_files limit
+                if len(files) >= max_files:
+                    break
+                
                 files.append({
-                    'name': file_info.file_name,
-                    'size': file_info.size,
-                    'mtime': file_info.upload_timestamp / 1000,  # Convert to seconds
-                    'id': file_info.id_,
-                    'content_type': getattr(file_info, 'content_type', 'application/octet-stream'),
-                    'sha1': getattr(file_info, 'content_sha1', ''),
-                    'action': getattr(file_info, 'action', 'upload'),
-                    'bucket_id': getattr(file_info, 'bucket_id', ''),
-                    'upload_timestamp': file_info.upload_timestamp
+                    'name': file_obj.file_name,
+                    'size': file_obj.size,
+                    'mtime': file_obj.upload_timestamp / 1000,  # Convert to seconds
+                    'id': file_obj.id_,
+                    'content_type': getattr(file_obj, 'content_type', 'application/octet-stream'),
+                    'sha1': getattr(file_obj, 'content_sha1', ''),
+                    'action': getattr(file_obj, 'action', 'upload'),
+                    'bucket_id': getattr(file_obj, 'bucket_id', ''),
+                    'upload_timestamp': file_obj.upload_timestamp
                 })
             
             self.logger.info(f"Found {len(files)} files in bucket")
@@ -345,11 +367,11 @@ class BackblazeProvider(BaseProvider):
         
         try:
             # Test basic connectivity by listing files
-            list(self.bucket.ls(limit=1))
+            # Note: This will list all files, but for an empty bucket it's safe
+            files = list(self.bucket.ls())
             
-            # Test bucket permissions by getting bucket info
-            bucket_info = self.bucket.get_bucket_info()
-            self.logger.info(f"Connection test successful. Bucket: {bucket_info.name}, Type: {bucket_info.bucket_type}")
+            # Test successful - we can list files from the bucket
+            self.logger.info(f"Connection test successful. Bucket: {self.bucket.name}, Files found: {len(files)}")
             
             return True
             

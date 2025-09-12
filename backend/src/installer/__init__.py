@@ -5,6 +5,11 @@ Copyright (C) 2024 HOMESERVER LLC
 Installation and configuration utilities.
 """
 
-from .install_backup_service import install_backup_service, uninstall_backup_service
+from .deployBackupService import deploy_backup_service, undeploy_backup_service
 
-__all__ = ['install_backup_service', 'uninstall_backup_service']
+try:
+    from .setupEnvironment import BackupEnvironmentSetup
+    __all__ = ['deploy_backup_service', 'undeploy_backup_service', 'BackupEnvironmentSetup']
+except ImportError:
+    # Environment setup may not be available in all environments
+    __all__ = ['deploy_backup_service', 'undeploy_backup_service']

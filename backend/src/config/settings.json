@@ -5,7 +5,7 @@
     "providers": {
       "local": {
         "enabled": false,
-        "path": "/var/www/homeserver/backup"
+        "path": "/var/backups/homeserver"
       },
       "aws_s3": {
         "enabled": false,
@@ -13,7 +13,24 @@
         "container": "homeserver-backups",
         "container_type": "bucket",
         "username": "",
-        "password": ""
+        "password": "",
+        "bucket": "homeserver-backups",
+        "region": "us-east-1",
+        "access_key": "",
+        "secret_key": "",
+        "max_retries": 3,
+        "retry_delay": 1.0,
+        "timeout": 300,
+        "max_bandwidth": null,
+        "upload_chunk_size": 104857600,
+        "multipart_threshold": 67108864,
+        "encryption_enabled": false,
+        "encryption_key": null,
+        "encryption_salt": null,
+        "connection_pool_size": 5,
+        "server_side_encryption": null,
+        "storage_class": "STANDARD",
+        "canned_acl": null
       },
       "google_drive": {
         "enabled": false,

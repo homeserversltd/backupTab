@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-HOMESERVER Backup Service Installer
+HOMESERVER Backup Service Deployer
 Copyright (C) 2024 HOMESERVER LLC
 
-Installs and configures the backup service.
+Deploys and configures the backup service with cron jobs and system integration.
 """
 
 import os
@@ -12,13 +12,13 @@ import shutil
 import subprocess
 from pathlib import Path
 
-def install_backup_service():
-    """Install the backup service."""
-    print("Installing HOMESERVER Backup Service...")
+def deploy_backup_service():
+    """Deploy the backup service."""
+    print("Deploying HOMESERVER Backup Service...")
     
     # Define paths
     source_dir = Path(__file__).parent.parent.parent  # Go up to backend directory
-    install_dir = Path("/var/www/homeserver/backup")
+    install_dir = Path("/var/www/homeserver/premium/backup")
     cron_file = Path("/etc/cron.d/homeserver-backup")
     
     try:
@@ -53,7 +53,7 @@ def install_backup_service():
         with open(cron_file, 'w') as f:
             f.write("# HOMESERVER Backup Cron Job\n")
             f.write("# Daily backup at 2 AM with random delay (0-59 minutes)\n")
-            f.write("0 2 * * * www-data sleep $((RANDOM % 3600)) && /usr/bin/python3 /var/www/homeserver/backup/src/service/backup_service.py --backup >> /var/log/homeserver/backup.log 2>&1\n")
+            f.write(f"0 2 * * * www-data sleep $((RANDOM % 3600)) && {install_dir}/backup-venv create >> /var/log/homeserver/backup.log 2>&1\n")
         print(f"Installed cron job: {cron_file}")
         
         # Create log directory
@@ -62,12 +62,11 @@ def install_backup_service():
         os.chown(log_dir, 33, 33)  # www-data user/group
         print(f"Created log directory: {log_dir}")
         
-        # Test service
-        print("Testing backup service...")
+        # Test backup system
+        print("Testing backup system...")
         result = subprocess.run([
-            "/usr/bin/python3", 
-            str(install_dir / "src" / "service" / "backup_service.py"), 
-            "--test"
+            str(install_dir / "backup-venv"), 
+            "list-providers"
         ], capture_output=True, text=True)
         
         if result.returncode == 0:
@@ -82,9 +81,9 @@ def install_backup_service():
         print(f"ERROR: Installation failed: {e}")
         return False
 
-def uninstall_backup_service():
-    """Uninstall the backup service."""
-    print("Uninstalling HOMESERVER Backup Service...")
+def undeploy_backup_service():
+    """Undeploy the backup service."""
+    print("Undeploying HOMESERVER Backup Service...")
     
     try:
         # Remove cron job
@@ -101,18 +100,18 @@ def uninstall_backup_service():
         return False
 
 def main():
-    """Main installer entry point."""
+    """Main deployer entry point."""
     import argparse
     
-    parser = argparse.ArgumentParser(description="HOMESERVER Backup Service Installer")
-    parser.add_argument("--uninstall", action="store_true", help="Uninstall the service")
+    parser = argparse.ArgumentParser(description="HOMESERVER Backup Service Deployer")
+    parser.add_argument("--uninstall", action="store_true", help="Undeploy the service")
     
     args = parser.parse_args()
     
     if args.uninstall:
-        success = uninstall_backup_service()
+        success = undeploy_backup_service()
     else:
-        success = install_backup_service()
+        success = deploy_backup_service()
     
     sys.exit(0 if success else 1)
 

@@ -15,8 +15,14 @@ from .logger import get_logger
 class ConfigManager:
     """Manages backup configuration operations."""
     
-    def __init__(self, config_file: str = "src/config/settings.json"):
-        self.config_file = Path(config_file)
+    def __init__(self, config_file: str = None):
+        # Use system config by default, fallback to template
+        if config_file is None:
+            system_config = Path("/etc/backupTab/settings.json")
+            template_config = Path("src/config/settings.json")
+            self.config_file = system_config if system_config.exists() else template_config
+        else:
+            self.config_file = Path(config_file)
         self.logger = get_logger()
         self._default_config = self._get_default_config()
     

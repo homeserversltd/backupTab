@@ -41,7 +41,13 @@ class EnhancedBackupCLI:
     """Enhanced backup CLI with modular provider system."""
     
     def __init__(self, config_file: Optional[str] = None):
-        self.config_file = config_file or "src/config/settings.json"
+        # Use system config by default, fallback to template
+        if config_file is None:
+            system_config = "/etc/backupTab/settings.json"
+            template_config = "src/config/settings.json"
+            self.config_file = system_config if os.path.exists(system_config) else template_config
+        else:
+            self.config_file = config_file
         self.temp_dir = Path("/tmp/homeserver-backup-cli-enhanced")
         self.backup_dir = Path("/var/www/homeserver/backup")
         
@@ -287,6 +293,21 @@ class EnhancedBackupCLI:
     def set_provider_credentials(self, provider_name: str, username: str, password: str) -> bool:
         """Set credentials for a specific provider."""
         updates = {"username": username, "password": password}
+        
+        # Handle provider-specific credential mapping
+        if provider_name == "backblaze":
+            updates["application_key_id"] = username
+            updates["application_key"] = password
+            updates["container"] = "homeServer-serverGenesis"  # Set correct bucket name
+            updates["bucket"] = "homeServer-serverGenesis"  # Backblaze provider uses 'bucket' field
+        elif provider_name == "aws_s3":
+            updates["access_key"] = username
+            updates["secret_key"] = password
+            updates["bucket"] = "homeserver-backups"  # Set default bucket name
+            updates["region"] = "us-east-1"  # Set default region
+            updates["username"] = username  # Keep for backward compatibility
+            updates["password"] = password  # Keep for backward compatibility
+        
         success = self.config_manager.update_provider_config(provider_name, updates)
         
         if success:
@@ -364,6 +385,39 @@ class EnhancedBackupCLI:
     def enable_backup_schedule(self, schedule: str = "0 2 * * *") -> bool:
         """Enable the backup cron schedule with default daily at 2 AM."""
         return self.set_backup_schedule(schedule)
+    
+    def set_provider_config(self, provider_name: str, key: str, value: str) -> bool:
+        """Set a specific configuration value for a provider."""
+        # Convert string values to appropriate types
+        if value.lower() in ['true', 'false']:
+            value = value.lower() == 'true'
+        elif value.lower() == 'null':
+            value = None
+        elif value.isdigit():
+            value = int(value)
+        elif value.replace('.', '', 1).isdigit():
+            value = float(value)
+        
+        updates = {key: value}
+        success = self.config_manager.update_provider_config(provider_name, updates)
+        
+        if success:
+            self.logger.info(f"Updated {provider_name} config: {key} = {value}")
+            print(f"Updated {provider_name} config: {key} = {value}")
+        else:
+            print(f"ERROR: Provider '{provider_name}' not found")
+        
+        return success
+    
+    def get_provider_config(self, provider_name: str) -> Optional[Dict[str, Any]]:
+        """Get configuration for a specific provider."""
+        provider_config = self.config_manager.get_provider_config(provider_name)
+        
+        if not provider_config:
+            print(f"ERROR: Provider '{provider_name}' not found")
+            return None
+        
+        return provider_config
 
 def main():
     """Main CLI entry point."""
@@ -428,6 +482,23 @@ def main():
     
     # Disable backup schedule command
     subparsers.add_parser("disable-schedule", help="Disable backup schedule")
+    
+    # Self-contained installer command
+    install_parser = subparsers.add_parser("install", help="Install backup system with virtual environment")
+    install_parser.add_argument("--force", action="store_true", help="Force installation")
+    
+    # Uninstall command
+    uninstall_parser = subparsers.add_parser("uninstall", help="Uninstall backup system")
+    
+    # Set provider config command
+    set_config_parser = subparsers.add_parser("set-config", help="Set configuration for a provider")
+    set_config_parser.add_argument("provider", help="Provider name")
+    set_config_parser.add_argument("key", help="Configuration key")
+    set_config_parser.add_argument("value", help="Configuration value")
+    
+    # Get provider config command
+    get_config_parser = subparsers.add_parser("get-config", help="Get configuration for a provider")
+    get_config_parser.add_argument("provider", help="Provider name")
     
     args = parser.parse_args()
     
@@ -502,6 +573,42 @@ def main():
         elif args.command == "disable-schedule":
             success = cli.disable_backup_schedule()
             if not success:
+                sys.exit(1)
+        elif args.command == "install":
+            # Run environment setup
+            try:
+                from src.installer.setupEnvironment import BackupEnvironmentSetup
+                setup = BackupEnvironmentSetup()
+                success = setup.install()
+                if not success:
+                    sys.exit(1)
+            except ImportError as e:
+                print(f"ERROR: Could not import environment setup: {e}")
+                sys.exit(1)
+        elif args.command == "uninstall":
+            # Run environment cleanup
+            try:
+                from src.installer.setupEnvironment import BackupEnvironmentSetup
+                setup = BackupEnvironmentSetup()
+                success = setup.uninstall()
+                if not success:
+                    sys.exit(1)
+            except ImportError as e:
+                print(f"ERROR: Could not import environment setup: {e}")
+                sys.exit(1)
+        elif args.command == "set-config":
+            success = cli.set_provider_config(args.provider, args.key, args.value)
+            if not success:
+                sys.exit(1)
+        elif args.command == "get-config":
+            config = cli.get_provider_config(args.provider)
+            if config:
+                print(f"Configuration for {args.provider}:")
+                for key, value in config.items():
+                    if key in ['password', 'secret_key', 'application_key', 'encryption_key']:
+                        value = '*' * len(str(value)) if value else '(empty)'
+                    print(f"  {key}: {value}")
+            else:
                 sys.exit(1)
     
     except KeyboardInterrupt:

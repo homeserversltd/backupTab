@@ -18,7 +18,7 @@ from flask import Blueprint, request, jsonify, current_app
 backup_bp = Blueprint('backup', __name__, url_prefix='/backup')
 
 # Configuration paths
-BACKUP_CONFIG_PATH = "/opt/homeserver-backup/config.yaml"
+BACKUP_CONFIG_PATH = "/etc/backupTab/settings.json"
 BACKUP_STATE_PATH = "/opt/homeserver-backup/backup_state.json"
 BACKUP_LOG_PATH = "/var/log/homeserver-backup/backup.log"
 BACKUP_CLI_PATH = "/opt/homeserver-backup/homeserver_backup_service.py"
@@ -26,6 +26,50 @@ BACKUP_CLI_PATH = "/opt/homeserver-backup/homeserver_backup_service.py"
 def get_logger():
     """Get logger for backup operations"""
     return logging.getLogger(__name__)
+
+def check_and_update_config():
+    """Check if configuration needs updating and run update script if needed."""
+    try:
+        # Check if system config exists
+        if not os.path.exists(BACKUP_CONFIG_PATH):
+            get_logger().info("System config not found, creating from template")
+            return True
+        
+        # Check if update script exists
+        update_script = "/usr/local/bin/homeserver-backup-update-settings"
+        if not os.path.exists(update_script):
+            get_logger().warning("Settings update script not found")
+            return False
+        
+        # Run update script in dry-run mode to check for differences
+        result = subprocess.run([
+            update_script, "--dry-run"
+        ], capture_output=True, text=True, timeout=30)
+        
+        # If there are differences, run the actual update
+        if result.returncode == 0 and "New fields that would be added:" in result.stdout:
+            get_logger().info("Configuration update needed, running update script")
+            
+            # Run actual update
+            update_result = subprocess.run([
+                update_script
+            ], capture_output=True, text=True, timeout=60)
+            
+            if update_result.returncode == 0:
+                get_logger().info("Configuration updated successfully")
+                return True
+            else:
+                get_logger().error(f"Configuration update failed: {update_result.stderr}")
+                return False
+        
+        return True
+        
+    except subprocess.TimeoutExpired:
+        get_logger().error("Configuration update timed out")
+        return False
+    except Exception as e:
+        get_logger().error(f"Error checking/updating configuration: {e}")
+        return False
 
 @backup_bp.route('/status', methods=['GET'])
 def get_status():
@@ -248,6 +292,10 @@ def test_cloud_connections():
 def get_config():
     """Get backup configuration"""
     try:
+        # Check and update configuration if needed
+        if not check_and_update_config():
+            get_logger().warning("Configuration update check failed, continuing with existing config")
+        
         if not os.path.exists(BACKUP_CONFIG_PATH):
             return jsonify({
                 'success': False,
@@ -256,15 +304,17 @@ def get_config():
             }), 404
         
         with open(BACKUP_CONFIG_PATH, 'r') as f:
-            config = yaml.safe_load(f)
+            config = json.load(f)
         
         # Remove sensitive information
         safe_config = config.copy()
-        for provider_name, provider_config in safe_config.get('cloud_providers', {}).items():
+        for provider_name, provider_config in safe_config.get('providers', {}).items():
             if 'password' in provider_config:
                 provider_config['password'] = '***REDACTED***'
             if 'application_key' in provider_config:
                 provider_config['application_key'] = '***REDACTED***'
+            if 'secret_key' in provider_config:
+                provider_config['secret_key'] = '***REDACTED***'
         
         return jsonify({
             'success': True,
@@ -284,6 +334,10 @@ def get_config():
 def update_config():
     """Update backup configuration"""
     try:
+        # Check and update configuration if needed before processing
+        if not check_and_update_config():
+            get_logger().warning("Configuration update check failed, continuing with existing config")
+        
         data = request.get_json()
         if not data:
             return jsonify({
@@ -299,7 +353,7 @@ def update_config():
         
         # Write new config
         with open(BACKUP_CONFIG_PATH, 'w') as f:
-            yaml.dump(data, f, default_flow_style=False, indent=2)
+            json.dump(data, f, indent=2)
         
         return jsonify({
             'success': True,
