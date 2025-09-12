@@ -300,13 +300,20 @@ class EnhancedBackupCLI:
             updates["application_key"] = password
             updates["container"] = "homeServer-serverGenesis"  # Set correct bucket name
             updates["bucket"] = "homeServer-serverGenesis"  # Backblaze provider uses 'bucket' field
-        elif provider_name == "aws_s3":
-            updates["access_key"] = username
-            updates["secret_key"] = password
-            updates["bucket"] = "homeserver-backups"  # Set default bucket name
-            updates["region"] = "us-east-1"  # Set default region
-            updates["username"] = username  # Keep for backward compatibility
-            updates["password"] = password  # Keep for backward compatibility
+        elif provider_name == "google_drive":
+            # Google Drive uses OAuth2, not username/password
+            # These fields are kept for compatibility but not used for auth
+            updates["username"] = username
+            updates["password"] = password
+            print("NOTE: Google Drive uses OAuth2 authentication via credentials.json file")
+            print("Make sure you have downloaded credentials.json from Google Cloud Console")
+        elif provider_name == "google_cloud_storage":
+            # Google Cloud Storage uses service account key, not username/password
+            # These fields are kept for compatibility but not used for auth
+            updates["username"] = username
+            updates["password"] = password
+            print("NOTE: Google Cloud Storage uses service account key authentication")
+            print("Make sure you have downloaded service account key from Google Cloud Console")
         
         success = self.config_manager.update_provider_config(provider_name, updates)
         
@@ -317,6 +324,40 @@ class EnhancedBackupCLI:
             print(f"ERROR: Provider '{provider_name}' not found")
         
         return success
+    
+    def set_provider_credentials_json(self, provider_name: str, credentials_json: str) -> bool:
+        """Set credentials JSON content for a specific provider."""
+        try:
+            # Validate JSON format
+            import json
+            parsed_json = json.loads(credentials_json)
+            
+            # Write credentials file
+            credentials_file = f"{provider_name}_credentials.json"
+            credentials_path = Path(credentials_file)
+            
+            with open(credentials_path, 'w') as f:
+                json.dump(parsed_json, f, indent=2)
+            
+            # Update provider config with credentials file path
+            updates = {"credentials_file": credentials_file}
+            success = self.config_manager.update_provider_config(provider_name, updates)
+            
+            if success:
+                self.logger.log_credential_operation(provider_name, "set_credentials_json", True)
+                print(f"Credentials JSON updated for {provider_name}")
+                print(f"Credentials file saved as: {credentials_file}")
+                return True
+            else:
+                print(f"ERROR: Provider '{provider_name}' not found")
+                return False
+                
+        except json.JSONDecodeError as e:
+            print(f"ERROR: Invalid JSON format: {e}")
+            return False
+        except Exception as e:
+            print(f"ERROR: Failed to save credentials: {e}")
+            return False
     
     def get_provider_credentials(self, provider_name: str) -> Optional[Dict[str, str]]:
         """Get credentials for a specific provider."""
@@ -425,6 +466,9 @@ def main():
     parser.add_argument("--config", "-c", help="Configuration file path")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     
+    # Add note about future developments
+    parser.epilog = "Note: Google Drive, Google Cloud Storage, and Dropbox providers are future developments and currently disabled. Only Local and Backblaze providers are fully functional."
+    
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
     
     # Create backup command
@@ -449,13 +493,18 @@ def main():
     test_parser.add_argument("--items", "-i", nargs="+", help="Items to backup")
     
     # List available providers
-    subparsers.add_parser("list-providers", help="List available providers")
+    subparsers.add_parser("list-providers", help="List available providers (some are future developments)")
     
     # Set provider credentials command
     set_creds_parser = subparsers.add_parser("set-credentials", help="Set credentials for a provider")
     set_creds_parser.add_argument("provider", help="Provider name")
     set_creds_parser.add_argument("--username", "-u", required=True, help="Username/access key")
     set_creds_parser.add_argument("--password", "-p", required=True, help="Password/secret key")
+    
+    # Set provider credentials JSON command
+    set_creds_json_parser = subparsers.add_parser("set-credentials-json", help="Set credentials JSON content for a provider")
+    set_creds_json_parser.add_argument("provider", help="Provider name")
+    set_creds_json_parser.add_argument("--json", "-j", required=True, help="Credentials JSON content")
     
     # Get provider credentials command
     get_creds_parser = subparsers.add_parser("get-credentials", help="Get credentials for a provider")
@@ -539,9 +588,16 @@ def main():
             print("Available providers:")
             for provider_name in PROVIDERS.keys():
                 status = "enabled" if provider_name in cli.providers else "disabled"
-                print(f"  {provider_name} ({status})")
+                if provider_name in ['google_drive', 'google_cloud_storage', 'dropbox']:
+                    print(f"  {provider_name} ({status}) - Future development (currently disabled)")
+                else:
+                    print(f"  {provider_name} ({status})")
         elif args.command == "set-credentials":
             success = cli.set_provider_credentials(args.provider, args.username, args.password)
+            if not success:
+                sys.exit(1)
+        elif args.command == "set-credentials-json":
+            success = cli.set_provider_credentials_json(args.provider, args.json)
             if not success:
                 sys.exit(1)
         elif args.command == "get-credentials":

@@ -12,19 +12,6 @@ from .base import BaseProvider
 from .local import LocalProvider
 
 # Import cloud providers with individual error handling
-try:
-    from .aws_s3 import AWSS3Provider
-except ImportError as e:
-    print(f"WARNING: Failed to import AWS S3 provider: {e}")
-    class AWSS3Provider(BaseProvider):
-        def __init__(self, config):
-            super().__init__(config)
-            self.name = "aws_s3_stub"
-        def test_connection(self): return False
-        def upload(self, *args, **kwargs): return False
-        def download(self, *args, **kwargs): return False
-        def list_files(self): return []
-        def delete(self, *args, **kwargs): return False
 
 try:
     from .google_drive import GoogleDriveProvider
@@ -34,6 +21,20 @@ except ImportError as e:
         def __init__(self, config):
             super().__init__(config)
             self.name = "google_drive_stub"
+        def test_connection(self): return False
+        def upload(self, *args, **kwargs): return False
+        def download(self, *args, **kwargs): return False
+        def list_files(self): return []
+        def delete(self, *args, **kwargs): return False
+
+try:
+    from .google_cloud_storage import GoogleCloudStorageProvider
+except ImportError as e:
+    print(f"WARNING: Failed to import Google Cloud Storage provider: {e}")
+    class GoogleCloudStorageProvider(BaseProvider):
+        def __init__(self, config):
+            super().__init__(config)
+            self.name = "google_cloud_storage_stub"
         def test_connection(self): return False
         def upload(self, *args, **kwargs): return False
         def download(self, *args, **kwargs): return False
@@ -71,8 +72,8 @@ except ImportError as e:
 __all__ = [
     'BaseProvider',
     'LocalProvider', 
-    'AWSS3Provider',
     'GoogleDriveProvider',
+    'GoogleCloudStorageProvider',
     'DropboxProvider',
     'BackblazeProvider'
 ]
@@ -80,8 +81,8 @@ __all__ = [
 # Provider registry
 PROVIDERS = {
     'local': LocalProvider,
-    'aws_s3': AWSS3Provider,
     'google_drive': GoogleDriveProvider,
+    'google_cloud_storage': GoogleCloudStorageProvider,
     'dropbox': DropboxProvider,
     'backblaze': BackblazeProvider
 }

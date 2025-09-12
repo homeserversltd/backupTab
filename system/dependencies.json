@@ -2,9 +2,9 @@
   "packages": [
     {
       "name": "rclone",
-      "version": ">=1.60.0",
+      "version": "1.60.0",
       "description": "Command line program to sync files and directories to and from cloud storage providers",
-      "flags": ["--noconfirm"]
+      "flags": []
     }
   ],
   "metadata": {

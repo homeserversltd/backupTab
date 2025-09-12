@@ -22,34 +22,38 @@ export interface Repository {
 }
 
 export interface CloudProvider {
-  name: string;
   enabled: boolean;
-  url?: string;
+  credentials_key: string;
+  container: string;
+  container_type: string;
   username?: string;
-  remote_path?: string;
-  connection_status?: boolean;
+  password?: string;
+  application_key_id?: string;
+  application_key?: string;
+  region?: string;
+  max_retries?: number;
+  retry_delay?: number;
+  timeout?: number;
+  max_bandwidth?: number | null;
+  upload_chunk_size?: number;
+  encryption_enabled?: boolean;
+  encryption_key?: string | null;
+  encryption_salt?: string | null;
+  connection_pool_size?: number;
 }
 
 export interface BackupConfig {
-  repositories: Repository[];
-  cloud_providers: Record<string, CloudProvider>;
-  retention: {
-    daily_backups: number;
-    weekly_backups: number;
-    monthly_backups: number;
-    yearly_backups: number;
-  };
-  schedule: {
-    daily_backup: string;
-    weekly_backup: string;
-    monthly_backup: string;
-    yearly_backup: string;
-  };
-  backup: {
-    compression: string;
-    max_file_size: string;
-    temp_directory: string;
+  backup_items: string[];
+  providers: Record<string, CloudProvider>;
+  retention_days: number;
+  encryption_enabled: boolean;
+  logging: {
+    enabled: boolean;
+    log_file: string;
     log_level: string;
+    max_file_size_mb: number;
+    backup_count: number;
+    format: string;
   };
 }
 

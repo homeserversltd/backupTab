@@ -1,0 +1,615 @@
+/**
+ * HOMESERVER Google Drive Setup Modal Styles
+ * Comprehensive styling for the Google Drive setup modal
+ */
+
+.google-drive-setup-modal {
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 32px;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: white;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.modal-close:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.modal-body {
+  padding: 32px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Progress Indicator */
+.setup-progress {
+  margin-bottom: 32px;
+}
+
+.progress-steps {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+}
+
+.progress-steps::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+  background-color: #e5e7eb;
+  z-index: 1;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  flex: 1;
+}
+
+.step-number {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #e5e7eb;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.progress-step.active .step-number {
+  background-color: #667eea;
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.step-label {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  text-align: center;
+}
+
+.progress-step.active .step-label {
+  color: #667eea;
+  font-weight: 600;
+}
+
+/* Setup Content */
+.setup-content {
+  min-height: 400px;
+}
+
+.setup-step h3 {
+  margin: 0 0 24px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.step-instructions {
+  margin-bottom: 24px;
+}
+
+.instruction-item {
+  display: flex;
+  margin-bottom: 20px;
+  align-items: flex-start;
+}
+
+.instruction-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #667eea;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.instruction-text {
+  flex: 1;
+}
+
+.instruction-text strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.instruction-text p {
+  margin: 0;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.instruction-text a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.instruction-text a:hover {
+  text-decoration: underline;
+}
+
+/* Credentials Preview */
+.credentials-preview {
+  margin-top: 24px;
+  padding: 20px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.credentials-preview h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: #1f2937;
+}
+
+.code-block {
+  position: relative;
+  background-color: #1f2937;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 16px;
+  color: #f9fafb;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-x: auto;
+}
+
+.copy-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: #374151;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.copy-button:hover {
+  background-color: #4b5563;
+}
+
+/* Credentials Input */
+.credentials-input {
+  margin-bottom: 24px;
+}
+
+.credentials-input label {
+  display: block;
+  margin-bottom: 8px;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.credentials-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.credentials-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.credentials-textarea.valid {
+  border-color: #10b981;
+}
+
+.credentials-textarea.invalid {
+  border-color: #ef4444;
+}
+
+.validation-message {
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.valid-message {
+  color: #10b981;
+  font-weight: 500;
+}
+
+.invalid-message {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.info-message {
+  color: #6b7280;
+}
+
+/* Advanced Options */
+.advanced-options {
+  margin-top: 24px;
+}
+
+.toggle-advanced {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 0;
+  text-decoration: underline;
+}
+
+.toggle-advanced:hover {
+  color: #5a67d8;
+}
+
+.advanced-content {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.advanced-content h4 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #1f2937;
+}
+
+.advanced-content p {
+  margin: 0 0 12px 0;
+  color: #6b7280;
+}
+
+.advanced-content ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #6b7280;
+}
+
+.advanced-content code {
+  background-color: #e5e7eb;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+}
+
+/* Completion Message */
+.completion-message {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.success-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #10b981;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: bold;
+  margin: 0 auto 16px auto;
+}
+
+.completion-message h4 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  color: #1f2937;
+}
+
+.completion-message p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+/* Next Steps */
+.next-steps {
+  margin-bottom: 24px;
+  padding: 20px;
+  background-color: #f0f9ff;
+  border-radius: 8px;
+  border: 1px solid #bae6fd;
+}
+
+.next-steps h4 {
+  margin: 0 0 12px 0;
+  color: #1e40af;
+  font-size: 16px;
+}
+
+.next-steps ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #1e40af;
+}
+
+.next-steps li {
+  margin-bottom: 4px;
+}
+
+/* Test Options */
+.test-options h4 {
+  margin: 0 0 12px 0;
+  color: #1f2937;
+  font-size: 16px;
+}
+
+.test-commands {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background-color: #1f2937;
+  border-radius: 6px;
+}
+
+.test-commands code {
+  flex: 1;
+  color: #f9fafb;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+}
+
+.test-commands button {
+  background-color: #374151;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: background-color 0.2s;
+}
+
+.test-commands button:hover {
+  background-color: #4b5563;
+}
+
+/* Navigation */
+.setup-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 24px;
+}
+
+.nav-button {
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.nav-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nav-button.primary {
+  background-color: #667eea;
+  color: white;
+}
+
+.nav-button.primary:hover:not(:disabled) {
+  background-color: #5a67d8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.nav-button.secondary {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.nav-button.secondary:hover:not(:disabled) {
+  background-color: #e5e7eb;
+}
+
+.step-indicator {
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 10px;
+  }
+  
+  .modal-header {
+    padding: 16px 20px;
+  }
+  
+  .modal-body {
+    padding: 20px;
+  }
+  
+  .progress-steps {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .progress-steps::before {
+    display: none;
+  }
+  
+  .progress-step {
+    flex-direction: row;
+    text-align: left;
+  }
+  
+  .step-number {
+    margin-right: 12px;
+  }
+  
+  .step-label {
+    margin-top: 0;
+  }
+  
+  .setup-navigation {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .nav-button {
+    width: 100%;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .modal-content {
+    background: #1f2937;
+    color: #f9fafb;
+  }
+  
+  .modal-header {
+    background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%);
+  }
+  
+  .setup-step h3 {
+    color: #f9fafb;
+  }
+  
+  .instruction-text strong {
+    color: #f9fafb;
+  }
+  
+  .instruction-text p {
+    color: #d1d5db;
+  }
+  
+  .credentials-preview {
+    background-color: #374151;
+    border-color: #4b5563;
+  }
+  
+  .credentials-preview h4 {
+    color: #f9fafb;
+  }
+  
+  .advanced-content {
+    background-color: #374151;
+    border-color: #4b5563;
+  }
+  
+  .advanced-content h4 {
+    color: #f9fafb;
+  }
+  
+  .next-steps {
+    background-color: #1e3a8a;
+    border-color: #3b82f6;
+  }
+  
+  .next-steps h4 {
+    color: #dbeafe;
+  }
+  
+  .next-steps ul {
+    color: #dbeafe;
+  }
+}
