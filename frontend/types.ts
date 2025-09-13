@@ -47,6 +47,7 @@ export interface BackupConfig {
   providers: Record<string, CloudProvider>;
   retention_days: number;
   encryption_enabled: boolean;
+  backup_count: number;
   logging: {
     enabled: boolean;
     log_file: string;

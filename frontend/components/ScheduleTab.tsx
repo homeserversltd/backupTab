@@ -100,13 +100,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
   return (
     <div className="schedule-tab">
-      <div className="schedule-header">
-        <div className="schedule-title">
-          <FontAwesomeIcon icon={faCalendarAlt} />
-          <h2>Backup Schedule</h2>
-        </div>
-      </div>
-
       <div className="schedule-form">
         {/* Toggle Switch */}
         <div 
@@ -129,61 +122,41 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         <div className={`schedule-options ${currentSchedule.enabled ? 'visible' : ''}`}>
           {/* Frequency Selection */}
           <div className="form-group">
-            <label>
-              <FontAwesomeIcon icon={faCalendarAlt} />
-              Frequency
-            </label>
-            <div className="schedule-frequency-radio-group">
-              <label className={`schedule-frequency-radio-label${currentSchedule.frequency === 'daily' ? ' schedule-frequency-selected' : ''}`}>
-                <input
-                  type="radio"
-                  name="frequency"
-                  value="daily"
-                  checked={currentSchedule.frequency === 'daily'}
-                  onChange={() => updateSchedule({ frequency: 'daily' })}
-                />
-                <span className="schedule-frequency-radio-label-content">Daily</span>
-              </label>
-              <label className={`schedule-frequency-radio-label${currentSchedule.frequency === 'weekly' ? ' schedule-frequency-selected' : ''}`}>
-                <input
-                  type="radio"
-                  name="frequency"
-                  value="weekly"
-                  checked={currentSchedule.frequency === 'weekly'}
-                  onChange={() => updateSchedule({ frequency: 'weekly' })}
-                />
-                <span className="schedule-frequency-radio-label-content">Weekly</span>
-              </label>
-              <label className={`schedule-frequency-radio-label${currentSchedule.frequency === 'monthly' ? ' schedule-frequency-selected' : ''}`}>
-                <input
-                  type="radio"
-                  name="frequency"
-                  value="monthly"
-                  checked={currentSchedule.frequency === 'monthly'}
-                  onChange={() => updateSchedule({ frequency: 'monthly' })}
-                />
-                <span className="schedule-frequency-radio-label-content">Monthly</span>
-              </label>
-              <label className={`schedule-frequency-radio-label${currentSchedule.frequency === 'yearly' ? ' schedule-frequency-selected' : ''}`}>
-                <input
-                  type="radio"
-                  name="frequency"
-                  value="yearly"
-                  checked={currentSchedule.frequency === 'yearly'}
-                  onChange={() => updateSchedule({ frequency: 'yearly' })}
-                />
-                <span className="schedule-frequency-radio-label-content">Yearly</span>
-              </label>
+            <div className="frequency-selector">
+              <div 
+                className={`frequency-option ${currentSchedule.frequency === 'daily' ? 'active' : ''}`}
+                onClick={() => updateSchedule({ frequency: 'daily' })}
+              >
+                <FontAwesomeIcon icon={faCalendarAlt} className="icon" />
+                <span>Daily</span>
+              </div>
+              <div 
+                className={`frequency-option ${currentSchedule.frequency === 'weekly' ? 'active' : ''}`}
+                onClick={() => updateSchedule({ frequency: 'weekly' })}
+              >
+                <FontAwesomeIcon icon={faCalendarAlt} className="icon" />
+                <span>Weekly</span>
+              </div>
+              <div 
+                className={`frequency-option ${currentSchedule.frequency === 'monthly' ? 'active' : ''}`}
+                onClick={() => updateSchedule({ frequency: 'monthly' })}
+              >
+                <FontAwesomeIcon icon={faCalendarAlt} className="icon" />
+                <span>Monthly</span>
+              </div>
+              <div 
+                className={`frequency-option ${currentSchedule.frequency === 'yearly' ? 'active' : ''}`}
+                onClick={() => updateSchedule({ frequency: 'yearly' })}
+              >
+                <FontAwesomeIcon icon={faCalendarAlt} className="icon" />
+                <span>Yearly</span>
+              </div>
             </div>
           </div>
           
           {/* Time and Day Selection */}
           <div className="form-row">
             <div className="form-group">
-              <label>
-                <FontAwesomeIcon icon={faClock} className="icon" />
-                Time
-              </label>
               <div className="time-input-group">
                 <input
                   type="time"
@@ -199,10 +172,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             
             {currentSchedule.frequency === 'weekly' && (
               <div className="form-group">
-                <label>
-                  <FontAwesomeIcon icon={faCalendarAlt} className="icon" />
-                  Day of Week
-                </label>
                 <div className="day-selector">
                   {DAYS_OF_WEEK.map((day, index) => (
                     <div
@@ -281,7 +250,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         
         <button
           type="button"
-          className="action-button primary"
+          className="save-schedule-button"
           onClick={saveSchedule}
         >
           <FontAwesomeIcon icon={faCheckCircle} />

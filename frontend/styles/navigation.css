@@ -7,6 +7,7 @@
   background: var(--primary);
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
+  border-radius: 12px;
 }
 
 .nav-button {
@@ -28,7 +29,7 @@
 }
 
 .nav-button.active {
-  color: var(--accent);
+  color: var(--text);
   border-bottom-color: var(--accent);
   background: var(--primaryHover);
 }

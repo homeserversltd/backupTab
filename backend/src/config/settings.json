@@ -66,6 +66,7 @@
     },
     "retention_days": 30,
     "encryption_enabled": true,
+    "backup_count": 0,
     "logging": {
       "enabled": true,
       "log_file": "/var/log/homeserver/backup.log",

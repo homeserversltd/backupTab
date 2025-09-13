@@ -4,6 +4,7 @@
 
 .overview-layout {
   display: flex !important;
+  flex-direction: column !important;
   gap: 0 !important;
   height: 100% !important;
   min-height: 600px !important;
@@ -16,6 +17,12 @@
   position: relative !important;
   margin: 0 !important;
   padding: 0 !important;
+}
+
+.overview-content {
+  display: flex !important;
+  flex: 1 !important;
+  gap: 0 !important;
 }
 
 /* Left Column - Providers */
@@ -40,6 +47,60 @@
   margin: 0 !important;
 }
 
+/* Stats Banner */
+.stats-banner {
+  background: var(--accent);
+  color: var(--background);
+  padding: 12px 20px;
+  margin: 0 0 20px 0;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 2px 4px var(--border);
+}
+
+.stats-banner h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.stats-banner .backup-count {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* Stats Grid Layout */
+.stats-grid {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.stat-item .backup-count,
+.stat-item .next-backup {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--background);
+}
+
+.stat-label {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.85rem;
+  opacity: 0.9;
+  color: var(--background);
+}
+
 /* Panel Headers */
 .panel-header h3 {
   margin: 0 0 0.5rem 0;
@@ -59,16 +120,16 @@
 .provider-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .provider-item {
   display: flex;
   align-items: center;
-  padding: 15px;
+  padding: 10px;
   background: var(--primary);
   border: 2px solid transparent;
-  border-radius: 8px;
+  border-radius: 6px;
   transition: all 0.2s ease;
   position: relative;
   box-shadow: 0 2px 4px var(--border);
@@ -92,8 +153,8 @@
 }
 
 .provider-icon {
-  font-size: 1.5rem;
-  margin-right: 1rem;
+  font-size: 1.2rem;
+  margin-right: 0.75rem;
   flex-shrink: 0;
 }
 
@@ -105,21 +166,22 @@
 .provider-name {
   font-weight: 600;
   color: var(--text);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.15rem;
+  font-size: 0.9rem;
 }
 
 .provider-description {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: var(--text);
   opacity: 0.8;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.15rem;
 }
 
 .provider-status {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 500;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
   display: inline-block;
 }
 
@@ -133,57 +195,6 @@
   color: var(--background);
 }
 
-/* File Input Section - Right Column */
-.file-input-section {
-  margin-bottom: 1.5rem;
-}
-
-.input-group {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.form-input {
-  flex: 1;
-  padding: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.9rem;
-  background: var(--background);
-  color: var(--text);
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent);
-}
-
-.action-button {
-  padding: 0.75rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.action-button.primary {
-  background: var(--accent);
-  color: var(--background);
-}
-
-.action-button.primary:hover:not(:disabled) {
-  background: var(--primaryHover);
-  transform: translateY(-1px);
-}
-
-.action-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
 /* File List - Right Column */
 .file-list {
@@ -227,26 +238,6 @@
   word-break: break-all;
 }
 
-.remove-button {
-  background: var(--error);
-  color: var(--background);
-  border: none;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 0.8rem;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
-
-.remove-button:hover {
-  background: var(--statusDown);
-  transform: scale(1.1);
-}
 
 /* Empty States */
 .empty-state {

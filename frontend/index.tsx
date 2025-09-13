@@ -8,7 +8,8 @@ import { useBackupControls } from './hooks/useBackupControls';
 import { 
   BackupStatus, 
   CloudProvider,
-  BackupConfig 
+  BackupConfig,
+  ScheduleInfo 
 } from './types';
 import { 
   getStatusColor,
@@ -24,6 +25,7 @@ const BackupTablet: React.FC = () => {
     getStatus,
     getConfig,
     updateConfig,
+    getSchedule,
     isLoading,
     error,
     clearError
@@ -32,6 +34,7 @@ const BackupTablet: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'providers' | 'schedule' | 'config'>('overview');
   const [status, setStatus] = useState<BackupStatus | null>(null);
   const [config, setConfig] = useState<BackupConfig | null>(null);
+  const [scheduleInfo, setScheduleInfo] = useState<ScheduleInfo | null>(null);
 
   // Load initial data
   useEffect(() => {
@@ -40,13 +43,15 @@ const BackupTablet: React.FC = () => {
 
   const loadInitialData = async () => {
     try {
-      const [statusData, configData] = await Promise.all([
+      const [statusData, configData, scheduleData] = await Promise.all([
         getStatus(),
-        getConfig()
+        getConfig(),
+        getSchedule()
       ]);
 
       setStatus(statusData);
       setConfig(configData);
+      setScheduleInfo(scheduleData);
     } catch (err) {
       console.error('Failed to load initial data:', err);
     }
@@ -101,6 +106,7 @@ const BackupTablet: React.FC = () => {
         {activeTab === 'overview' && (
           <OverviewTab 
             config={config}
+            scheduleInfo={scheduleInfo}
             onConfigChange={updateConfig}
           />
         )}

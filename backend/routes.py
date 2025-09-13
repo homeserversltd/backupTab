@@ -4,6 +4,7 @@ HOMESERVER Backup Tab Backend Routes
 Professional backup system API endpoints - Refactored version
 """
 
+import os
 from datetime import datetime
 from flask import Blueprint, request, jsonify
 from .utils import get_logger, create_backup_timestamp
@@ -90,6 +91,9 @@ def get_config():
     """Get backup configuration"""
     try:
         config = config_manager.get_safe_config()
+        # Ensure backup_count is included
+        if 'backup_count' not in config:
+            config['backup_count'] = 0
         return create_response(True, config)
     except Exception as e:
         get_logger().error(f"Config retrieval failed: {e}")
@@ -221,7 +225,13 @@ def get_provider_info(provider_name):
 def get_backup_statistics():
     """Get backup statistics and metrics"""
     try:
+        # Get basic stats from backup handler
         stats = backup_handler.get_backup_statistics()
+        
+        # Add backup count from config
+        config = config_manager.get_safe_config()
+        stats['backup_count'] = config.get('backup_count', 0)
+        
         return create_response(True, stats)
     except Exception as e:
         get_logger().error(f"Statistics retrieval failed: {e}")
@@ -295,4 +305,104 @@ def test_schedule():
         return create_response(True, result)
     except Exception as e:
         get_logger().error(f"Schedule test failed: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+# Version and System Info Routes
+@bp.route('/version', methods=['GET'])
+def get_version():
+    """Get backup tab version information"""
+    try:
+        # Read version from VERSION file
+        version_file = os.path.join(os.path.dirname(__file__), '..', 'VERSION')
+        version = "1.0.0"  # Default fallback
+        
+        if os.path.exists(version_file):
+            with open(version_file, 'r') as f:
+                version = f.read().strip()
+        
+        return create_response(True, {
+            'version': version,
+            'tab_name': 'backupTab',
+            'description': 'HOMESERVER Professional Backup System',
+            'last_updated': datetime.now().isoformat()
+        })
+    except Exception as e:
+        get_logger().error(f"Version retrieval failed: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/auto-update/status', methods=['GET'])
+def get_auto_update_status():
+    """Get current auto-update status for the backup tab"""
+    try:
+        # Check if auto-update is enabled in config
+        config = config_manager.get_safe_config()
+        auto_update_enabled = config.get('auto_update_enabled', False)
+        
+        return create_response(True, {
+            'enabled': auto_update_enabled,
+            'tab_name': 'backupTab',
+            'last_check': config.get('last_update_check'),
+            'update_available': config.get('update_available', False)
+        })
+    except Exception as e:
+        get_logger().error(f"Auto-update status retrieval failed: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/auto-update/toggle', methods=['POST'])
+def toggle_auto_update():
+    """Toggle auto-update setting for the backup tab"""
+    try:
+        data = request.get_json()
+        if not data or 'enabled' not in data:
+            return create_response(False, error='Missing enabled field', status_code=400)
+        
+        enabled = bool(data['enabled'])
+        
+        # Update config with auto-update setting
+        config = config_manager.get_safe_config()
+        config['auto_update_enabled'] = enabled
+        config['last_update_check'] = datetime.now().isoformat()
+        
+        success = config_manager.update_config(config)
+        if not success:
+            return create_response(False, error='Failed to update auto-update setting', status_code=500)
+        
+        # If enabling auto-update, trigger a check for updates
+        if enabled:
+            try:
+                # This would integrate with the main update system
+                # For now, we'll just log that auto-update was enabled
+                get_logger().info(f"Auto-update enabled for backupTab")
+            except Exception as check_error:
+                get_logger().warning(f"Failed to check for updates after enabling auto-update: {check_error}")
+        
+        return create_response(True, {
+            'enabled': enabled,
+            'tab_name': 'backupTab',
+            'message': f'Auto-update {"enabled" if enabled else "disabled"} successfully'
+        })
+    except Exception as e:
+        get_logger().error(f"Auto-update toggle failed: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/auto-update/check', methods=['POST'])
+def check_for_updates():
+    """Manually check for updates for the backup tab"""
+    try:
+        # This would integrate with the main update system
+        # For now, we'll simulate a check
+        config = config_manager.get_safe_config()
+        config['last_update_check'] = datetime.now().isoformat()
+        config['update_available'] = False  # This would be determined by the update system
+        
+        config_manager.update_config(config)
+        
+        return create_response(True, {
+            'update_available': False,
+            'tab_name': 'backupTab',
+            'last_check': config['last_update_check'],
+            'message': 'Update check completed'
+        })
+    except Exception as e:
+        get_logger().error(f"Update check failed: {e}")
         return create_response(False, error=str(e), status_code=500)

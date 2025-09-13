@@ -3,7 +3,7 @@
  * Backup configuration and file management
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BackupConfig } from '../types';
 
 interface ConfigTabProps {
@@ -19,6 +19,86 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
   const [retentionDays, setRetentionDays] = useState(config?.retention_days || 30);
   const [encryptionEnabled, setEncryptionEnabled] = useState(config?.encryption_enabled || false);
   const [logLevel, setLogLevel] = useState(config?.logging?.log_level || 'INFO');
+  const [version, setVersion] = useState<string>('1.0.0');
+  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(false);
+  const [lastUpdateCheck, setLastUpdateCheck] = useState<string>('');
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+
+  // Load version and auto-update status on component mount
+  useEffect(() => {
+    loadVersionInfo();
+    loadAutoUpdateStatus();
+  }, []);
+
+  const loadVersionInfo = async () => {
+    try {
+      const response = await fetch('/api/backup/version');
+      const data = await response.json();
+      if (data.success) {
+        setVersion(data.data.version);
+      }
+    } catch (error) {
+      console.error('Failed to load version info:', error);
+    }
+  };
+
+  const loadAutoUpdateStatus = async () => {
+    try {
+      const response = await fetch('/api/backup/auto-update/status');
+      const data = await response.json();
+      if (data.success) {
+        setAutoUpdateEnabled(data.data.enabled);
+        setLastUpdateCheck(data.data.last_check || '');
+        setUpdateAvailable(data.data.update_available || false);
+      }
+    } catch (error) {
+      console.error('Failed to load auto-update status:', error);
+    }
+  };
+
+  const handleAutoUpdateToggle = async (enabled: boolean) => {
+    try {
+      const response = await fetch('/api/backup/auto-update/toggle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ enabled }),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setAutoUpdateEnabled(enabled);
+        if (enabled) {
+          // Trigger an immediate update check when enabling
+          checkForUpdates();
+        }
+      } else {
+        console.error('Failed to toggle auto-update:', data.error);
+      }
+    } catch (error) {
+      console.error('Failed to toggle auto-update:', error);
+    }
+  };
+
+  const checkForUpdates = async () => {
+    try {
+      const response = await fetch('/api/backup/auto-update/check', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setLastUpdateCheck(data.data.last_check);
+        setUpdateAvailable(data.data.update_available);
+      }
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+    }
+  };
 
   const handleAddFile = () => {
     if (!newFilePath.trim() || !config) return;
@@ -172,6 +252,60 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
           >
             Reset to Defaults
           </button>
+        </div>
+
+        {/* About Section */}
+        <div className="config-section">
+          <h4>About & Updates</h4>
+          <div className="about-content">
+            <div className="about-info">
+              <div className="info-item">
+                <strong>Version:</strong> {version}
+              </div>
+              <div className="info-item">
+                <strong>Tab Name:</strong> backupTab
+              </div>
+              <div className="info-item">
+                <strong>Description:</strong> HOMESERVER Professional Backup System
+              </div>
+              {lastUpdateCheck && (
+                <div className="info-item">
+                  <strong>Last Update Check:</strong> {new Date(lastUpdateCheck).toLocaleString()}
+                </div>
+              )}
+              {updateAvailable && (
+                <div className="info-item update-available">
+                  <strong>Update Available:</strong> <span className="update-badge">New version available</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="auto-update-controls">
+              <div className="setting-item">
+                <div className="checkbox-container">
+                  <input
+                    id="auto-update-enabled"
+                    type="checkbox"
+                    checked={autoUpdateEnabled}
+                    onChange={(e) => handleAutoUpdateToggle(e.target.checked)}
+                  />
+                  <label htmlFor="auto-update-enabled">Enable Auto-Update</label>
+                </div>
+                <p className="setting-description">
+                  Automatically check for and apply updates to the backup tab
+                </p>
+              </div>
+              
+              <div className="update-actions">
+                <button 
+                  className="action-button secondary"
+                  onClick={checkForUpdates}
+                >
+                  Check for Updates
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

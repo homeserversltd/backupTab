@@ -61,7 +61,7 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
             <input
               id="path"
               type="text"
-              value={localConfig.container || ''}
+              value={localConfig.container || '/mnt/nas/backups/homeserver'}
               onChange={(e) => handleFieldChange('container', e.target.value)}
               placeholder="/mnt/nas/backups/homeserver"
               className="form-input"
@@ -71,20 +71,6 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
             </small>
           </div>
 
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={localConfig.enabled || false}
-                onChange={(e) => handleFieldChange('enabled', e.target.checked)}
-                className="form-checkbox"
-              />
-              <span>Enable local NAS backup storage</span>
-            </label>
-            <small className="field-help">
-              Enable or disable the local NAS filesystem provider
-            </small>
-          </div>
         </div>
 
         {/* Backup Process Information */}
@@ -112,21 +98,6 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
           </div>
         </div>
 
-        {/* Advanced Settings */}
-        <div className="config-section">
-          <h5>Advanced Settings</h5>
-          <div className="info-box">
-            <div className="info-item">
-              <strong>Retention Policy:</strong> Configured globally in the Config tab
-            </div>
-            <div className="info-item">
-              <strong>Backup Schedule:</strong> Configured in the Schedule tab
-            </div>
-            <div className="info-item">
-              <strong>Encryption:</strong> Configured globally in the Config tab
-            </div>
-          </div>
-        </div>
 
         {/* Storage Requirements */}
         <div className="config-section">
