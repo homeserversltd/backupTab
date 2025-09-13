@@ -91,6 +91,23 @@ export interface ScheduleInfo {
   schedule_config: Record<string, string>;
 }
 
+export interface BackupScheduleConfig {
+  id: string;
+  name: string;
+  enabled: boolean;
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+  day?: number; // 0-6 for weekly (Sunday-Saturday), 1-31 for monthly
+  hour: number; // 0-23
+  minute: number; // 0-59
+  customCron?: string; // For custom schedules
+  backupType: 'full' | 'incremental' | 'differential';
+  retentionDays: number;
+  repositories: string[];
+  lastRun?: string;
+  nextRun?: string;
+  status: 'active' | 'paused' | 'error' | 'never_run';
+}
+
 export interface BackupOperation {
   type: 'daily' | 'weekly' | 'monthly' | 'yearly';
   repositories: string[];

@@ -16,11 +16,67 @@
       "description": "TypeScript types for the backup tablet"
     },
     {
-      "source": "frontend/PortalCard.css",
-      "target": "/var/www/homeserver/src/tablets/backupTab/PortalCard.css",
+      "source": "frontend/backupTab.css",
+      "target": "/var/www/homeserver/src/tablets/backupTab/backupTab.css",
       "type": "copy",
       "identifier": null,
-      "description": "Backup tablet-specific CSS"
+      "description": "Main CSS import file for backup tablet"
+    },
+    {
+      "source": "frontend/styles/base.css",
+      "target": "/var/www/homeserver/src/tablets/backupTab/styles/base.css",
+      "type": "copy",
+      "identifier": null,
+      "description": "Base styles for backup tablet"
+    },
+    {
+      "source": "frontend/styles/navigation.css",
+      "target": "/var/www/homeserver/src/tablets/backupTab/styles/navigation.css",
+      "type": "copy",
+      "identifier": null,
+      "description": "Navigation styles for backup tablet"
+    },
+    {
+      "source": "frontend/styles/providers.css",
+      "target": "/var/www/homeserver/src/tablets/backupTab/styles/providers.css",
+      "type": "copy",
+      "identifier": null,
+      "description": "Provider selection and configuration styles"
+    },
+    {
+      "source": "frontend/styles/forms.css",
+      "target": "/var/www/homeserver/src/tablets/backupTab/styles/forms.css",
+      "type": "copy",
+      "identifier": null,
+      "description": "Form and input styling for backup tablet"
+    },
+    {
+      "source": "frontend/styles/overview.css",
+      "target": "/var/www/homeserver/src/tablets/backupTab/styles/overview.css",
+      "type": "copy",
+      "identifier": null,
+      "description": "Overview tab specific styles"
+    },
+    {
+      "source": "frontend/styles/repositories.css",
+      "target": "/var/www/homeserver/src/tablets/backupTab/styles/repositories.css",
+      "type": "copy",
+      "identifier": null,
+      "description": "Repository cards and backup history styles"
+    },
+    {
+      "source": "frontend/styles/config.css",
+      "target": "/var/www/homeserver/src/tablets/backupTab/styles/config.css",
+      "type": "copy",
+      "identifier": null,
+      "description": "Configuration panel styles"
+    },
+    {
+      "source": "frontend/styles/responsive.css",
+      "target": "/var/www/homeserver/src/tablets/backupTab/styles/responsive.css",
+      "type": "copy",
+      "identifier": null,
+      "description": "Responsive design styles for mobile and tablet"
     },
     {
       "source": "frontend/components/BackupCard.tsx",

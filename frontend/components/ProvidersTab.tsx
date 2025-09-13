@@ -1,10 +1,13 @@
 /**
  * HOMESERVER Backup Providers Tab Component
- * Cloud provider configuration and management
+ * Modular provider configuration and management
  */
 
 import React, { useState, useEffect } from 'react';
-import { BackupConfig } from '../types';
+import { BackupConfig, CloudProvider } from '../types';
+import { ProviderSelector } from './providers/ProviderSelector';
+import { BackblazeProvider } from './providers/BackblazeProvider';
+import { LocalProvider } from './providers/LocalProvider';
 
 interface ProvidersTabProps {
   config: BackupConfig | null;
@@ -16,7 +19,8 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
   updateConfig
 }) => {
   const [selectedProvider, setSelectedProvider] = useState<string>('backblaze');
-  const [providerConfig, setProviderConfig] = useState<Record<string, any>>({});
+  const [providerConfig, setProviderConfig] = useState<CloudProvider | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Load provider config when provider changes
   useEffect(() => {
@@ -29,16 +33,44 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
     setSelectedProvider(provider);
   };
 
-  const handleProviderConfigChange = (key: string, value: string) => {
-    setProviderConfig(prev => ({
-      ...prev,
-      [key]: value
-    }));
+  const handleProviderToggle = async (provider: string, enabled: boolean) => {
+    if (!config) return;
+    
+    setIsLoading(true);
+    try {
+      const updatedConfig = {
+        ...config,
+        providers: {
+          ...config.providers,
+          [provider]: {
+            ...config.providers[provider],
+            enabled
+          }
+        }
+      };
+      
+      await updateConfig(updatedConfig);
+    } catch (err) {
+      console.error('Failed to toggle provider:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleProviderConfigChange = (newConfig: Partial<CloudProvider>) => {
+    setProviderConfig(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        ...newConfig
+      };
+    });
   };
 
   const handleSaveProviderConfig = async () => {
-    if (!config) return;
+    if (!config || !providerConfig) return;
     
+    setIsLoading(true);
     try {
       const updatedConfig = {
         ...config,
@@ -54,6 +86,56 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
       await updateConfig(updatedConfig);
     } catch (err) {
       console.error('Failed to save provider config:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderProviderConfig = () => {
+    if (!providerConfig) {
+      return (
+        <div className="provider-config-panel">
+          <div className="loading-state">
+            <span>Loading provider configuration...</span>
+          </div>
+        </div>
+      );
+    }
+
+    switch (selectedProvider) {
+      case 'backblaze':
+        return (
+          <div className="provider-config-panel">
+            <BackblazeProvider
+              config={providerConfig}
+              onConfigChange={handleProviderConfigChange}
+              onSave={handleSaveProviderConfig}
+              isLoading={isLoading}
+            />
+          </div>
+        );
+      
+      case 'local':
+        return (
+          <div className="provider-config-panel">
+            <LocalProvider
+              config={providerConfig}
+              onConfigChange={handleProviderConfigChange}
+              onSave={handleSaveProviderConfig}
+              isLoading={isLoading}
+            />
+          </div>
+        );
+      
+      default:
+        return (
+          <div className="provider-config-panel">
+            <div className="provider-not-available">
+              <h4>Provider Not Available</h4>
+              <p>This provider is not yet implemented or available.</p>
+            </div>
+          </div>
+        );
     }
   };
 
@@ -70,113 +152,15 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
   return (
     <div className="providers-tab">
       <div className="providers-layout">
-        <div className="providers-panel">
-          <h3>Providers</h3>
-          <div className="provider-list">
-            {/* Backblaze first - always selectable */}
-            <div 
-              className={`provider-item ${selectedProvider === 'backblaze' ? 'selected' : ''}`}
-              onClick={() => handleProviderSelect('backblaze')}
-            >
-              <span className="provider-name">backblaze</span>
-              {config.providers.backblaze?.enabled && (
-                <span className="provider-check">✓</span>
-              )}
-            </div>
-            
-            {/* Other providers - greyed out */}
-            {Object.keys(config.providers)
-              .filter(provider => provider !== 'backblaze')
-              .map(provider => (
-                <div 
-                  key={provider}
-                  className="provider-item disabled"
-                >
-                  <span className="provider-name">{provider}</span>
-                  <span className="provider-disabled">Future development</span>
-                </div>
-              ))}
-            
-            <div className="provider-item placeholder">
-              <span className="provider-name">placeholder coming soon</span>
-            </div>
-            <div className="provider-item placeholder">
-              <span className="provider-name"></span>
-            </div>
-          </div>
-        </div>
+        <ProviderSelector
+          config={config}
+          selectedProvider={selectedProvider}
+          onProviderSelect={handleProviderSelect}
+          onProviderToggle={handleProviderToggle}
+          isLoading={isLoading}
+        />
         
-        <div className="provider-config-panel">
-          <h3>Configuration</h3>
-          {selectedProvider && config.providers[selectedProvider] && (
-            <div className="config-form">
-              <div className="form-group">
-                <label>Username</label>
-                <input
-                  type="text"
-                  value={providerConfig.username || ''}
-                  onChange={(e) => handleProviderConfigChange('username', e.target.value)}
-                  placeholder="Enter username"
-                />
-              </div>
-              <div className="form-group">
-                <label>Password</label>
-                <input
-                  type="password"
-                  value={providerConfig.password || ''}
-                  onChange={(e) => handleProviderConfigChange('password', e.target.value)}
-                  placeholder="Enter password"
-                />
-              </div>
-              {selectedProvider === 'backblaze' && (
-                <>
-                  <div className="form-group">
-                    <label>Bucket Name</label>
-                    <input
-                      type="text"
-                      value={providerConfig.container || ''}
-                      onChange={(e) => handleProviderConfigChange('container', e.target.value)}
-                      placeholder="Enter bucket name"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Application Key ID</label>
-                    <input
-                      type="text"
-                      value={providerConfig.application_key_id || ''}
-                      onChange={(e) => handleProviderConfigChange('application_key_id', e.target.value)}
-                      placeholder="Enter application key ID"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Application Key</label>
-                    <input
-                      type="password"
-                      value={providerConfig.application_key || ''}
-                      onChange={(e) => handleProviderConfigChange('application_key', e.target.value)}
-                      placeholder="Enter application key"
-                    />
-                  </div>
-                </>
-              )}
-              <div className="form-group">
-                <label>Additional Config</label>
-                <textarea
-                  value={providerConfig.notes || ''}
-                  onChange={(e) => handleProviderConfigChange('notes', e.target.value)}
-                  placeholder="Any other configuration notes..."
-                  rows={3}
-                />
-              </div>
-              <button 
-                className="action-button primary"
-                onClick={handleSaveProviderConfig}
-              >
-                Save Configuration
-              </button>
-            </div>
-          )}
-        </div>
+        {renderProviderConfig()}
       </div>
     </div>
   );

@@ -1,0 +1,51 @@
+/**
+ * Base styles for backup tab
+ * Uses theme system variables
+ */
+
+.backup-tablet {
+  background: var(--background);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px var(--primary), 0 2px 4px var(--border);
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.backup-tablet-header {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  color: var(--text);
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.backup-tablet-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.backup-tablet-description {
+  margin-top: 0.5rem;
+  opacity: 0.9;
+  font-size: 0.9rem;
+}
+
+.version-info {
+  margin-top: 1rem;
+}
+
+.version-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  backdrop-filter: blur(10px);
+}
+
+.backup-tablet-content {
+  padding: 1.5rem;
+  min-height: 400px;
+}

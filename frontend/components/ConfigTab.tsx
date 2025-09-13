@@ -107,6 +107,7 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                   <button 
                     className="remove-button"
                     onClick={() => handleRemoveFile(index)}
+                    title="Remove file from backup list"
                   >
                     ×
                   </button>
@@ -120,26 +121,32 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
           <h4>Backup Settings</h4>
           <div className="settings-grid">
             <div className="setting-item">
-              <label>Retention Days</label>
+              <label htmlFor="retention-days">Retention Days</label>
               <input
+                id="retention-days"
                 type="number"
                 value={retentionDays}
                 onChange={(e) => setRetentionDays(parseInt(e.target.value) || 30)}
                 min="1"
                 max="365"
+                placeholder="30"
               />
             </div>
             <div className="setting-item">
-              <label>Encryption</label>
-              <input
-                type="checkbox"
-                checked={encryptionEnabled}
-                onChange={(e) => setEncryptionEnabled(e.target.checked)}
-              />
+              <div className="checkbox-container">
+                <input
+                  id="encryption-enabled"
+                  type="checkbox"
+                  checked={encryptionEnabled}
+                  onChange={(e) => setEncryptionEnabled(e.target.checked)}
+                />
+                <label htmlFor="encryption-enabled">Enable Encryption</label>
+              </div>
             </div>
             <div className="setting-item">
-              <label>Log Level</label>
+              <label htmlFor="log-level">Log Level</label>
               <select 
+                id="log-level"
                 value={logLevel}
                 onChange={(e) => setLogLevel(e.target.value)}
               >

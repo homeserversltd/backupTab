@@ -54,16 +54,6 @@ const BackupTablet: React.FC = () => {
 
   return (
     <div className="backup-tablet">
-      <div className="backup-tablet-header">
-        <h2>HOMESERVER Backup System</h2>
-        <p className="backup-tablet-description">
-          Professional-grade 3-2-1 backup system with encryption and cloud upload
-        </p>
-        <div className="version-info">
-          <span className="version-badge">v1.0.0</span>
-        </div>
-      </div>
-
       <div className="backup-tablet-nav">
         <button 
           className={`nav-button ${activeTab === 'overview' ? 'active' : ''}`}

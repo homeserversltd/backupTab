@@ -1,0 +1,34 @@
+/**
+ * Navigation styles for backup tab
+ */
+
+.backup-tablet-nav {
+  display: flex;
+  background: var(--primary);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.nav-button {
+  flex: 1;
+  padding: 1rem;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+}
+
+.nav-button:hover {
+  background: var(--primaryHover);
+  color: var(--text);
+}
+
+.nav-button.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: var(--primaryHover);
+}

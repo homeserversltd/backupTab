@@ -1,0 +1,53 @@
+/**
+ * Responsive design styles
+ */
+
+@media (max-width: 768px) {
+  .backup-tablet {
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .repositories-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .backup-tablet-nav {
+    flex-direction: column;
+  }
+
+  .nav-button {
+    border-bottom: 1px solid var(--border);
+    border-right: none;
+  }
+
+  .nav-button.active {
+    border-bottom-color: var(--border);
+    border-left: 3px solid var(--accent);
+  }
+
+  .backup-actions {
+    flex-direction: column;
+  }
+
+  .action-button {
+    width: 100%;
+  }
+
+  .repository-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-controls {
+    flex-direction: column;
+  }
+
+  .providers-layout {
+    flex-direction: column;
+  }
+
+  .provider-selector {
+    flex: none;
+    max-height: 300px;
+  }
+}

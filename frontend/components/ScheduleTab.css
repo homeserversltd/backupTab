@@ -1,0 +1,502 @@
+/**
+ * HOMESERVER Backup Schedule Tab Styles
+ * Professional backup scheduling interface styling
+ */
+
+.schedule-tab {
+  padding: 20px;
+  background: var(--background);
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Header Section */
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 20px;
+  background: var(--background);
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
+}
+
+.schedule-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.schedule-title h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.schedule-title svg {
+  color: var(--accent);
+  font-size: 24px;
+}
+
+.schedule-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.view-toggle {
+  display: flex;
+  background: var(--primary);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.view-toggle button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  color: var(--secondary);
+}
+
+.view-toggle button.active {
+  background: var(--background);
+  color: var(--accent);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.view-toggle button:hover:not(.active) {
+  background: var(--primaryHover);
+  color: var(--text);
+}
+
+.add-schedule-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--success);
+  color: var(--background);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);
+}
+
+.add-schedule-btn:hover {
+  background: var(--success);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(5, 150, 105, 0.4);
+  filter: brightness(1.1);
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--background);
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
+}
+
+.empty-state svg {
+  font-size: 64px;
+  color: var(--primary);
+  margin-bottom: 20px;
+}
+
+.empty-state h3 {
+  color: var(--text);
+  margin-bottom: 10px;
+  font-size: 24px;
+}
+
+.empty-state p {
+  color: var(--secondary);
+  margin-bottom: 30px;
+  font-size: 16px;
+}
+
+.create-first-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 30px;
+  background: var(--accent);
+  color: var(--background);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(144, 207, 243, 0.3);
+}
+
+.create-first-btn:hover {
+  background: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(144, 207, 243, 0.4);
+  filter: brightness(1.1);
+}
+
+/* Schedules Grid */
+.schedules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.schedule-card {
+  background: var(--background);
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border-left: 4px solid var(--primary);
+  border: 1px solid var(--border);
+}
+
+.schedule-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Use existing status classes from overview.css and repositories.css */
+.schedule-card.status-active {
+  border-left-color: var(--statusUp);
+}
+
+.schedule-card.status-paused {
+  border-left-color: var(--warning);
+}
+
+.schedule-card.status-error {
+  border-left-color: var(--statusDown);
+}
+
+.schedule-card.status-never-run {
+  border-left-color: var(--statusUnknown);
+}
+
+.schedule-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.schedule-info h3 {
+  margin: 0 0 8px 0;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.schedule-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.schedule-status svg {
+  font-size: 16px;
+}
+
+/* Use existing status color classes from overview.css */
+.schedule-status .status-active {
+  color: var(--statusUp);
+}
+
+.schedule-status .status-paused {
+  color: var(--warning);
+}
+
+.schedule-status .status-error {
+  color: var(--statusDown);
+}
+
+.schedule-status .status-never-run {
+  color: var(--statusUnknown);
+}
+
+.schedule-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.schedule-actions button {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.toggle-btn {
+  background: var(--primary);
+  color: var(--secondary);
+}
+
+.toggle-btn:hover {
+  background: var(--primaryHover);
+  color: var(--text);
+}
+
+.edit-btn {
+  background: var(--accent);
+  color: var(--background);
+}
+
+.edit-btn:hover {
+  background: var(--accent);
+  filter: brightness(1.1);
+}
+
+.delete-btn {
+  background: var(--statusDown);
+  color: var(--background);
+}
+
+.delete-btn:hover {
+  background: var(--statusDown);
+  filter: brightness(1.1);
+}
+
+/* Schedule Details */
+.schedule-details {
+  padding: 20px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: var(--secondary);
+  font-size: 14px;
+}
+
+.detail-value {
+  color: var(--text);
+  font-size: 14px;
+  text-align: right;
+}
+
+/* Calendar View */
+.schedule-calendar {
+  background: var(--background);
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+
+.calendar-header h3 {
+  color: var(--text);
+  margin-bottom: 10px;
+  font-size: 24px;
+}
+
+.calendar-header p {
+  color: var(--secondary);
+  margin-bottom: 30px;
+}
+
+.calendar-placeholder {
+  padding: 60px 20px;
+}
+
+.calendar-placeholder svg {
+  font-size: 64px;
+  color: var(--primary);
+  margin-bottom: 20px;
+}
+
+.calendar-placeholder p {
+  color: var(--secondary);
+  font-size: 16px;
+}
+
+/* Modal Styles */
+.schedule-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.schedule-modal {
+  background: var(--background);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 30px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--secondary);
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: var(--primary);
+  color: var(--text);
+}
+
+.modal-content {
+  padding: 30px;
+}
+
+/* Use existing form styles from forms.css */
+.time-selects {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.time-selects select {
+  flex: 1;
+}
+
+.time-selects span {
+  color: var(--secondary);
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 30px;
+  border-top: 1px solid var(--border);
+  background: var(--background);
+  border-radius: 0 0 12px 12px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .schedule-header {
+    flex-direction: column;
+    gap: 20px;
+    align-items: stretch;
+  }
+
+  .schedule-controls {
+    justify-content: space-between;
+  }
+
+  .schedules-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-card-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+
+  .schedule-actions {
+    justify-content: flex-end;
+  }
+
+  .modal-content {
+    padding: 20px;
+  }
+
+  .modal-actions {
+    padding: 15px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .schedule-tab {
+    padding: 10px;
+  }
+
+  .view-toggle {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .view-toggle button {
+    justify-content: center;
+  }
+
+  .time-selects {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .time-selects span {
+    text-align: center;
+  }
+}

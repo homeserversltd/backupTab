@@ -5,7 +5,7 @@
     "providers": {
       "local": {
         "enabled": false,
-        "path": "/var/backups/homeserver"
+        "container": "/mnt/nas/backups/homeserver"
       },
       "google_drive": {
         "enabled": false,

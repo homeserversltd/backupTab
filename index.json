@@ -56,14 +56,23 @@
       "backup_handlers": "backend/backup_handlers.py",
       "schedule_handlers": "backend/schedule_handlers.py",
       "refactoring_summary": "backend/REFACTORING_SUMMARY.md",
-      "routes_old": "backend/routes_old.py"
+      "routes_old": "backend/routes_old.py",
+      "routes_new": "backend/routes_new.py"
     },
     "frontend": {
       "index": "frontend/index.json",
       "package": "frontend/package.patch.json",
       "entry": "frontend/index.tsx",
       "types": "frontend/types.ts",
-      "PortalCard": "frontend/PortalCard.css",
+      "backupTab": "frontend/backupTab.css",
+      "base_css": "frontend/styles/base.css",
+      "navigation_css": "frontend/styles/navigation.css",
+      "providers_css": "frontend/styles/providers.css",
+      "forms_css": "frontend/styles/forms.css",
+      "overview_css": "frontend/styles/overview.css",
+      "repositories_css": "frontend/styles/repositories.css",
+      "config_css": "frontend/styles/config.css",
+      "responsive_css": "frontend/styles/responsive.css",
       "useBackupControls": "frontend/hooks/useBackupControls.ts",
       "default": "frontend/images/default.png",
       "components_index": "frontend/components/index.ts",
@@ -81,7 +90,10 @@
       "GoogleDriveSetupModal_tsx": "frontend/components/GoogleDriveSetupModal.tsx",
       "GoogleSetupModal_css": "frontend/components/GoogleSetupModal.css",
       "GoogleSetupModal_md": "frontend/components/GoogleSetupModal.md",
-      "GoogleSetupModal_tsx": "frontend/components/GoogleSetupModal.tsx"
+      "GoogleSetupModal_tsx": "frontend/components/GoogleSetupModal.tsx",
+      "ProviderSelector": "frontend/components/providers/ProviderSelector.tsx",
+      "BackblazeProvider": "frontend/components/providers/BackblazeProvider.tsx",
+      "LocalProvider": "frontend/components/providers/LocalProvider.tsx"
     },
     "permissions": {
       "flask_backup": "permissions/flask-backup"

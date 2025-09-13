@@ -190,17 +190,33 @@ class EnhancedBackupCLI:
         # Upload to all enabled providers
         upload_results = {}
         for provider_name, provider in self.providers.items():
-            self.logger.info(f"Uploading to {provider_name}...")
-            success = provider.upload(package_path, package_path.name)
+            self.logger.info(f"Processing with {provider_name}...")
+            
+            if provider_name == "local":
+                # Local provider handles tarball creation and encryption internally
+                backup_path = provider.create_backup(backup_items, timestamp)
+                success = backup_path is not None
+                if success:
+                    self.logger.info(f"Local backup created: {backup_path}")
+            else:
+                # Other providers use the pre-created package
+                success = provider.upload(package_path, package_path.name)
+            
             upload_results[provider_name] = success
             self.logger.log_provider_operation(provider_name, "upload", success)
         
-        # Move to local backup directory
-        local_path = self.backup_dir / package_path.name
-        shutil.move(str(package_path), str(local_path))
-        
-        self.logger.log_backup_success(str(local_path), upload_results)
-        return local_path
+        # Move to local backup directory (only if not using local provider)
+        if "local" not in self.providers or not upload_results.get("local", False):
+            local_path = self.backup_dir / package_path.name
+            shutil.move(str(package_path), str(local_path))
+            self.logger.log_backup_success(str(local_path), upload_results)
+            return local_path
+        else:
+            # Local provider already handled storage, clean up temp package
+            if package_path.exists():
+                package_path.unlink()
+            self.logger.log_backup_success("NAS storage", upload_results)
+            return None  # Local provider returns its own path
     
     def list_backups(self, provider_name: Optional[str] = None) -> List[Dict[str, Any]]:
         """List available backups from specified provider or all providers."""

@@ -1,0 +1,213 @@
+/**
+ * Overview tab styles - matching providers.css design patterns
+ */
+
+.overview-tab {
+  padding: 1.5rem;
+  background: var(--background);
+  min-height: 100%;
+}
+
+.overview-header {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  color: var(--text);
+  padding: 2rem;
+  text-align: center;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 4px var(--primary), 0 2px 4px var(--border);
+}
+
+.overview-header h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.overview-description {
+  margin: 1rem 0;
+  opacity: 0.9;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.overview-header .version-info {
+  margin-top: 1.5rem;
+}
+
+.overview-header .version-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  backdrop-filter: blur(10px);
+}
+
+/* Section Headers */
+.status-section,
+.config-section {
+  margin-bottom: 2rem;
+}
+
+.status-section h3,
+.config-section h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 2px solid var(--primary);
+  padding-bottom: 0.5rem;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.status-card {
+  background: var(--background);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 4px var(--primary), 0 2px 4px var(--border);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.status-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.status-card h4 {
+  margin: 0 0 1rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.status-value.healthy {
+  color: var(--statusUp);
+}
+
+.status-value.warning {
+  color: var(--statusPartial);
+}
+
+.status-value.error {
+  color: var(--statusDown);
+}
+
+.status-value.unknown {
+  color: var(--statusUnknown);
+}
+
+/* Info Box Styling - matching providers pattern */
+.info-box {
+  background: var(--primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 4px var(--border);
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.info-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.info-item strong {
+  font-weight: 600;
+  color: var(--text);
+  margin-right: 1rem;
+  min-width: 120px;
+}
+
+/* Warning Box Styling - matching providers pattern */
+.warning-box {
+  background: var(--warning);
+  border: 1px solid var(--warning);
+  color: var(--background);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.warning-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.warning-content {
+  flex: 1;
+}
+
+.warning-content strong {
+  font-weight: 600;
+}
+
+/* Loading and Error Banners */
+.loading-banner {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--background);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loading-banner::before {
+  content: '⟳';
+  animation: spin 1s linear infinite;
+  font-size: 1.2rem;
+}
+
+.error-banner {
+  background: var(--error);
+  border: 1px solid var(--error);
+  color: var(--background);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

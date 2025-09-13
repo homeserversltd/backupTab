@@ -13,5 +13,10 @@ export { default as GoogleDriveSetupModal } from './GoogleDriveSetupModal';
 export { default as GoogleCloudStorageSetupModal } from './GoogleCloudStorageSetupModal';
 export { default as GoogleSetupModal } from './GoogleSetupModal';
 
+// Provider components
+export { default as ProviderSelector } from './providers/ProviderSelector';
+export { default as BackblazeProvider } from './providers/BackblazeProvider';
+export { default as LocalProvider } from './providers/LocalProvider';
+
 // Utility exports
 export * from './StatusUtils';
