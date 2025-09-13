@@ -1,122 +1,136 @@
 /**
  * HOMESERVER Backup Overview Tab Component
- * System status and key metrics display
+ * Providers and backup files management
  */
 
-import React from 'react';
-import { BackupStatus, BackupConfig } from '../types';
+import React, { useState } from 'react';
+import { BackupConfig } from '../types';
 
 interface OverviewTabProps {
-  status: BackupStatus | null;
   config: BackupConfig | null;
-  getStatusColor: (systemStatus: string) => string;
+  onConfigChange: (config: Partial<BackupConfig>) => Promise<boolean>;
 }
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({
-  status,
   config,
-  getStatusColor
+  onConfigChange
 }) => {
-  if (!status) {
-    return (
-      <div className="overview-tab">
-        <div className="loading-banner">
-          <span>Loading system status...</span>
-        </div>
-      </div>
-    );
-  }
+  const [newFilePath, setNewFilePath] = useState('');
+
+  const handleAddFile = async () => {
+    if (newFilePath.trim() && config) {
+      const updatedItems = [...(config.backup_items || []), newFilePath.trim()];
+      await onConfigChange({ backup_items: updatedItems });
+      setNewFilePath('');
+    }
+  };
+
+  const handleRemoveFile = async (index: number) => {
+    if (config) {
+      const updatedItems = config.backup_items?.filter((_, i) => i !== index) || [];
+      await onConfigChange({ backup_items: updatedItems });
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleAddFile();
+    }
+  };
 
   return (
-    <div className="overview-tab">
-      <div className="overview-header">
-        <h2>HOMESERVER Backup System</h2>
-        <p className="overview-description">
-          Professional-grade 3-2-1 backup system with encryption and cloud upload
-        </p>
-        <div className="version-info">
-          <span className="version-badge">v1.0.0</span>
+    <div className="overview-layout overview-container">
+      {/* Left Column - Providers */}
+      <div className="providers-panel">
+        <div className="panel-header">
+          <h3>Storage Providers</h3>
+          <p className="panel-description">
+            Configured backup storage providers
+          </p>
         </div>
-      </div>
-      
-      {/* System Status Overview */}
-      <div className="status-section">
-        <h3>System Overview</h3>
-        <div className="status-grid">
-          <div className="status-card">
-            <h4>System Status</h4>
-            <div className={`status-value ${getStatusColor(status.system_status)}`}>
-              {status.system_status.replace('_', ' ').toUpperCase()}
+        
+        <div className="provider-list">
+          {config?.providers ? Object.entries(config.providers).map(([key, provider]) => (
+            <div key={key} className={`provider-item ${provider.enabled ? 'enabled' : 'disabled'}`}>
+              <div className="provider-icon">💾</div>
+              <div className="provider-info">
+                <div className="provider-name">{key}</div>
+                <div className="provider-description">
+                  {provider.container_type === 'local' ? 'Local NAS Storage' : 
+                   provider.container_type === 'aws' ? 'AWS S3' :
+                   provider.container_type === 'google' ? 'Google Drive' : 
+                   provider.container_type || 'Cloud Storage'}
+                </div>
+                <div className={`provider-status ${provider.enabled ? 'enabled' : 'disabled'}`}>
+                  {provider.enabled ? 'ENABLED' : 'DISABLED'}
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="status-card">
-            <h4>Service Status</h4>
-            <div className="status-value">
-              {status.service_status.toUpperCase()}
+          )) : (
+            <div className="empty-state">
+              <p>No providers configured</p>
             </div>
-          </div>
-          <div className="status-card">
-            <h4>Files to Backup</h4>
-            <div className="status-value">
-              {config?.backup_items?.length || 0}
-            </div>
-          </div>
-          <div className="status-card">
-            <h4>Active Providers</h4>
-            <div className="status-value">
-              {config ? Object.values(config.providers).filter(p => p.enabled).length : 0}
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Configuration Summary */}
-      <div className="config-section">
-        <h3>Configuration Summary</h3>
-        <div className="info-box">
-          <div className="info-item">
-            <strong>Backup Items:</strong> {config?.backup_items?.length || 0} configured
+      {/* Right Column - Backup Files */}
+      <div className="files-panel">
+        <div className="panel-header">
+          <h3>Files to Backup</h3>
+          <p className="panel-description">
+            Files and directories to include in backups
+          </p>
+        </div>
+
+        <div className="file-input-section">
+          <div className="input-group">
+            <input
+              type="text"
+              value={newFilePath}
+              onChange={(e) => setNewFilePath(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="/path/to/backup"
+              className="form-input"
+            />
+            <button
+              onClick={handleAddFile}
+              disabled={!newFilePath.trim()}
+              className="action-button primary"
+            >
+              Add
+            </button>
           </div>
-          <div className="info-item">
-            <strong>Storage Providers:</strong> {config ? Object.values(config.providers).filter(p => p.enabled).length : 0} active
-          </div>
-          <div className="info-item">
-            <strong>System Status:</strong> {status.system_status.replace('_', ' ').toUpperCase()}
-          </div>
-          <div className="info-item">
-            <strong>Service Health:</strong> {status.service_status.toUpperCase()}
-          </div>
+        </div>
+
+        <div className="file-list">
+          {config?.backup_items && config.backup_items.length > 0 ? (
+            config.backup_items.map((file, index) => (
+              <div key={index} className="file-item">
+                <div className="file-icon">📁</div>
+                <div className="file-info">
+                  <div className="file-path">{file}</div>
+                </div>
+                <button
+                  onClick={() => handleRemoveFile(index)}
+                  className="remove-button"
+                  title="Remove file"
+                >
+                  ✕
+                </button>
+              </div>
+            ))
+          ) : (
+            <div className="empty-state">
+              <p>No files configured for backup</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* System Information */}
-      <div className="config-section">
-        <h3>System Information</h3>
-        <div className="info-box">
-          <div className="info-item">
-            <strong>Version:</strong> v1.0.0
-          </div>
-          <div className="info-item">
-            <strong>Platform:</strong> HOMESERVER Professional Backup System
-          </div>
-          <div className="info-item">
-            <strong>Backup Strategy:</strong> 3-2-1 (3 copies, 2 media types, 1 off-site)
-          </div>
-          <div className="info-item">
-            <strong>Encryption:</strong> AES-256 encryption for all backups
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="config-section">
-        <h3>Quick Actions</h3>
-        <div className="warning-box">
-          <div className="warning-icon">ℹ</div>
-          <div className="warning-content">
-            <strong>Getting Started:</strong> Configure backup items in the Overview tab, set up storage providers in the Providers tab, and schedule backups in the Schedule tab. Use the Config tab for advanced settings like encryption and retention policies.
-          </div>
-        </div>
+      {/* Version at bottom */}
+      <div className="version-footer">
+        <span>v1.0.0</span>
       </div>
     </div>
   );

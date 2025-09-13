@@ -43,134 +43,59 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   schedules = [], 
   onScheduleChange 
 }) => {
-  const [schedulesList, setSchedulesList] = useState<BackupScheduleConfig[]>(schedules);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingSchedule, setEditingSchedule] = useState<BackupScheduleConfig | null>(null);
-  const [currentView, setCurrentView] = useState<'list' | 'calendar'>('list');
+  const [currentSchedule, setCurrentSchedule] = useState<BackupScheduleConfig>({
+    id: '1',
+    name: 'Backup Schedule',
+    enabled: false,
+    frequency: 'daily',
+    hour: 2,
+    minute: 0,
+    backupType: 'incremental',
+    retentionDays: 30,
+    repositories: [],
+    status: 'never_run'
+  });
 
-  // Initialize with sample data if none provided
-  useEffect(() => {
-    if (schedulesList.length === 0) {
-      const sampleSchedules: BackupScheduleConfig[] = [
-        {
-          id: '1',
-          name: 'Daily System Backup',
-          enabled: true,
-          frequency: 'daily',
-          hour: 2,
-          minute: 0,
-          backupType: 'incremental',
-          retentionDays: 30,
-          repositories: ['system', 'documents'],
-          lastRun: '2024-01-15T02:00:00Z',
-          nextRun: '2024-01-16T02:00:00Z',
-          status: 'active'
-        },
-        {
-          id: '2',
-          name: 'Weekly Full Backup',
-          enabled: true,
-          frequency: 'weekly',
-          day: 0, // Sunday
-          hour: 3,
-          minute: 0,
-          backupType: 'full',
-          retentionDays: 90,
-          repositories: ['system', 'documents', 'media'],
-          lastRun: '2024-01-14T03:00:00Z',
-          nextRun: '2024-01-21T03:00:00Z',
-          status: 'active'
-        }
-      ];
-      setSchedulesList(sampleSchedules);
-    }
-  }, [schedulesList.length]);
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active': return <FontAwesomeIcon icon={faCheckCircle} className="status-active" />;
-      case 'paused': return <FontAwesomeIcon icon={faPause} className="status-paused" />;
-      case 'error': return <FontAwesomeIcon icon={faExclamationTriangle} className="status-error" />;
-      default: return <FontAwesomeIcon icon={faClock} className="status-never-run" />;
+  // Helper function to format schedule preview
+  const getSchedulePreview = () => {
+    if (!currentSchedule.enabled) return null;
+    
+    const timeFormatted = new Date(`2000-01-01T${currentSchedule.hour.toString().padStart(2, '0')}:${currentSchedule.minute.toString().padStart(2, '0')}`).toLocaleTimeString([], {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+    
+    switch (currentSchedule.frequency) {
+      case 'daily':
+        return `Backups will run daily at ${timeFormatted}`;
+      case 'weekly': {
+        const dayName = DAYS_OF_WEEK[currentSchedule.day || 0]?.label;
+        return `Backups will run every ${dayName} at ${timeFormatted}`;
+      }
+      case 'monthly': {
+        const dayOfMonth = currentSchedule.day || 1;
+        const suffix = dayOfMonth === 1 ? 'st' : dayOfMonth === 2 ? 'nd' : dayOfMonth === 3 ? 'rd' : 'th';
+        return `Backups will run on the ${dayOfMonth}${suffix} of each month at ${timeFormatted}`;
+      }
+      case 'yearly':
+        return `Backups will run yearly at ${timeFormatted}`;
+      case 'custom':
+        return `Custom schedule: ${currentSchedule.customCron || 'Not configured'}`;
+      default:
+        return '';
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'status-active';
-      case 'paused': return 'status-paused';
-      case 'error': return 'status-error';
-      default: return 'status-never-run';
-    }
+  const updateSchedule = (updates: Partial<BackupScheduleConfig>) => {
+    const updated = { ...currentSchedule, ...updates };
+    setCurrentSchedule(updated);
+    onScheduleChange?.([updated]);
   };
 
-  const formatNextRun = (schedule: BackupScheduleConfig) => {
-    if (!schedule.nextRun) return 'Not scheduled';
-    const date = new Date(schedule.nextRun);
-    return date.toLocaleString();
-  };
-
-  const formatLastRun = (schedule: BackupScheduleConfig) => {
-    if (!schedule.lastRun) return 'Never';
-    const date = new Date(schedule.lastRun);
-    return date.toLocaleString();
-  };
-
-  const toggleSchedule = (id: string) => {
-    const updated = schedulesList.map(schedule => 
-      schedule.id === id 
-        ? { ...schedule, enabled: !schedule.enabled, status: (!schedule.enabled ? 'active' : 'paused') as 'active' | 'paused' | 'error' | 'never_run' }
-        : schedule
-    );
-    setSchedulesList(updated);
-    onScheduleChange?.(updated);
-  };
-
-  const deleteSchedule = (id: string) => {
-    const updated = schedulesList.filter(schedule => schedule.id !== id);
-    setSchedulesList(updated);
-    onScheduleChange?.(updated);
-  };
-
-  const addNewSchedule = () => {
-    const newSchedule: BackupScheduleConfig = {
-      id: Date.now().toString(),
-      name: 'New Backup Schedule',
-      enabled: false,
-      frequency: 'daily',
-      hour: 2,
-      minute: 0,
-      backupType: 'incremental',
-      retentionDays: 30,
-      repositories: [],
-      status: 'never_run'
-    };
-    setEditingSchedule(newSchedule);
-    setShowAddModal(true);
-  };
-
-  const editSchedule = (schedule: BackupScheduleConfig) => {
-    setEditingSchedule(schedule);
-    setShowAddModal(true);
-  };
-
-  const saveSchedule = (schedule: BackupScheduleConfig) => {
-    if (editingSchedule) {
-      const updated = schedulesList.map(s => s.id === schedule.id ? schedule : s);
-      setSchedulesList(updated);
-      onScheduleChange?.(updated);
-    } else {
-      const updated = [...schedulesList, schedule];
-      setSchedulesList(updated);
-      onScheduleChange?.(updated);
-    }
-    setShowAddModal(false);
-    setEditingSchedule(null);
-  };
-
-  const cancelEdit = () => {
-    setShowAddModal(false);
-    setEditingSchedule(null);
+  const saveSchedule = async () => {
+    // Save the single schedule
+    onScheduleChange?.([currentSchedule]);
   };
 
   return (
@@ -178,335 +103,194 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       <div className="schedule-header">
         <div className="schedule-title">
           <FontAwesomeIcon icon={faCalendarAlt} />
-          <h2>Backup Schedules</h2>
-        </div>
-        <div className="schedule-controls">
-          <div className="view-toggle">
-            <button 
-              className={currentView === 'list' ? 'active' : ''}
-              onClick={() => setCurrentView('list')}
-            >
-              <FontAwesomeIcon icon={faClock} />
-              List View
-            </button>
-            <button 
-              className={currentView === 'calendar' ? 'active' : ''}
-              onClick={() => setCurrentView('calendar')}
-            >
-              <FontAwesomeIcon icon={faCalendarAlt} />
-              Calendar View
-            </button>
-          </div>
-          <button className="add-schedule-btn" onClick={addNewSchedule}>
-            <FontAwesomeIcon icon={faPlus} />
-            Add Schedule
-          </button>
+          <h2>Backup Schedule</h2>
         </div>
       </div>
 
-      {currentView === 'list' ? (
-        <div className="schedule-list">
-          {schedulesList.length === 0 ? (
-            <div className="empty-state">
-              <FontAwesomeIcon icon={faCalendarAlt} />
-              <h3>No Backup Schedules</h3>
-              <p>Create your first backup schedule to get started with automated backups.</p>
-              <button className="create-first-btn" onClick={addNewSchedule}>
-                <FontAwesomeIcon icon={faPlus} />
-                Create First Schedule
-              </button>
-            </div>
-          ) : (
-            <div className="schedules-grid">
-              {schedulesList.map(schedule => (
-                <div key={schedule.id} className={`schedule-card ${getStatusColor(schedule.status)}`}>
-                  <div className="schedule-card-header">
-                    <div className="schedule-info">
-                      <h3>{schedule.name}</h3>
-                      <div className="schedule-status">
-                        {getStatusIcon(schedule.status)}
-                        <span>{schedule.status.replace('_', ' ').toUpperCase()}</span>
-                      </div>
-                    </div>
-                    <div className="schedule-actions">
-                      <button 
-                        className="toggle-btn"
-                        onClick={() => toggleSchedule(schedule.id)}
-                        title={schedule.enabled ? 'Pause Schedule' : 'Enable Schedule'}
-                      >
-                        {schedule.enabled ? <FontAwesomeIcon icon={faPause} /> : <FontAwesomeIcon icon={faPlay} />}
-                      </button>
-                      <button 
-                        className="edit-btn"
-                        onClick={() => editSchedule(schedule)}
-                        title="Edit Schedule"
-                      >
-                        <FontAwesomeIcon icon={faEdit} />
-                      </button>
-                      <button 
-                        className="delete-btn"
-                        onClick={() => deleteSchedule(schedule.id)}
-                        title="Delete Schedule"
-                      >
-                        <FontAwesomeIcon icon={faTrash} />
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="schedule-details">
-                    <div className="detail-row">
-                      <span className="detail-label">Frequency:</span>
-                      <span className="detail-value">
-                        {schedule.frequency === 'daily' ? 'Daily' :
-                         schedule.frequency === 'weekly' ? `Weekly (${DAYS_OF_WEEK[schedule.day || 0]?.label})` :
-                         schedule.frequency === 'monthly' ? `Monthly (Day ${schedule.day || 1})` :
-                         schedule.frequency === 'yearly' ? 'Yearly' : 'Custom'}
-                      </span>
-                    </div>
-                    <div className="detail-row">
-                      <span className="detail-label">Time:</span>
-                      <span className="detail-value">
-                        {(() => {
-                          const hourValue = schedule.hour;
-                          const minuteValue = schedule.minute < 10 ? `0${schedule.minute}` : `${schedule.minute}`;
-                          const amPm = hourValue < 12 ? 'AM' : 'PM';
-                          const hour12 = hourValue === 0 ? 12 : hourValue > 12 ? hourValue - 12 : hourValue;
-                          return `${hour12}:${minuteValue} ${amPm}`;
-                        })()}
-                      </span>
-                    </div>
-                    <div className="detail-row">
-                      <span className="detail-label">Type:</span>
-                      <span className="detail-value">
-                        {BACKUP_TYPES.find(t => t.value === schedule.backupType)?.label}
-                      </span>
-                    </div>
-                    <div className="detail-row">
-                      <span className="detail-label">Retention:</span>
-                      <span className="detail-value">{schedule.retentionDays} days</span>
-                    </div>
-                    <div className="detail-row">
-                      <span className="detail-label">Next Run:</span>
-                      <span className="detail-value">{formatNextRun(schedule)}</span>
-                    </div>
-                    <div className="detail-row">
-                      <span className="detail-label">Last Run:</span>
-                      <span className="detail-value">{formatLastRun(schedule)}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="schedule-calendar">
-          <div className="calendar-header">
-            <h3>Backup Schedule Calendar</h3>
-            <p>Calendar view coming soon - this will show scheduled backups on a calendar interface</p>
+      <div className="schedule-form">
+        {/* Toggle Switch */}
+        <div 
+          className={`update-schedule-toggle ${currentSchedule.enabled ? 'enabled' : ''}`}
+          onClick={() => updateSchedule({ enabled: !currentSchedule.enabled })}
+        >
+          <div className={`schedule-toggle-switch ${currentSchedule.enabled ? 'enabled' : ''}`} />
+          <div className="schedule-toggle-label">
+            <h5 className="schedule-toggle-title">Automatic Backups</h5>
+            <p className="schedule-toggle-description">
+              {currentSchedule.enabled 
+                ? 'Automatic backups are enabled and will run according to your schedule'
+                : 'Enable automatic backups to keep your data protected with scheduled backups'
+              }
+            </p>
           </div>
-          <div className="calendar-placeholder">
-            <FontAwesomeIcon icon={faCalendarAlt} />
-            <p>Calendar view will be implemented in a future update</p>
-          </div>
-        </div>
-      )}
-
-      {/* Schedule Modal */}
-      {showAddModal && editingSchedule && (
-        <ScheduleModal
-          schedule={editingSchedule}
-          onSave={saveSchedule}
-          onCancel={cancelEdit}
-          isEditing={!!editingSchedule.id && schedulesList.some(s => s.id === editingSchedule.id)}
-        />
-      )}
-    </div>
-  );
-};
-
-// Schedule Modal Component
-interface ScheduleModalProps {
-  schedule: BackupScheduleConfig;
-  onSave: (schedule: BackupScheduleConfig) => void;
-  onCancel: () => void;
-  isEditing: boolean;
-}
-
-const ScheduleModal: React.FC<ScheduleModalProps> = ({ 
-  schedule, 
-  onSave, 
-  onCancel, 
-  isEditing 
-}) => {
-  const [formData, setFormData] = useState<BackupScheduleConfig>(schedule);
-
-  const handleSave = () => {
-    onSave(formData);
-  };
-
-  const updateFormData = (updates: Partial<BackupScheduleConfig>) => {
-    setFormData(prev => ({ ...prev, ...updates }));
-  };
-
-  return (
-    <div className="schedule-modal-overlay">
-      <div className="schedule-modal">
-        <div className="modal-header">
-          <h3>{isEditing ? 'Edit Schedule' : 'Create New Schedule'}</h3>
-          <button className="close-btn" onClick={onCancel}>×</button>
         </div>
         
-        <div className="modal-content">
-          <div className="form-group">
-            <label>Schedule Name</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => updateFormData({ name: e.target.value })}
-              placeholder="Enter schedule name"
-            />
-          </div>
-
+        {/* Schedule Options */}
+        <div className={`schedule-options ${currentSchedule.enabled ? 'visible' : ''}`}>
+          {/* Frequency Selection */}
           <div className="form-group">
             <label>
-              <input
-                type="checkbox"
-                checked={formData.enabled}
-                onChange={(e) => updateFormData({ enabled: e.target.checked })}
-              />
-              Enable this schedule
+              <FontAwesomeIcon icon={faCalendarAlt} />
+              Frequency
             </label>
+            <div className="schedule-frequency-radio-group">
+              <label className={`schedule-frequency-radio-label${currentSchedule.frequency === 'daily' ? ' schedule-frequency-selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="frequency"
+                  value="daily"
+                  checked={currentSchedule.frequency === 'daily'}
+                  onChange={() => updateSchedule({ frequency: 'daily' })}
+                />
+                <span className="schedule-frequency-radio-label-content">Daily</span>
+              </label>
+              <label className={`schedule-frequency-radio-label${currentSchedule.frequency === 'weekly' ? ' schedule-frequency-selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="frequency"
+                  value="weekly"
+                  checked={currentSchedule.frequency === 'weekly'}
+                  onChange={() => updateSchedule({ frequency: 'weekly' })}
+                />
+                <span className="schedule-frequency-radio-label-content">Weekly</span>
+              </label>
+              <label className={`schedule-frequency-radio-label${currentSchedule.frequency === 'monthly' ? ' schedule-frequency-selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="frequency"
+                  value="monthly"
+                  checked={currentSchedule.frequency === 'monthly'}
+                  onChange={() => updateSchedule({ frequency: 'monthly' })}
+                />
+                <span className="schedule-frequency-radio-label-content">Monthly</span>
+              </label>
+              <label className={`schedule-frequency-radio-label${currentSchedule.frequency === 'yearly' ? ' schedule-frequency-selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="frequency"
+                  value="yearly"
+                  checked={currentSchedule.frequency === 'yearly'}
+                  onChange={() => updateSchedule({ frequency: 'yearly' })}
+                />
+                <span className="schedule-frequency-radio-label-content">Yearly</span>
+              </label>
+            </div>
           </div>
-
-          <div className="form-group">
-            <label>Frequency</label>
-            <select
-              value={formData.frequency}
-              onChange={(e) => updateFormData({ frequency: e.target.value as any })}
-            >
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-              <option value="yearly">Yearly</option>
-              <option value="custom">Custom (Cron)</option>
-            </select>
-          </div>
-
-          {formData.frequency === 'weekly' && (
+          
+          {/* Time and Day Selection */}
+          <div className="form-row">
             <div className="form-group">
-              <label>Day of Week</label>
+              <label>
+                <FontAwesomeIcon icon={faClock} className="icon" />
+                Time
+              </label>
+              <div className="time-input-group">
+                <input
+                  type="time"
+                  className="form-control"
+                  value={`${currentSchedule.hour.toString().padStart(2, '0')}:${currentSchedule.minute.toString().padStart(2, '0')}`}
+                  onChange={(e) => {
+                    const [hour, minute] = e.target.value.split(':').map(Number);
+                    updateSchedule({ hour: hour || 0, minute: minute || 0 });
+                  }}
+                />
+              </div>
+            </div>
+            
+            {currentSchedule.frequency === 'weekly' && (
+              <div className="form-group">
+                <label>
+                  <FontAwesomeIcon icon={faCalendarAlt} className="icon" />
+                  Day of Week
+                </label>
+                <div className="day-selector">
+                  {DAYS_OF_WEEK.map((day, index) => (
+                    <div
+                      key={day.value}
+                      className={`day-option ${currentSchedule.day === day.value ? 'active' : ''}`}
+                      onClick={() => updateSchedule({ day: day.value })}
+                    >
+                      {day.label.substring(0, 3)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {currentSchedule.frequency === 'monthly' && (
+              <div className="form-group">
+                <label>
+                  <FontAwesomeIcon icon={faCalendarAlt} className="icon" />
+                  Day of Month
+                </label>
+                <input
+                  type="number"
+                  className="form-control"
+                  min="1"
+                  max="31"
+                  value={currentSchedule.day || 1}
+                  onChange={(e) => updateSchedule({ day: parseInt(e.target.value) })}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Backup Type and Retention */}
+          <div className="form-row">
+            <div className="form-group">
+              <label>Backup Type</label>
               <select
-                value={formData.day || 1}
-                onChange={(e) => updateFormData({ day: parseInt(e.target.value) })}
+                className="form-control"
+                value={currentSchedule.backupType}
+                onChange={(e) => updateSchedule({ backupType: e.target.value as any })}
               >
-                {DAYS_OF_WEEK.map(day => (
-                  <option key={day.value} value={day.value}>
-                    {day.label}
+                {BACKUP_TYPES.map(type => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
                   </option>
                 ))}
               </select>
             </div>
-          )}
-
-          {formData.frequency === 'monthly' && (
+            
             <div className="form-group">
-              <label>Day of Month</label>
-              <select
-                value={formData.day || 1}
-                onChange={(e) => updateFormData({ day: parseInt(e.target.value) })}
-              >
-                {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                  <option key={day} value={day}>
-                    {day}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="form-group">
-            <label>Time</label>
-            <div className="time-selects">
-              <select
-                value={formData.hour}
-                onChange={(e) => updateFormData({ hour: parseInt(e.target.value) })}
-              >
-                {Array.from({ length: 24 }, (_, i) => {
-                  const hourValue = i;
-                  const amPm = hourValue < 12 ? 'AM' : 'PM';
-                  const hour12 = hourValue === 0 ? 12 : hourValue > 12 ? hourValue - 12 : hourValue;
-                  return (
-                    <option key={hourValue} value={hourValue}>
-                      {hour12} {amPm}
-                    </option>
-                  );
-                })}
-              </select>
-              <span>:</span>
-              <select
-                value={formData.minute}
-                onChange={(e) => updateFormData({ minute: parseInt(e.target.value) })}
-              >
-                {Array.from({ length: 60 }, (_, i) => (
-                  <option key={i} value={i}>
-                    {i < 10 ? `0${i}` : `${i}`}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label>Backup Type</label>
-            <select
-              value={formData.backupType}
-              onChange={(e) => updateFormData({ backupType: e.target.value as any })}
-            >
-              {BACKUP_TYPES.map(type => (
-                <option key={type.value} value={type.value}>
-                  {type.label} - {type.description}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Retention (Days)</label>
-            <input
-              type="number"
-              value={formData.retentionDays}
-              onChange={(e) => updateFormData({ retentionDays: parseInt(e.target.value) })}
-              min="1"
-              max="3650"
-            />
-          </div>
-
-          {formData.frequency === 'custom' && (
-            <div className="form-group">
-              <label>Cron Expression</label>
+              <label>Retention (Days)</label>
               <input
-                type="text"
-                value={formData.customCron || ''}
-                onChange={(e) => updateFormData({ customCron: e.target.value })}
-                placeholder="0 2 * * * (daily at 2 AM)"
+                type="number"
+                className="form-control"
+                value={currentSchedule.retentionDays}
+                onChange={(e) => updateSchedule({ retentionDays: parseInt(e.target.value) })}
+                min="1"
+                max="3650"
               />
-              <small>Format: minute hour day month weekday</small>
+            </div>
+          </div>
+          
+          {/* Schedule Preview */}
+          {currentSchedule.enabled && (
+            <div className="schedule-preview">
+              <h5>
+                <FontAwesomeIcon icon={faClock} />
+                Schedule Preview
+              </h5>
+              <div className="schedule-preview-text">
+                <strong>{getSchedulePreview()}</strong>
+              </div>
             </div>
           )}
         </div>
-
-        <div className="modal-actions">
-          <button className="action-button secondary" onClick={onCancel}>
-            Cancel
-          </button>
-          <button className="action-button primary" onClick={handleSave}>
-            {isEditing ? 'Update Schedule' : 'Create Schedule'}
-          </button>
-        </div>
+        
+        <button
+          type="button"
+          className="action-button primary"
+          onClick={saveSchedule}
+        >
+          <FontAwesomeIcon icon={faCheckCircle} />
+          Save Schedule
+        </button>
       </div>
     </div>
   );
 };
+
 
 export default ScheduleTab;

@@ -17,7 +17,7 @@ import {
   ScheduleTab,
   ConfigTab
 } from './components';
-import './PortalCard.css';
+import './backupTab.css';
 
 const BackupTablet: React.FC = () => {
   const {
@@ -100,9 +100,8 @@ const BackupTablet: React.FC = () => {
 
         {activeTab === 'overview' && (
           <OverviewTab 
-            status={status}
             config={config}
-            getStatusColor={getStatusColor}
+            onConfigChange={updateConfig}
           />
         )}
 

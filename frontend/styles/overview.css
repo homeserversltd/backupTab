@@ -1,213 +1,285 @@
 /**
- * Overview tab styles - matching providers.css design patterns
+ * Overview tab styles - two-column layout matching providers.css
  */
 
-.overview-tab {
-  padding: 1.5rem;
-  background: var(--background);
-  min-height: 100%;
+.overview-layout {
+  display: flex !important;
+  gap: 0 !important;
+  height: 100% !important;
+  min-height: 600px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 4px var(--primary), 0 2px 4px var(--border) !important;
+  background-color: var(--hiddenTabBackground) !important;
+  border-radius: 12px !important;
+  position: relative !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
-.overview-header {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-  color: var(--text);
-  padding: 2rem;
-  text-align: center;
-  border-radius: 12px;
-  margin-bottom: 2rem;
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 4px var(--primary), 0 2px 4px var(--border);
+/* Left Column - Providers */
+.providers-panel {
+  flex: 0 0 300px !important;
+  background: var(--background) !important;
+  border-radius: 0 !important;
+  padding: 20px !important;
+  overflow-y: auto !important;
+  border-right: 2px solid var(--border) !important;
+  box-shadow: 4px 0 8px rgba(0, 0, 0, 0.1) !important;
+  margin: 0 !important;
 }
 
-.overview-header h2 {
-  margin: 0;
-  font-size: 1.8rem;
-  font-weight: 600;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+/* Right Column - Files */
+.files-panel {
+  flex: 1 !important;
+  background: var(--background) !important;
+  border-radius: 0 !important;
+  padding: 20px !important;
+  overflow-y: auto !important;
+  margin: 0 !important;
 }
 
-.overview-description {
-  margin: 1rem 0;
-  opacity: 0.9;
-  font-size: 1rem;
-  line-height: 1.5;
-}
-
-.overview-header .version-info {
-  margin-top: 1.5rem;
-}
-
-.overview-header .version-badge {
-  display: inline-block;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  backdrop-filter: blur(10px);
-}
-
-/* Section Headers */
-.status-section,
-.config-section {
-  margin-bottom: 2rem;
-}
-
-.status-section h3,
-.config-section h3 {
-  margin: 0 0 1rem 0;
+/* Panel Headers */
+.panel-header h3 {
+  margin: 0 0 0.5rem 0;
   font-size: 1.2rem;
   font-weight: 600;
   color: var(--text);
-  border-bottom: 2px solid var(--primary);
-  padding-bottom: 0.5rem;
 }
 
-.status-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 1rem;
+.panel-description {
+  margin: 0 0 1.5rem 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  opacity: 0.8;
 }
 
-.status-card {
-  background: var(--background);
+/* Provider List - Left Column */
+.provider-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.provider-item {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  background: var(--primary);
+  border: 2px solid transparent;
   border-radius: 8px;
-  padding: 20px;
-  text-align: center;
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 4px var(--primary), 0 2px 4px var(--border);
   transition: all 0.2s ease;
   position: relative;
+  box-shadow: 0 2px 4px var(--border);
 }
 
-.status-card:hover {
+.provider-item:hover {
+  background: var(--primaryHover);
+  border-color: var(--border);
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.status-card h4 {
-  margin: 0 0 1rem 0;
-  font-size: 0.9rem;
+.provider-item.enabled {
+  border-color: var(--accent);
+  background: var(--primaryHover);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.provider-item.disabled {
+  opacity: 0.6;
+}
+
+.provider-icon {
+  font-size: 1.5rem;
+  margin-right: 1rem;
+  flex-shrink: 0;
+}
+
+.provider-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.provider-name {
   font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+.provider-description {
+  font-size: 0.85rem;
   color: var(--text);
   opacity: 0.8;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
 }
 
-.status-value {
-  font-size: 1.5rem;
-  font-weight: 700;
+.provider-status {
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.provider-status.enabled {
+  background: var(--success);
+  color: var(--background);
+}
+
+.provider-status.disabled {
+  background: var(--secondary);
+  color: var(--background);
+}
+
+/* File Input Section - Right Column */
+.file-input-section {
+  margin-bottom: 1.5rem;
+}
+
+.input-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.form-input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: var(--background);
   color: var(--text);
 }
 
-.status-value.healthy {
-  color: var(--statusUp);
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
-.status-value.warning {
-  color: var(--statusPartial);
+.action-button {
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.status-value.error {
-  color: var(--statusDown);
+.action-button.primary {
+  background: var(--accent);
+  color: var(--background);
 }
 
-.status-value.unknown {
-  color: var(--statusUnknown);
+.action-button.primary:hover:not(:disabled) {
+  background: var(--primaryHover);
+  transform: translateY(-1px);
 }
 
-/* Info Box Styling - matching providers pattern */
-.info-box {
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* File List - Right Column */
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
   background: var(--primary);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 4px var(--border);
+  border-radius: 6px;
+  transition: all 0.2s ease;
 }
 
-.info-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--border);
-  color: var(--text);
+.file-item:hover {
+  background: var(--primaryHover);
+  border-color: var(--border);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.info-item:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.info-item strong {
-  font-weight: 600;
-  color: var(--text);
-  margin-right: 1rem;
-  min-width: 120px;
-}
-
-/* Warning Box Styling - matching providers pattern */
-.warning-box {
-  background: var(--warning);
-  border: 1px solid var(--warning);
-  color: var(--background);
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-}
-
-.warning-icon {
+.file-icon {
   font-size: 1.2rem;
+  margin-right: 0.75rem;
   flex-shrink: 0;
-  margin-top: 0.1rem;
 }
 
-.warning-content {
+.file-info {
   flex: 1;
+  min-width: 0;
 }
 
-.warning-content strong {
-  font-weight: 600;
+.file-path {
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: var(--text);
+  word-break: break-all;
 }
 
-/* Loading and Error Banners */
-.loading-banner {
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  color: var(--background);
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.loading-banner::before {
-  content: '⟳';
-  animation: spin 1s linear infinite;
-  font-size: 1.2rem;
-}
-
-.error-banner {
+.remove-button {
   background: var(--error);
-  border: 1px solid var(--error);
   color: var(--background);
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+.remove-button:hover {
+  background: var(--statusDown);
+  transform: scale(1.1);
+}
+
+/* Empty States */
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text);
+  opacity: 0.6;
+}
+
+.empty-state p {
+  margin: 0;
+  font-style: italic;
+}
+
+/* Version Footer */
+.version-footer {
+  position: absolute;
+  bottom: 10px;
+  right: 20px;
+  font-size: 0.8rem;
+  color: var(--text);
+  opacity: 0.6;
+}
+
+/* Override parent container interference */
+.backup-tablet-content .overview-container {
+  padding: 0 !important;
+  margin: -1.5rem !important;
+  width: calc(100% + 3rem) !important;
+}
+
+/* Ensure overview layout takes full width */
+.overview-layout {
+  width: 100% !important;
+  max-width: none !important;
 }
