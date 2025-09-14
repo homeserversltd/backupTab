@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { CloudProvider } from '../../types';
-import { showToast } from '../../../../components/Popup/PopupManager'; //donot touch this
+import { showToast } from '../../../../../src/components/Popup/PopupManager';
 
 interface LocalProviderProps {
   config: CloudProvider | null;
@@ -21,6 +21,8 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
   isLoading = false
 }) => {
   const [localConfig, setLocalConfig] = useState<Partial<CloudProvider>>({});
+  const [isBackupProcessExpanded, setIsBackupProcessExpanded] = useState(false);
+  const [isStorageRequirementsExpanded, setIsStorageRequirementsExpanded] = useState(false);
 
   // Initialize local config when prop changes
   useEffect(() => {
@@ -85,25 +87,35 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
 
         {/* Backup Process Information */}
         <div className="config-section">
-          <h5>Backup Process</h5>
-          <div className="info-box">
-            <div className="info-item">
-              <strong>Target Sources:</strong> All items configured in the Overview tab
-            </div>
-            <div className="info-item">
-              <strong>Process:</strong> Glob targets → Create tarball → Encrypt → Store on NAS
-            </div>
-            <div className="info-item">
-              <strong>NAS Path:</strong> /mnt/nas/backups/homeserver (default)
-            </div>
-            <div className="info-item">
-              <strong>Backup Format:</strong> Encrypted .tar.gz archives
-            </div>
-            <div className="info-item">
-              <strong>Permissions:</strong> 755 (drwxr-xr-x)
-            </div>
-            <div className="info-item">
-              <strong>Owner:</strong> root:root
+          <div 
+            className="collapsible-header"
+            onClick={() => setIsBackupProcessExpanded(!isBackupProcessExpanded)}
+          >
+            <h5>Backup Process</h5>
+            <span className={`collapse-icon ${isBackupProcessExpanded ? 'expanded' : ''}`}>
+              ▼
+            </span>
+          </div>
+          <div className={`collapsible-content ${isBackupProcessExpanded ? 'expanded' : ''}`}>
+            <div className="info-box">
+              <div className="info-item">
+                <strong>Target Sources:</strong> All items configured in the Overview tab
+              </div>
+              <div className="info-item">
+                <strong>Process:</strong> Glob targets → Create tarball → Encrypt → Store on NAS
+              </div>
+              <div className="info-item">
+                <strong>NAS Path:</strong> /mnt/nas/backups/homeserver (default)
+              </div>
+              <div className="info-item">
+                <strong>Backup Format:</strong> Encrypted .tar.gz archives
+              </div>
+              <div className="info-item">
+                <strong>Permissions:</strong> 755 (drwxr-xr-x)
+              </div>
+              <div className="info-item">
+                <strong>Owner:</strong> root:root
+              </div>
             </div>
           </div>
         </div>
@@ -111,12 +123,22 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
 
         {/* Storage Requirements */}
         <div className="config-section">
-          <h5>Storage Requirements</h5>
-          <div className="warning-box">
-            <div className="warning-icon">⚠</div>
-            <div className="warning-content">
-              <strong>Important:</strong> Ensure sufficient NAS disk space is available for encrypted backup tarballs.
-              NAS backups provide local redundancy but are not protected against site-wide disasters - consider using cloud providers for off-site redundancy.
+          <div 
+            className="collapsible-header"
+            onClick={() => setIsStorageRequirementsExpanded(!isStorageRequirementsExpanded)}
+          >
+            <h5>Storage Requirements</h5>
+            <span className={`collapse-icon ${isStorageRequirementsExpanded ? 'expanded' : ''}`}>
+              ▼
+            </span>
+          </div>
+          <div className={`collapsible-content ${isStorageRequirementsExpanded ? 'expanded' : ''}`}>
+            <div className="warning-box">
+              <div className="warning-icon">⚠</div>
+              <div className="warning-content">
+                <strong>Important:</strong> Ensure sufficient NAS disk space is available for encrypted backup tarballs.
+                NAS backups provide local redundancy but are not protected against site-wide disasters - consider using cloud providers for off-site redundancy.
+              </div>
             </div>
           </div>
         </div>

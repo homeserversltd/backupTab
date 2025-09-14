@@ -7,8 +7,9 @@ Handles backup schedule management and cron job operations
 import os
 import subprocess
 import yaml
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
+import croniter
 from .utils import (
     BACKUP_CONFIG_PATH,
     get_logger,
@@ -26,6 +27,23 @@ class ScheduleHandler:
         self.config_manager = BackupConfigManager()
         self.backup_service = BackupService()
     
+    def _calculate_next_run(self, cron_schedule: str) -> Optional[str]:
+        """Calculate the next run time for a cron schedule."""
+        try:
+            if not cron_schedule:
+                return None
+            
+            # Create cron iterator
+            cron = croniter.croniter(cron_schedule, datetime.now())
+            next_run = cron.get_next(datetime)
+            
+            # Format as ISO string
+            return next_run.isoformat()
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to calculate next run time for schedule '{cron_schedule}': {e}")
+            return None
+    
     def get_schedule_status(self) -> Dict[str, Any]:
         """Get backup schedule configuration and status using cron"""
         try:
@@ -34,6 +52,12 @@ class ScheduleHandler:
             
             if result["success"]:
                 status = result["status"]
+                
+                # Calculate next run time if schedule is enabled
+                next_run = None
+                if status['enabled'] and status['schedule']:
+                    next_run = self._calculate_next_run(status['schedule'])
+                
                 schedule = {
                     'cron_status': 'enabled' if status['enabled'] else 'disabled',
                     'schedule': status['schedule'],
@@ -43,7 +67,7 @@ class ScheduleHandler:
                     'script_executable': status['script_executable'],
                     'template_file': status['template_file'],
                     'template_exists': status['template_exists'],
-                    'next_run': 'Cron will determine next run time',
+                    'next_run': next_run or 'Not scheduled',
                     'last_run': 'Check backup logs for last run',
                     'schedule_config': {
                         'enabled': status['enabled'],

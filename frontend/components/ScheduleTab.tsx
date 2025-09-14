@@ -30,7 +30,7 @@ import './ScheduleTab.css';
 
 interface ScheduleTabProps {
   schedules?: BackupScheduleConfig[];
-  onScheduleChange?: (schedules: BackupScheduleConfig[]) => void;
+  onScheduleChange?: () => void;
 }
 
 interface UpdateSchedule {
@@ -260,7 +260,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         status: updateSchedule.enabled ? 'active' : 'paused'
       };
       
-      onScheduleChange?.([updatedSchedule]);
+      onScheduleChange?.();
       
       showToast({
         message: `Schedule ${updateSchedule.enabled ? 'saved and enabled' : 'saved and disabled'} successfully`,

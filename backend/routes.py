@@ -384,6 +384,19 @@ def get_backup_statistics():
         config = config_manager.get_safe_config()
         stats['backup_count'] = config.get('backup_count', 0)
         
+        # Add backup type from schedule configuration
+        schedule_config = config.get('schedule', {})
+        backup_type = schedule_config.get('backupType', 'incremental')
+        stats['backup_type'] = backup_type
+        
+        # Add human-readable backup type description
+        backup_type_descriptions = {
+            'full': 'Complete system backup',
+            'incremental': 'Only changed files since last backup',
+            'differential': 'All changes since last full backup'
+        }
+        stats['backup_type_description'] = backup_type_descriptions.get(backup_type, 'Unknown backup type')
+        
         return create_response(True, stats)
     except Exception as e:
         get_logger().error(f"Statistics retrieval failed: {e}")

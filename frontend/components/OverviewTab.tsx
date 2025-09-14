@@ -19,7 +19,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 }) => {
 
   const formatNextBackup = (nextRun: string | null): string => {
-    if (!nextRun) return 'Not scheduled';
+    if (!nextRun || nextRun === 'Not scheduled') return 'Not scheduled';
     
     try {
       const date = new Date(nextRun);
@@ -27,14 +27,36 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       const diffMs = date.getTime() - now.getTime();
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
       const diffDays = Math.floor(diffHours / 24);
+      const diffMinutes = Math.floor(diffMs / (1000 * 60));
       
       if (diffMs < 0) return 'Overdue';
       if (diffDays > 0) return `In ${diffDays} day${diffDays > 1 ? 's' : ''}`;
       if (diffHours > 0) return `In ${diffHours} hour${diffHours > 1 ? 's' : ''}`;
-      return 'Soon';
+      if (diffMinutes > 0) return `In ${diffMinutes} minute${diffMinutes > 1 ? 's' : ''}`;
+      return 'Very soon';
     } catch {
-      return 'Invalid date';
+      return nextRun; // Return the original string if it's not a valid date
     }
+  };
+
+  const getBackupTypeInfo = () => {
+    const backupType = scheduleInfo?.schedule_config?.backupType || 'incremental';
+    const backupTypeLabels = {
+      'full': 'Full Backup',
+      'incremental': 'Incremental',
+      'differential': 'Differential'
+    };
+    const backupTypeDescriptions = {
+      'full': 'Complete system backup',
+      'incremental': 'Only changed files since last backup',
+      'differential': 'All changes since last full backup'
+    };
+    
+    return {
+      type: backupType,
+      label: backupTypeLabels[backupType as keyof typeof backupTypeLabels] || 'Unknown',
+      description: backupTypeDescriptions[backupType as keyof typeof backupTypeDescriptions] || 'Unknown backup type'
+    };
   };
 
   return (
@@ -50,6 +72,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <div className="stat-item">
             <p className="next-backup">{formatNextBackup(scheduleInfo?.next_run || null)}</p>
             <p className="stat-label">Next Scheduled Backup</p>
+          </div>
+          <div className="stat-item">
+            <p className="backup-type">{getBackupTypeInfo().label}</p>
+            <p className="stat-label">Backup Type</p>
           </div>
         </div>
       </div>

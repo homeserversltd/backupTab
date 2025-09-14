@@ -294,7 +294,13 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                 <strong>Tab Name:</strong> backupTab
               </div>
               <div className="info-item">
+                <strong>Author:</strong> HOMESERVER LLC
+              </div>
+              <div className="info-item">
                 <strong>Description:</strong> HOMESERVER Professional Backup System
+              </div>
+              <div className="info-item">
+                <strong>Repository:</strong> <a href="https://github.com/homeserversltd/backupTab" target="_blank" rel="noopener noreferrer" className="github-link">GitHub - backupTab</a>
               </div>
             </div>
             

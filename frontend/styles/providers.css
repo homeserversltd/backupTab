@@ -228,3 +228,108 @@ input:checked + .toggle-slider:before {
   color: var(--text);
   font-weight: 600;
 }
+
+/* Collapsible Sections */
+.collapsible-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.collapsible-header:hover {
+  background-color: var(--primary);
+  border-radius: 4px;
+  padding: 0.75rem 0.5rem;
+  margin: 0 -0.5rem;
+}
+
+.collapsible-header h5 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.collapse-icon {
+  font-size: 0.8rem;
+  color: var(--secondary);
+  transition: transform 0.2s ease;
+  transform: rotate(-90deg);
+}
+
+.collapse-icon.expanded {
+  transform: rotate(0deg);
+}
+
+.collapsible-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  opacity: 0;
+}
+
+.collapsible-content.expanded {
+  max-height: 500px;
+  opacity: 1;
+  padding-top: 1rem;
+}
+
+/* Info Box Styling */
+.info-box {
+  background: var(--primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem;
+  margin: 0.5rem 0;
+}
+
+.info-item {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.info-item:last-child {
+  margin-bottom: 0;
+}
+
+.info-item strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Warning Box Styling */
+.warning-box {
+  display: flex;
+  align-items: flex-start;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+  padding: 1rem;
+  margin: 0.5rem 0;
+}
+
+.warning-icon {
+  font-size: 1.2rem;
+  color: var(--warning);
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.warning-content {
+  flex: 1;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.warning-content strong {
+  color: var(--warning);
+  font-weight: 600;
+}
