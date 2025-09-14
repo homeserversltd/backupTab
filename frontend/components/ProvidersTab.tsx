@@ -4,11 +4,12 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { BackupConfig, CloudProvider } from '../types';
+import { BackupConfig, CloudProvider, ProviderStatus } from '../types';
 import { ProviderSelector } from './providers/ProviderSelector';
 import { BackblazeProvider } from './providers/BackblazeProvider';
 import { LocalProvider } from './providers/LocalProvider';
-import { showToast } from '../../../components/Popup/PopupManager';
+import { showToast } from '../../../../src/components/Popup/PopupManager';
+import { useBackupControls } from '../hooks/useBackupControls';
 
 interface ProvidersTabProps {
   config: BackupConfig | null;
@@ -21,7 +22,41 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
 }) => {
   const [selectedProvider, setSelectedProvider] = useState<string>('backblaze');
   const [providerConfig, setProviderConfig] = useState<CloudProvider | null>(null);
+  const [providerStatuses, setProviderStatuses] = useState<ProviderStatus[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  const { getProvidersStatus } = useBackupControls();
+
+  // Load provider statuses on component mount
+  useEffect(() => {
+    const loadProviderStatuses = async () => {
+      try {
+        console.log('Fetching provider statuses from API...');
+        const statuses = await getProvidersStatus();
+        console.log('Provider statuses response:', statuses);
+        console.log('Provider statuses length:', statuses?.length);
+        setProviderStatuses(statuses || []);
+        
+        // Set default selected provider to first available provider
+        if (statuses && statuses.length > 0 && !selectedProvider) {
+          const firstAvailable = statuses.find(p => p.available);
+          if (firstAvailable) {
+            console.log('Setting default provider to:', firstAvailable.name);
+            setSelectedProvider(firstAvailable.name);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load provider statuses:', err);
+        showToast({
+          message: 'Failed to load provider statuses',
+          variant: 'error',
+          duration: 4000
+        });
+      }
+    };
+
+    loadProviderStatuses();
+  }, [getProvidersStatus]);
 
   // Load provider config when provider changes
   useEffect(() => {
@@ -179,6 +214,7 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
       <div className="providers-layout">
         <ProviderSelector
           config={config}
+          providerStatuses={providerStatuses}
           selectedProvider={selectedProvider}
           onProviderSelect={handleProviderSelect}
           onProviderToggle={handleProviderToggle}

@@ -5,6 +5,7 @@ Professional backup system API endpoints - Refactored version
 """
 
 import os
+import subprocess
 from datetime import datetime
 from flask import Blueprint, request, jsonify
 from .utils import get_logger, create_backup_timestamp
@@ -38,6 +39,30 @@ def create_response(success: bool, data: dict = None, error: str = None, status_
     
     return jsonify(response_data), status_code if not success else 200
 
+def _get_provider_description(provider_name: str) -> str:
+    """Get human-readable description for provider"""
+    descriptions = {
+        'local': 'Store backups on local disk',
+        'backblaze': 'Cloud storage with competitive pricing',
+        'google_drive': 'Google Drive cloud storage',
+        'google_cloud_storage': 'Google Cloud Storage buckets',
+        'dropbox': 'Dropbox cloud storage',
+        'aws_s3': 'Amazon S3 cloud storage'
+    }
+    return descriptions.get(provider_name, f'{provider_name.replace("_", " ").title()} storage')
+
+def _get_provider_icon(provider_name: str) -> str:
+    """Get icon identifier for provider"""
+    icons = {
+        'local': 'floppy-disk',
+        'backblaze': 'cloud',
+        'google_drive': 'folder',
+        'google_cloud_storage': 'server',
+        'dropbox': 'box',
+        'aws_s3': 'cloud'
+    }
+    return icons.get(provider_name, 'storage')
+
 # System Status Routes
 @bp.route('/status', methods=['GET'])
 def get_status():
@@ -60,6 +85,31 @@ def get_repositories():
         get_logger().error(f"Repository listing failed: {e}")
         return create_response(False, error=str(e), status_code=500)
 
+@bp.route('/providers/status', methods=['GET'])
+def get_providers_status():
+    """Get status of all providers in a simple, iterable format"""
+    try:
+        # Get the full config
+        config = config_manager.get_safe_config()
+        providers = config.get('providers', {})
+        
+        # Create simple status list for frontend iteration
+        provider_status = []
+        for provider_name, provider_config in providers.items():
+            provider_status.append({
+                'name': provider_name,
+                'enabled': provider_config.get('enabled', False),
+                'available': True,  # All providers in config are available
+                'display_name': provider_name.replace('_', ' ').title(),
+                'description': _get_provider_description(provider_name),
+                'icon': _get_provider_icon(provider_name)
+            })
+        
+        return create_response(True, {'providers': provider_status})
+    except Exception as e:
+        get_logger().error(f"Provider status retrieval failed: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
 # Backup Operations Routes
 @bp.route('/backup/run', methods=['POST'])
 def run_backup():
@@ -73,6 +123,45 @@ def run_backup():
         return create_response(True, result)
     except Exception as e:
         get_logger().error(f"Backup execution failed: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/backup/sync-now', methods=['POST'])
+def sync_now():
+    """Run backup script directly (Sync Now button)"""
+    try:
+        # Path to the backup script
+        backup_script = '/var/www/homeserver/premium/backupTab/backend/backup'
+        
+        # Check if script exists
+        if not os.path.exists(backup_script):
+            return create_response(False, error='Backup script not found', status_code=404)
+        
+        # Make script executable
+        os.chmod(backup_script, 0o755)
+        
+        # Run the backup script
+        result = subprocess.run(
+            [backup_script, 'create'],
+            capture_output=True,
+            text=True,
+            timeout=300,  # 5 minute timeout
+            cwd='/var/www/homeserver/premium/backupTab/backend'
+        )
+        
+        if result.returncode == 0:
+            return create_response(True, {
+                'message': 'Backup completed successfully',
+                'output': result.stdout,
+                'timestamp': create_backup_timestamp()
+            })
+        else:
+            return create_response(False, error=f'Backup failed: {result.stderr}', status_code=500)
+            
+    except subprocess.TimeoutExpired:
+        get_logger().error("Backup script timed out")
+        return create_response(False, error='Backup timed out', status_code=408)
+    except Exception as e:
+        get_logger().error(f"Sync now failed: {e}")
         return create_response(False, error=str(e), status_code=500)
 
 @bp.route('/cloud/test', methods=['POST'])

@@ -22,8 +22,9 @@ import {
   faSave,
   faSpinner
 } from '@fortawesome/free-solid-svg-icons';
-import { BackupScheduleConfig } from '../types';
-import { showToast } from '../../../components/Popup/PopupManager';
+import { BackupScheduleConfig, ScheduleInfo } from '../types';
+import { showToast } from '../../../components/Popup/PopupManager'; //donot touch this
+import { useBackupControls } from '../hooks/useBackupControls';
 import './ScheduleTab.css';
 
 interface ScheduleTabProps {
@@ -49,6 +50,15 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   schedules = [], 
   onScheduleChange 
 }) => {
+  const {
+    getSchedule,
+    setScheduleConfig,
+    syncNow,
+    isLoading: apiLoading,
+    error: apiError,
+    clearError
+  } = useBackupControls();
+
   const [updateSchedule, setUpdateSchedule] = useState<UpdateSchedule>({
     enabled: false,
     frequency: 'weekly',
@@ -59,6 +69,40 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const [backupType, setBackupType] = useState<'full' | 'incremental' | 'differential'>('incremental');
   const [retentionDays, setRetentionDays] = useState<number>(30);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [scheduleInfo, setScheduleInfo] = useState<ScheduleInfo | null>(null);
+
+  // Load current schedule configuration on mount
+  useEffect(() => {
+    loadScheduleConfig();
+  }, []);
+
+  const loadScheduleConfig = async () => {
+    try {
+      const schedule = await getSchedule();
+      setScheduleInfo(schedule);
+      
+      // Parse existing schedule configuration if available
+      if (schedule.schedule_config) {
+        const config = schedule.schedule_config;
+        setUpdateSchedule({
+          enabled: schedule.timer_status === 'active',
+          frequency: (config.frequency as 'daily' | 'weekly' | 'monthly') || 'weekly',
+          time: config.time || '02:00',
+          dayOfWeek: typeof config.dayOfWeek === 'number' ? config.dayOfWeek : 0,
+          dayOfMonth: typeof config.dayOfMonth === 'number' ? config.dayOfMonth : 1
+        });
+        setBackupType((config.backupType as 'full' | 'incremental' | 'differential') || 'incremental');
+        setRetentionDays(typeof config.retentionDays === 'number' ? config.retentionDays : 30);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load schedule configuration';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 4000
+      });
+    }
+  };
 
   // Helper function to format schedule preview
   const getSchedulePreview = () => {
@@ -91,9 +135,26 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const saveSchedule = async () => {
     setIsLoading(true);
     try {
-      // Convert UpdateSchedule to BackupScheduleConfig format
+      // Convert UpdateSchedule to backend format
       const [hour, minute] = updateSchedule.time.split(':').map(Number);
-      const schedule: BackupScheduleConfig = {
+      const scheduleConfig = {
+        enabled: updateSchedule.enabled,
+        frequency: updateSchedule.frequency,
+        hour: hour || 2,
+        minute: minute || 0,
+        dayOfWeek: updateSchedule.frequency === 'weekly' ? updateSchedule.dayOfWeek : undefined,
+        dayOfMonth: updateSchedule.frequency === 'monthly' ? updateSchedule.dayOfMonth : undefined,
+        backupType: backupType,
+        retentionDays: retentionDays,
+        repositories: [],
+        time: updateSchedule.time
+      };
+      
+      // Save to backend
+      await setScheduleConfig(scheduleConfig);
+      
+      // Update local state
+      const updatedSchedule: BackupScheduleConfig = {
         id: '1',
         name: 'Backup Schedule',
         enabled: updateSchedule.enabled,
@@ -105,18 +166,47 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         backupType: backupType,
         retentionDays: retentionDays,
         repositories: [],
-        status: 'never_run'
+        status: updateSchedule.enabled ? 'active' : 'paused'
       };
       
-      onScheduleChange?.([schedule]);
+      onScheduleChange?.([updatedSchedule]);
       
       showToast({
         message: `Schedule ${updateSchedule.enabled ? 'saved and enabled' : 'saved and disabled'} successfully`,
         variant: 'success',
         duration: 3000
       });
+      
+      // Reload schedule info to get updated status
+      await loadScheduleConfig();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save schedule';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 4000
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const runBackupNow = async () => {
+    setIsLoading(true);
+    try {
+      // Run backup script directly
+      const result = await syncNow();
+      
+      showToast({
+        message: 'Backup completed successfully',
+        variant: 'success',
+        duration: 3000
+      });
+      
+      // Reload schedule info to get updated last run time
+      await loadScheduleConfig();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to run backup';
       showToast({
         message: errorMessage,
         variant: 'error',
@@ -270,24 +360,67 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           )}
         </div>
         
-        <button
-          type="button"
-          className="save-schedule-button"
-          onClick={saveSchedule}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <>
-              <FontAwesomeIcon icon={faSpinner} spin />
-              Saving...
-            </>
-          ) : (
-            <>
-              <FontAwesomeIcon icon={faSave} />
-              Save Schedule
-            </>
-          )}
-        </button>
+        {/* Schedule Status */}
+        <div className="schedule-status">
+          <h5>
+            <FontAwesomeIcon icon={faClock} />
+            Backup Status
+          </h5>
+          <div className="status-info">
+            <div className="status-item">
+              <strong>Next Scheduled Backup:</strong> 
+              <span className="status-value">
+                {scheduleInfo?.next_run ? scheduleInfo.next_run : 'Not scheduled'}
+              </span>
+            </div>
+            {scheduleInfo?.last_run && (
+              <div className="status-item">
+                <strong>Last Run:</strong> 
+                <span className="status-value">{scheduleInfo.last_run}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="schedule-actions">
+          <button
+            type="button"
+            className="sync-now-button"
+            onClick={runBackupNow}
+            disabled={isLoading || apiLoading}
+          >
+            {(isLoading || apiLoading) ? (
+              <>
+                <FontAwesomeIcon icon={faSpinner} spin />
+                Running...
+              </>
+            ) : (
+              <>
+                <FontAwesomeIcon icon={faPlay} />
+                Sync Now
+              </>
+            )}
+          </button>
+          
+          <button
+            type="button"
+            className="save-schedule-button"
+            onClick={saveSchedule}
+            disabled={isLoading || apiLoading}
+          >
+            {(isLoading || apiLoading) ? (
+              <>
+                <FontAwesomeIcon icon={faSpinner} spin />
+                Saving...
+              </>
+            ) : (
+              <>
+                <FontAwesomeIcon icon={faSave} />
+                Save Schedule
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

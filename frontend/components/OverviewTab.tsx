@@ -103,7 +103,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           {config?.backup_items && config.backup_items.length > 0 ? (
             config.backup_items.map((file, index) => (
               <div key={index} className="file-item">
-                <div className="file-icon">🗂️</div>
                 <div className="file-info">
                   <div className="file-path">{file}</div>
                 </div>

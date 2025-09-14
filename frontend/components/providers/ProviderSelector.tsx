@@ -4,71 +4,31 @@
  */
 
 import React from 'react';
-import { BackupConfig } from '../../types';
+import { BackupConfig, ProviderStatus } from '../../types';
 
 interface ProviderSelectorProps {
   config: BackupConfig | null;
+  providerStatuses: ProviderStatus[];
   selectedProvider: string;
   onProviderSelect: (provider: string) => void;
   onProviderToggle: (provider: string, enabled: boolean) => Promise<void>;
   isLoading?: boolean;
 }
 
-interface ProviderInfo {
-  name: string;
-  displayName: string;
-  description: string;
-  status: 'available' | 'future_development' | 'deprecated';
-  icon: string;
-}
-
-const PROVIDER_INFO: Record<string, ProviderInfo> = {
-  local: {
-    name: 'local',
-    displayName: 'Local Filesystem',
-    description: 'Store backups on local disk',
-    status: 'available',
-    icon: '💾'
-  },
-  backblaze: {
-    name: 'backblaze',
-    displayName: 'Backblaze B2',
-    description: 'Cloud storage with competitive pricing',
-    status: 'available',
-    icon: '☁️'
-  },
-  google_drive: {
-    name: 'google_drive',
-    displayName: 'Google Drive',
-    description: 'Google Drive cloud storage',
-    status: 'future_development',
-    icon: '📁'
-  },
-  google_cloud_storage: {
-    name: 'google_cloud_storage',
-    displayName: 'Google Cloud Storage',
-    description: 'Google Cloud Storage buckets',
-    status: 'future_development',
-    icon: '🗄️'
-  },
-  dropbox: {
-    name: 'dropbox',
-    displayName: 'Dropbox',
-    description: 'Dropbox cloud storage',
-    status: 'future_development',
-    icon: '📦'
-  }
-};
-
 export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
   config,
+  providerStatuses,
   selectedProvider,
   onProviderSelect,
   onProviderToggle,
   isLoading = false
 }) => {
+  console.log('ProviderSelector received providerStatuses:', providerStatuses);
+  console.log('ProviderSelector received config:', config);
+  
   const handleProviderClick = (provider: string) => {
-    if (PROVIDER_INFO[provider]?.status === 'available') {
+    const providerStatus = providerStatuses.find(p => p.name === provider);
+    if (providerStatus?.available) {
       onProviderSelect(provider);
     }
   };
@@ -77,7 +37,7 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
     await onProviderToggle(provider, enabled);
   };
 
-  if (!config) {
+  if (!config || !providerStatuses.length) {
     return (
       <div className="provider-selector">
         <div className="loading-state">
@@ -97,31 +57,31 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
       </div>
 
       <div className="provider-list">
-        {Object.entries(PROVIDER_INFO).map(([key, info]) => {
-          const providerConfig = config.providers[key];
+        {providerStatuses.map((providerStatus) => {
+          const providerConfig = config.providers[providerStatus.name];
           const isEnabled = providerConfig?.enabled || false;
-          const isSelected = selectedProvider === key;
-          const isAvailable = info.status === 'available';
+          const isSelected = selectedProvider === providerStatus.name;
+          const isAvailable = providerStatus.available;
 
           return (
             <div
-              key={key}
+              key={providerStatus.name}
               className={`provider-item ${isSelected ? 'selected' : ''} ${!isAvailable ? 'disabled' : ''}`}
-              onClick={() => handleProviderClick(key)}
+              onClick={() => handleProviderClick(providerStatus.name)}
             >
-              <div className="provider-icon">{info.icon}</div>
+              <div className="provider-icon">{providerStatus.icon}</div>
               
               <div className="provider-info">
-                <div className="provider-name">{info.displayName}</div>
-                <div className="provider-description">{info.description}</div>
+                <div className="provider-name">{providerStatus.display_name}</div>
+                <div className="provider-description">{providerStatus.description}</div>
                 
-                {info.status === 'future_development' && (
+                {!isAvailable && (
                   <div className="provider-status future">
                     Coming Soon
                   </div>
                 )}
                 
-                {info.status === 'available' && (
+                {isAvailable && (
                   <div className="provider-status available">
                     Available
                   </div>
@@ -134,7 +94,7 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
                     <input
                       type="checkbox"
                       checked={isEnabled}
-                      onChange={(e) => handleToggleProvider(key, e.target.checked)}
+                      onChange={(e) => handleToggleProvider(providerStatus.name, e.target.checked)}
                       disabled={isLoading}
                     />
                     <span className="toggle-slider"></span>
@@ -163,7 +123,7 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
           <div className="summary-item">
             <span className="summary-label">Available:</span>
             <span className="summary-value">
-              {Object.values(PROVIDER_INFO).filter(p => p.status === 'available').length}
+              {providerStatuses.filter(p => p.available).length}
             </span>
           </div>
         </div>

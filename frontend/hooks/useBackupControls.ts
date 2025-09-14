@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { showToast } from '../../../components/Popup/PopupManager';
+import { showToast } from '../../../../src/components/Popup/PopupManager';
 import { 
   BackupStatus, 
   Repository, 
@@ -13,6 +13,7 @@ import {
   BackupConfig, 
   BackupHistory, 
   ScheduleInfo,
+  ProviderStatus,
   UseBackupControlsReturn 
 } from '../types';
 
@@ -43,6 +44,7 @@ export function useBackupControls(): UseBackupControlsReturn {
       });
 
       const data = await response.json();
+      console.log('API Response for', endpoint, ':', data);
 
       if (!response.ok) {
         throw new Error(data.error || `HTTP ${response.status}`);
@@ -52,6 +54,7 @@ export function useBackupControls(): UseBackupControlsReturn {
         throw new Error(data.error || 'API call failed');
       }
 
+      console.log('API Success - returning data:', data.data);
       return data.data;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -89,6 +92,12 @@ export function useBackupControls(): UseBackupControlsReturn {
     });
   }, [handleApiCall]);
 
+  const syncNow = useCallback(async (): Promise<any> => {
+    return handleApiCall<any>('/backup/sync-now', {
+      method: 'POST',
+    });
+  }, [handleApiCall]);
+
   const testCloudConnections = useCallback(async (): Promise<CloudTestResult> => {
     return handleApiCall<CloudTestResult>('/cloud/test', {
       method: 'POST',
@@ -123,16 +132,52 @@ export function useBackupControls(): UseBackupControlsReturn {
     return true;
   }, [handleApiCall]);
 
+  const setScheduleConfig = useCallback(async (config: any): Promise<boolean> => {
+    await handleApiCall('/schedule/config', {
+      method: 'POST',
+      body: JSON.stringify(config),
+    });
+    return true;
+  }, [handleApiCall]);
+
+  const getScheduleHistory = useCallback(async (): Promise<any> => {
+    return handleApiCall<any>('/schedule/history');
+  }, [handleApiCall]);
+
+  const getScheduleTemplates = useCallback(async (): Promise<any> => {
+    return handleApiCall<any>('/schedule/templates');
+  }, [handleApiCall]);
+
+  const testSchedule = useCallback(async (): Promise<any> => {
+    return handleApiCall<any>('/schedule/test', {
+      method: 'POST',
+    });
+  }, [handleApiCall]);
+
+  const getProvidersStatus = useCallback(async (): Promise<ProviderStatus[]> => {
+    console.log('Making API call to /providers/status');
+    const result = await handleApiCall<{providers: ProviderStatus[]}>('/providers/status');
+    console.log('Raw API response for providers status:', result);
+    console.log('Extracted providers array:', result.providers);
+    return result.providers;
+  }, [handleApiCall]);
+
   return {
     getStatus,
     getRepositories,
     runBackup,
+    syncNow,
     testCloudConnections,
     getConfig,
     updateConfig,
     getHistory,
     getSchedule,
     updateSchedule,
+    setScheduleConfig,
+    getScheduleHistory,
+    getScheduleTemplates,
+    testSchedule,
+    getProvidersStatus,
     isLoading,
     error,
     clearError,

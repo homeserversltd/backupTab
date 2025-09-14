@@ -42,6 +42,15 @@ export interface CloudProvider {
   connection_pool_size?: number;
 }
 
+export interface ProviderStatus {
+  name: string;
+  enabled: boolean;
+  available: boolean;
+  display_name: string;
+  description: string;
+  icon: string;
+}
+
 export interface BackupConfig {
   backup_items: string[];
   providers: Record<string, CloudProvider>;
@@ -137,12 +146,18 @@ export interface UseBackupControlsReturn {
   getStatus: () => Promise<BackupStatus>;
   getRepositories: () => Promise<Repository[]>;
   runBackup: (type: string, repositories: string[]) => Promise<BackupOperation>;
+  syncNow: () => Promise<any>;
   testCloudConnections: () => Promise<CloudTestResult>;
   getConfig: () => Promise<BackupConfig>;
   updateConfig: (config: Partial<BackupConfig>) => Promise<boolean>;
   getHistory: () => Promise<BackupHistory>;
   getSchedule: () => Promise<ScheduleInfo>;
   updateSchedule: (action: string) => Promise<boolean>;
+  setScheduleConfig: (config: any) => Promise<boolean>;
+  getScheduleHistory: () => Promise<any>;
+  getScheduleTemplates: () => Promise<any>;
+  testSchedule: () => Promise<any>;
+  getProvidersStatus: () => Promise<ProviderStatus[]>;
   isLoading: boolean;
   error: string | null;
   clearError: () => void;

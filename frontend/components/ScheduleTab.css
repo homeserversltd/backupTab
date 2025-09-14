@@ -455,3 +455,98 @@
 /* Removed duplicate styles - all toggle switch and form styles are now above */
 
 /* All styles now match UpdateManagerModal exactly */
+
+/* Schedule Actions */
+.schedule-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.sync-now-button {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.sync-now-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.sync-now-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.sync-now-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Status Display */
+.schedule-status {
+  background-color: var(--secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 20px;
+}
+
+.schedule-status h5 {
+  margin: 0 0 12px 0;
+  color: var(--text);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.status-item strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.status-value {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .schedule-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .sync-now-button,
+  .save-schedule-button {
+    width: 100%;
+  }
+}
