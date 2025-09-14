@@ -475,6 +475,75 @@ class EnhancedBackupCLI:
             return None
         
         return provider_config
+    
+    def deploy_cron_job(self, schedule: str) -> bool:
+        """Deploy cron job with the specified schedule using backup service."""
+        print(f"Deploying cron job with schedule: {schedule}")
+        
+        try:
+            # Use the backup service for deployment
+            from src.service.backup_service import BackupService
+            service = BackupService(self.config_file)
+            result = service.deploy_cron_schedule(schedule)
+            
+            if result["success"]:
+                print(f"Cron job deployed successfully: {result['message']}")
+                print(f"Cron file: {result['cron_file']}")
+                return True
+            else:
+                print(f"ERROR: {result['error']}")
+                return False
+                
+        except Exception as e:
+            print(f"ERROR: Failed to deploy cron job: {e}")
+            return False
+    
+    def remove_cron_job(self) -> bool:
+        """Remove the cron job completely using backup service."""
+        print("Removing cron job...")
+        
+        try:
+            # Use the backup service for removal
+            from src.service.backup_service import BackupService
+            service = BackupService(self.config_file)
+            result = service.remove_cron_schedule()
+            
+            if result["success"]:
+                print(f"Cron job removed successfully: {result['message']}")
+                return True
+            else:
+                print(f"ERROR: {result['error']}")
+                return False
+                
+        except Exception as e:
+            print(f"ERROR: Failed to remove cron job: {e}")
+            return False
+    
+    def get_cron_job_status(self) -> Dict[str, Any]:
+        """Get comprehensive cron job status using backup service."""
+        try:
+            # Use the backup service for status
+            from src.service.backup_service import BackupService
+            service = BackupService(self.config_file)
+            result = service.get_cron_status()
+            
+            if result["success"]:
+                status = result["status"]
+                print(f"Cron Job Status:")
+                print(f"  Enabled: {status['enabled']}")
+                print(f"  Schedule: {status['schedule'] or 'None'}")
+                print(f"  Cron File: {status['cron_file']}")
+                print(f"  File Exists: {status['exists']}")
+                print(f"  Backup Script: {status['backup_script']}")
+                print(f"  Script Executable: {status['script_executable']}")
+                return status
+            else:
+                print(f"ERROR: {result['error']}")
+                return {"error": result["error"]}
+                
+        except Exception as e:
+            print(f"ERROR: Failed to get cron status: {e}")
+            return {"error": str(e)}
 
 def main():
     """Main CLI entry point."""
@@ -564,6 +633,16 @@ def main():
     # Get provider config command
     get_config_parser = subparsers.add_parser("get-config", help="Get configuration for a provider")
     get_config_parser.add_argument("provider", help="Provider name")
+    
+    # Deploy cron job command
+    deploy_cron_parser = subparsers.add_parser("deploy-cron", help="Deploy cron job with schedule")
+    deploy_cron_parser.add_argument("schedule", help="Cron schedule (e.g., '0 2 * * *' for daily at 2 AM)")
+    
+    # Remove cron job command
+    subparsers.add_parser("remove-cron", help="Remove cron job")
+    
+    # Get cron status command
+    subparsers.add_parser("cron-status", help="Get cron job status")
     
     args = parser.parse_args()
     
@@ -682,6 +761,16 @@ def main():
                     print(f"  {key}: {value}")
             else:
                 sys.exit(1)
+        elif args.command == "deploy-cron":
+            success = cli.deploy_cron_job(args.schedule)
+            if not success:
+                sys.exit(1)
+        elif args.command == "remove-cron":
+            success = cli.remove_cron_job()
+            if not success:
+                sys.exit(1)
+        elif args.command == "cron-status":
+            cli.get_cron_job_status()
     
     except KeyboardInterrupt:
         print("\nOperation cancelled by user")

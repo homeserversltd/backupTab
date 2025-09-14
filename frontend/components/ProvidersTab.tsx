@@ -14,11 +14,13 @@ import { useBackupControls } from '../hooks/useBackupControls';
 interface ProvidersTabProps {
   config: BackupConfig | null;
   updateConfig: (config: Partial<BackupConfig>) => Promise<boolean>;
+  onConfigUpdate?: (config: BackupConfig) => void;
 }
 
 export const ProvidersTab: React.FC<ProvidersTabProps> = ({
   config,
-  updateConfig
+  updateConfig,
+  onConfigUpdate
 }) => {
   const [selectedProvider, setSelectedProvider] = useState<string>('backblaze');
   const [providerConfig, setProviderConfig] = useState<CloudProvider | null>(null);
@@ -87,6 +89,28 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
       
       const success = await updateConfig(updatedConfig);
       if (success) {
+        // Update local config state immediately for UI responsiveness
+        setProviderConfig(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            enabled
+          };
+        });
+        
+        // Update the main config state if callback is provided
+        if (onConfigUpdate) {
+          onConfigUpdate(updatedConfig);
+        }
+        
+        // Refresh provider statuses after config update
+        try {
+          const statuses = await getProvidersStatus();
+          setProviderStatuses(statuses || []);
+        } catch (refreshErr) {
+          console.warn('Failed to refresh provider statuses:', refreshErr);
+        }
+        
         showToast({
           message: `Provider ${provider} ${enabled ? 'enabled' : 'disabled'} successfully`,
           variant: 'success',
@@ -133,6 +157,14 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
       
       const success = await updateConfig(updatedConfig);
       if (success) {
+        // Refresh provider statuses after config update
+        try {
+          const statuses = await getProvidersStatus();
+          setProviderStatuses(statuses || []);
+        } catch (refreshErr) {
+          console.warn('Failed to refresh provider statuses:', refreshErr);
+        }
+        
         showToast({
           message: `${selectedProvider} configuration saved successfully`,
           variant: 'success',

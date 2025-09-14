@@ -62,6 +62,7 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
           const isEnabled = providerConfig?.enabled || false;
           const isSelected = selectedProvider === providerStatus.name;
           const isAvailable = providerStatus.available;
+          const isConfigured = providerStatus.configured;
 
           return (
             <div
@@ -76,14 +77,20 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
                 <div className="provider-description">{providerStatus.description}</div>
                 
                 {!isAvailable && (
-                  <div className="provider-status future">
+                  <div className="provider-status not-available">
                     Coming Soon
                   </div>
                 )}
                 
-                {isAvailable && (
+                {isAvailable && !isConfigured && (
+                  <div className="provider-status not-configured">
+                    Not Configured
+                  </div>
+                )}
+                
+                {isAvailable && isConfigured && (
                   <div className="provider-status available">
-                    Available
+                    Ready
                   </div>
                 )}
               </div>
@@ -124,6 +131,12 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
             <span className="summary-label">Available:</span>
             <span className="summary-value">
               {providerStatuses.filter(p => p.available).length}
+            </span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">Ready:</span>
+            <span className="summary-value">
+              {providerStatuses.filter(p => p.available && p.configured).length}
             </span>
           </div>
         </div>

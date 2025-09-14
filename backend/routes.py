@@ -52,16 +52,73 @@ def _get_provider_description(provider_name: str) -> str:
     return descriptions.get(provider_name, f'{provider_name.replace("_", " ").title()} storage')
 
 def _get_provider_icon(provider_name: str) -> str:
-    """Get icon identifier for provider"""
+    """Get emoji icon for provider"""
     icons = {
-        'local': 'floppy-disk',
-        'backblaze': 'cloud',
-        'google_drive': 'folder',
-        'google_cloud_storage': 'server',
-        'dropbox': 'box',
-        'aws_s3': 'cloud'
+        'local': '💾',
+        'backblaze': '☁️',
+        'google_drive': '📁',
+        'google_cloud_storage': '🗄️',
+        'dropbox': '📦',
+        'aws_s3': '☁️'
     }
-    return icons.get(provider_name, 'storage')
+    return icons.get(provider_name, '💿')
+
+def _is_provider_available(provider_name: str) -> bool:
+    """Check if provider is available to be configured (not necessarily fully configured)"""
+    # Local is always available
+    if provider_name == 'local':
+        return True
+    
+    # Backblaze is hardcoded as available
+    if provider_name == 'backblaze':
+        return True
+    
+    # Other providers are not yet implemented
+    return False
+
+def _is_provider_configured(provider_name: str, provider_config: dict) -> bool:
+    """Check if provider has required credentials configured"""
+    if provider_name == 'local':
+        # Local provider is always configured - it doesn't need credentials
+        return True
+    
+    elif provider_name == 'backblaze':
+        # Backblaze needs application_key_id and application_key
+        return bool(
+            provider_config.get('application_key_id', '').strip() and
+            provider_config.get('application_key', '').strip()
+        )
+    
+    elif provider_name == 'google_drive':
+        # Google Drive needs credentials_file and token_file
+        return bool(
+            provider_config.get('credentials_file', '').strip() and
+            provider_config.get('token_file', '').strip()
+        )
+    
+    elif provider_name == 'google_cloud_storage':
+        # Google Cloud Storage needs credentials_file and project_id
+        return bool(
+            provider_config.get('credentials_file', '').strip() and
+            provider_config.get('project_id', '').strip()
+        )
+    
+    elif provider_name == 'dropbox':
+        # Dropbox needs username and password (or access token)
+        return bool(
+            provider_config.get('username', '').strip() and
+            provider_config.get('password', '').strip()
+        )
+    
+    elif provider_name == 'aws_s3':
+        # AWS S3 needs access_key_id and secret_access_key
+        return bool(
+            provider_config.get('access_key_id', '').strip() and
+            provider_config.get('secret_access_key', '').strip()
+        )
+    
+    # Default to False for unknown providers
+    return False
 
 # System Status Routes
 @bp.route('/status', methods=['GET'])
@@ -96,10 +153,13 @@ def get_providers_status():
         # Create simple status list for frontend iteration
         provider_status = []
         for provider_name, provider_config in providers.items():
+            is_available = _is_provider_available(provider_name)
+            is_configured = _is_provider_configured(provider_name, provider_config)
             provider_status.append({
                 'name': provider_name,
                 'enabled': provider_config.get('enabled', False),
-                'available': True,  # All providers in config are available
+                'available': is_available,
+                'configured': is_configured,
                 'display_name': provider_name.replace('_', ' ').title(),
                 'description': _get_provider_description(provider_name),
                 'icon': _get_provider_icon(provider_name)
@@ -239,7 +299,10 @@ def update_schedule():
         if not action:
             return create_response(False, error='No action specified', status_code=400)
         
-        result = schedule_handler.update_schedule(action)
+        # Get schedule from data if provided
+        schedule = data.get('schedule')
+        
+        result = schedule_handler.update_schedule(action, schedule)
         return create_response(True, result)
     except Exception as e:
         get_logger().error(f"Schedule update failed: {e}")
@@ -384,6 +447,18 @@ def get_schedule_templates():
         return create_response(True, templates)
     except Exception as e:
         get_logger().error(f"Schedule templates retrieval failed: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/schedule/cron/available', methods=['GET'])
+def get_available_cron_schedules():
+    """Get available cron schedule presets"""
+    try:
+        from .src.service.backup_service import BackupService
+        service = BackupService()
+        result = service.get_available_schedules()
+        return create_response(True, result)
+    except Exception as e:
+        get_logger().error(f"Available cron schedules retrieval failed: {e}")
         return create_response(False, error=str(e), status_code=500)
 
 @bp.route('/schedule/test', methods=['POST'])

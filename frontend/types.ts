@@ -36,9 +36,6 @@ export interface CloudProvider {
   timeout?: number;
   max_bandwidth?: number | null;
   upload_chunk_size?: number;
-  encryption_enabled?: boolean;
-  encryption_key?: string | null;
-  encryption_salt?: string | null;
   connection_pool_size?: number;
 }
 
@@ -46,6 +43,7 @@ export interface ProviderStatus {
   name: string;
   enabled: boolean;
   available: boolean;
+  configured: boolean;
   display_name: string;
   description: string;
   icon: string;
@@ -56,6 +54,8 @@ export interface BackupConfig {
   providers: Record<string, CloudProvider>;
   retention_days: number;
   encryption_enabled: boolean;
+  encryption_key?: string | null;
+  encryption_salt?: string | null;
   backup_count: number;
   logging: {
     enabled: boolean;

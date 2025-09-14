@@ -127,6 +127,16 @@
   color: var(--background);
 }
 
+.provider-status.not-configured {
+  background: #6c757d;
+  color: var(--background);
+}
+
+.provider-status.not-available {
+  background: #ffc107;
+  color: var(--background);
+}
+
 .provider-controls {
   margin-left: auto;
   flex-shrink: 0;

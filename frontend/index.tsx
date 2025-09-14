@@ -109,6 +109,7 @@ const BackupTablet: React.FC = () => {
           <ProvidersTab 
             config={config}
             updateConfig={updateConfig}
+            onConfigUpdate={setConfig}
           />
         )}
 
@@ -120,6 +121,7 @@ const BackupTablet: React.FC = () => {
           <ConfigTab 
             config={config}
             updateConfig={updateConfig}
+            onConfigUpdate={setConfig}
           />
         )}
       </div>

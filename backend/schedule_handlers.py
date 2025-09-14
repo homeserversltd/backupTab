@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 HOMESERVER Backup Tab Schedule Handlers
-Handles backup schedule management and systemd timer operations
+Handles backup schedule management and cron job operations
 """
 
 import os
@@ -13,95 +13,123 @@ from .utils import (
     BACKUP_CONFIG_PATH,
     get_logger,
     run_cli_command,
-    get_systemd_service_status,
     validate_file_path
 )
 from .config_manager import BackupConfigManager
+from .src.service.backup_service import BackupService
 
 class ScheduleHandler:
-    """Handles backup schedule management"""
+    """Handles backup schedule management using cron jobs"""
     
     def __init__(self):
         self.logger = get_logger()
         self.config_manager = BackupConfigManager()
-        self.timer_name = 'homeserver-backup.timer'
+        self.backup_service = BackupService()
     
     def get_schedule_status(self) -> Dict[str, Any]:
-        """Get backup schedule configuration and status"""
+        """Get backup schedule configuration and status using cron"""
         try:
-            schedule = {
-                'timer_status': 'unknown',
-                'next_run': None,
-                'last_run': None,
-                'schedule_config': {}
-            }
+            # Get cron status from backup service
+            result = self.backup_service.get_cron_status()
             
-            # Check timer status
-            schedule['timer_status'] = get_systemd_service_status(self.timer_name)
-            
-            # Get next run time
-            try:
-                result = subprocess.run(['/bin/systemctl', 'list-timers', self.timer_name, '--no-pager'], 
-                                      capture_output=True, text=True, timeout=10)
-                if result.returncode == 0:
-                    lines = result.stdout.strip().split('\n')
-                    for line in lines:
-                        if self.timer_name in line:
-                            parts = line.split()
-                            if len(parts) >= 2:
-                                schedule['next_run'] = parts[0]
-                                schedule['last_run'] = parts[1]
-                            break
-            except Exception:
-                pass
-            
-            # Read schedule config from main config
-            if os.path.exists(BACKUP_CONFIG_PATH):
-                with open(BACKUP_CONFIG_PATH, 'r') as f:
-                    config = yaml.safe_load(f)
-                    schedule['schedule_config'] = config.get('schedule', {})
+            if result["success"]:
+                status = result["status"]
+                schedule = {
+                    'cron_status': 'enabled' if status['enabled'] else 'disabled',
+                    'schedule': status['schedule'],
+                    'cron_file': status['cron_file'],
+                    'file_exists': status['exists'],
+                    'backup_script': status['backup_script'],
+                    'script_executable': status['script_executable'],
+                    'template_file': status['template_file'],
+                    'template_exists': status['template_exists'],
+                    'next_run': 'Cron will determine next run time',
+                    'last_run': 'Check backup logs for last run',
+                    'schedule_config': {
+                        'enabled': status['enabled'],
+                        'schedule': status['schedule'],
+                        'type': 'cron'
+                    }
+                }
+            else:
+                schedule = {
+                    'cron_status': 'error',
+                    'error': result['error'],
+                    'schedule': None,
+                    'cron_file': '/etc/cron.d/homeserver-backup',
+                    'file_exists': False,
+                    'backup_script': '/var/www/homeserver/backup/backup',
+                    'script_executable': False,
+                    'next_run': None,
+                    'last_run': None,
+                    'schedule_config': {
+                        'enabled': False,
+                        'schedule': None,
+                        'type': 'cron'
+                    }
+                }
             
             return schedule
         
         except Exception as e:
-            self.logger.error(f"Schedule retrieval failed: {e}")
+            self.logger.error(f"Schedule status retrieval failed: {e}")
             raise
     
-    def update_schedule(self, action: str) -> Dict[str, Any]:
-        """Update backup schedule"""
+    def update_schedule(self, action: str, schedule: str = None) -> Dict[str, Any]:
+        """Update backup schedule using cron"""
         try:
-            valid_actions = ['start', 'stop', 'enable', 'disable']
+            valid_actions = ['enable', 'disable', 'deploy', 'remove']
             if action not in valid_actions:
                 raise ValueError(f'Unknown action: {action}. Valid actions: {valid_actions}')
             
-            # Execute systemd command
-            result = subprocess.run(['/bin/systemctl', action, self.timer_name], 
-                                  capture_output=True, text=True, timeout=10)
+            if action == 'enable' or action == 'deploy':
+                if not schedule:
+                    # Use default schedule if none provided
+                    schedule = "0 2 * * *"  # Daily at 2 AM
+                
+                # Deploy cron schedule
+                result = self.backup_service.deploy_cron_schedule(schedule)
+                
+                if result["success"]:
+                    return {
+                        'message': f'Cron schedule {action} successful',
+                        'action': action,
+                        'schedule': schedule,
+                        'cron_status': 'enabled',
+                        'cron_file': result.get('cron_file', '/etc/cron.d/homeserver-backup')
+                    }
+                else:
+                    raise RuntimeError(f'Cron schedule {action} failed: {result["error"]}')
             
-            if result.returncode != 0:
-                raise RuntimeError(f'Schedule {action} failed: {result.stderr}')
-            
-            # Get updated status
-            updated_status = self.get_schedule_status()
-            
-            return {
-                'message': f'Schedule {action} successful',
-                'action': action,
-                'timer_status': updated_status['timer_status'],
-                'next_run': updated_status['next_run'],
-                'last_run': updated_status['last_run']
-            }
+            elif action == 'disable' or action == 'remove':
+                # Remove cron schedule
+                result = self.backup_service.remove_cron_schedule()
+                
+                if result["success"]:
+                    return {
+                        'message': f'Cron schedule {action} successful',
+                        'action': action,
+                        'schedule': None,
+                        'cron_status': 'disabled',
+                        'previous_schedule': result.get('previous_schedule')
+                    }
+                else:
+                    raise RuntimeError(f'Cron schedule {action} failed: {result["error"]}')
         
         except Exception as e:
             self.logger.error(f"Schedule update failed: {e}")
             raise
     
     def set_schedule_config(self, schedule_config: Dict[str, Any]) -> Dict[str, Any]:
-        """Set backup schedule configuration"""
+        """Set backup schedule configuration using cron"""
         try:
             # Validate schedule configuration
             if not self._validate_schedule_config(schedule_config):
                 raise ValueError("Invalid schedule configuration")
+            
+            # Convert frontend schedule config to cron expression
+            cron_expression = self._convert_to_cron_expression(schedule_config)
+            schedule_config['schedule'] = cron_expression
             
             # Update configuration file
             config = self.config_manager.get_config()
@@ -111,20 +139,21 @@ class ScheduleHandler:
             if not success:
                 raise RuntimeError("Failed to update schedule configuration")
             
-            # Reload systemd if timer is enabled
-            timer_status = get_systemd_service_status(self.timer_name)
-            if timer_status == 'active':
-                try:
-                    subprocess.run(['/bin/systemctl', 'daemon-reload'], 
-                                  capture_output=True, text=True, timeout=10)
-                    subprocess.run(['/bin/systemctl', 'restart', self.timer_name], 
-                                  capture_output=True, text=True, timeout=10)
-                except Exception as e:
-                    self.logger.warning(f"Failed to reload systemd configuration: {e}")
+            # Deploy cron schedule if enabled
+            if schedule_config.get('enabled', False) and cron_expression:
+                cron_result = self.backup_service.deploy_cron_schedule(cron_expression)
+                if not cron_result["success"]:
+                    self.logger.warning(f"Failed to deploy cron schedule: {cron_result['error']}")
+            elif not schedule_config.get('enabled', False):
+                # Remove cron schedule if disabled
+                cron_result = self.backup_service.remove_cron_schedule()
+                if not cron_result["success"]:
+                    self.logger.warning(f"Failed to remove cron schedule: {cron_result['error']}")
             
             return {
                 'message': 'Schedule configuration updated successfully',
                 'schedule_config': schedule_config,
+                'cron_deployed': schedule_config.get('enabled', False),
                 'updated_at': datetime.now().isoformat()
             }
         
@@ -188,24 +217,24 @@ class ScheduleHandler:
     def test_schedule(self) -> Dict[str, Any]:
         """Test the backup schedule by running it manually"""
         try:
-            # Trigger the timer manually
-            result = subprocess.run(['/bin/systemctl', 'start', self.timer_name], 
-                                  capture_output=True, text=True, timeout=10)
+            # Test cron deployment without actually deploying
+            test_result = self.backup_service.test_cron_deployment()
             
-            if result.returncode != 0:
-                raise RuntimeError(f'Failed to trigger schedule test: {result.stderr}')
-            
-            # Wait a moment and check status
-            import time
-            time.sleep(2)
-            
-            current_status = self.get_schedule_status()
-            
-            return {
-                'message': 'Schedule test triggered successfully',
-                'timer_status': current_status['timer_status'],
-                'tested_at': datetime.now().isoformat()
-            }
+            if test_result["success"]:
+                return {
+                    'message': 'Cron schedule test successful',
+                    'status': 'success',
+                    'tested_at': datetime.now().isoformat(),
+                    'schedule': test_result.get('schedule'),
+                    'backup_script': test_result.get('backup_script'),
+                    'template_processed': True
+                }
+            else:
+                return {
+                    'message': f'Cron schedule test failed: {test_result["error"]}',
+                    'status': 'error',
+                    'tested_at': datetime.now().isoformat()
+                }
         
         except Exception as e:
             self.logger.error(f"Schedule test failed: {e}")
@@ -247,6 +276,42 @@ class ScheduleHandler:
         
         except Exception:
             return False
+    
+    def _convert_to_cron_expression(self, schedule_config: Dict[str, Any]) -> str:
+        """Convert frontend schedule configuration to cron expression"""
+        try:
+            frequency = schedule_config.get('frequency', 'daily')
+            time_str = schedule_config.get('time', '02:00')
+            
+            # Parse time
+            hour, minute = map(int, time_str.split(':'))
+            
+            if frequency == 'daily':
+                # Daily: minute hour * * *
+                return f"{minute} {hour} * * *"
+            
+            elif frequency == 'weekly':
+                # Weekly: minute hour * * dayOfWeek (0=Sunday, 1=Monday, etc.)
+                day_of_week = schedule_config.get('dayOfWeek', 0)
+                return f"{minute} {hour} * * {day_of_week}"
+            
+            elif frequency == 'monthly':
+                # Monthly: minute hour dayOfMonth * *
+                day_of_month = schedule_config.get('dayOfMonth', 1)
+                return f"{minute} {hour} {day_of_month} * *"
+            
+            elif frequency == 'custom':
+                # Custom cron expression provided directly
+                return schedule_config.get('cron_expression', '0 2 * * *')
+            
+            else:
+                # Default to daily at 2 AM
+                return '0 2 * * *'
+                
+        except Exception as e:
+            self.logger.error(f"Failed to convert schedule to cron: {e}")
+            # Return default daily schedule
+            return '0 2 * * *'
     
     def get_available_schedules(self) -> Dict[str, Any]:
         """Get available schedule templates and options"""

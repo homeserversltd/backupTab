@@ -232,58 +232,6 @@ export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
           </div>
         </div>
 
-        {/* Encryption Settings */}
-        <div className="config-section">
-          <h5>Encryption Settings</h5>
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={localConfig.encryption_enabled || false}
-                onChange={(e) => handleFieldChange('encryption_enabled', e.target.checked)}
-                className="form-checkbox"
-              />
-              <span>Enable client-side encryption</span>
-            </label>
-            <small className="field-help">
-              Encrypt files before uploading to B2 (recommended for sensitive data)
-            </small>
-          </div>
-
-          {localConfig.encryption_enabled && (
-            <>
-              <div className="form-group">
-                <label htmlFor="encryption_key">Encryption Key</label>
-                <input
-                  id="encryption_key"
-                  type="password"
-                  value={localConfig.encryption_key || ''}
-                  onChange={(e) => handleFieldChange('encryption_key', e.target.value)}
-                  placeholder="Leave empty to auto-generate"
-                  className="form-input"
-                />
-                <small className="field-help">
-                  Leave empty to auto-generate a secure key
-                </small>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="encryption_salt">Encryption Salt</label>
-                <input
-                  id="encryption_salt"
-                  type="password"
-                  value={localConfig.encryption_salt || ''}
-                  onChange={(e) => handleFieldChange('encryption_salt', e.target.value)}
-                  placeholder="Leave empty to auto-generate"
-                  className="form-input"
-                />
-                <small className="field-help">
-                  Leave empty to auto-generate a secure salt
-                </small>
-              </div>
-            </>
-          )}
-        </div>
 
         {/* Action Buttons */}
         <div className="form-actions">

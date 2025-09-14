@@ -1,249 +1,358 @@
 #!/usr/bin/env python3
 """
-HOMESERVER Backup Service
+HOMESERVER Backup Service Middleman
 Copyright (C) 2024 HOMESERVER LLC
 
-Service integration for the backup system.
+Service that acts as a middleman between cron_manager.py and homeserver-backup.cron template.
+Handles cron job deployment, template processing, and system integration.
 """
 
 import os
 import sys
 import json
-import logging
+import subprocess
 from pathlib import Path
-from typing import Dict, Any, Optional
+from datetime import datetime
+from typing import Dict, Any, Optional, List
 
-# Add src to path for imports (for CLI import)
-sys.path.append(str(Path(__file__).parent.parent))
+# Add src to path for imports
+current_dir = Path(__file__).parent
+src_dir = current_dir.parent
+sys.path.insert(0, str(src_dir))
 
-from ..providers import get_provider, PROVIDERS
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('/var/log/homeserver/backup.log'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger('homeserver_backup')
+from ..utils.cron_manager import CronManager
+from ..utils.logger import get_logger
 
 class BackupService:
-    """HOMESERVER Backup Service."""
+    """Backup service middleman for cron job management."""
     
     def __init__(self, config_file: Optional[str] = None):
-        self.config_file = config_file or "/var/www/homeserver/backup/backup_config.json"
-        self.config = self._load_config()
-        self.providers = {}
-        self._initialize_providers()
-    
-    def _load_config(self) -> Dict[str, Any]:
-        """Load backup configuration."""
-        default_config = {
-            "backup_items": [
-                "/var/www/homeserver/src",
-                "/var/lib/gogs",
-                "/etc/homeserver"
-            ],
-            "providers": {
-                "local": {
-                    "enabled": True,
-                    "path": "/var/www/homeserver/backup"
-                },
-                "aws_s3": {
-                    "enabled": False,
-                    "bucket": "homeserver-backups",
-                    "region": "us-east-1",
-                    "access_key": "",
-                    "secret_key": ""
-                },
-                "google_drive": {
-                    "enabled": False,
-                    "credentials_file": "",
-                    "token_file": "token.json",
-                    "folder_id": ""
-                },
-                "dropbox": {
-                    "enabled": False,
-                    "access_token": "",
-                    "folder_path": "/HOMESERVER Backups"
-                },
-                "backblaze": {
-                    "enabled": False,
-                    "application_key_id": "",
-                    "application_key": "",
-                    "bucket": "homeserver-backups"
-                }
-            },
-            "encryption": {
-                "enabled": True,
-                "fak_path": "/root/key/skeleton.key"
-            },
-            "compression": {
-                "enabled": True,
-                "level": 6
-            },
-            "retention": {
-                "days": 30,
-                "max_backups": 10
-            }
-        }
+        self.config_file = config_file or "/etc/backupTab/settings.json"
+        self.logger = get_logger()
+        self.cron_manager = CronManager()
+        self.template_file = current_dir / "homeserver-backup.cron"
+        self.backup_script = "/var/www/homeserver/backup/backup"
         
-        if Path(self.config_file).exists():
+        # Ensure backup script exists and is executable
+        self._ensure_backup_script()
+    
+    def _ensure_backup_script(self) -> bool:
+        """Ensure the backup script exists and is executable."""
+        backup_path = Path(self.backup_script)
+        if not backup_path.exists():
+            self.logger.error(f"Backup script not found: {self.backup_script}")
+            return False
+        
+        # Make executable if not already
+        if not os.access(backup_path, os.X_OK):
             try:
-                with open(self.config_file, 'r') as f:
-                    config = json.load(f)
-                # Merge with defaults
-                for key, value in default_config.items():
-                    if key not in config:
-                        config[key] = value
-                return config
+                os.chmod(backup_path, 0o755)
+                self.logger.info(f"Made backup script executable: {self.backup_script}")
             except Exception as e:
-                logger.warning(f"Failed to load config, using defaults: {e}")
-        
-        # Create default config file
-        config_dir = Path(self.config_file).parent
-        config_dir.mkdir(parents=True, exist_ok=True)
-        
-        with open(self.config_file, 'w') as f:
-            json.dump(default_config, f, indent=2)
-        
-        logger.info(f"Created default config file: {self.config_file}")
-        return default_config
-    
-    def _initialize_providers(self):
-        """Initialize enabled providers."""
-        for provider_name, provider_config in self.config["providers"].items():
-            if provider_config.get("enabled", False):
-                try:
-                    provider = get_provider(provider_name, provider_config)
-                    self.providers[provider_name] = provider
-                    logger.info(f"Initialized provider: {provider_name}")
-                except Exception as e:
-                    logger.error(f"Failed to initialize provider {provider_name}: {e}")
-    
-    def test_connection(self) -> bool:
-        """Test connection to all enabled providers."""
-        logger.info("Testing provider connections...")
-        
-        all_success = True
-        for provider_name, provider in self.providers.items():
-            try:
-                success = provider.test_connection()
-                if success:
-                    logger.info(f"✓ {provider_name} connection successful")
-                else:
-                    logger.error(f"✗ {provider_name} connection failed")
-                    all_success = False
-            except Exception as e:
-                logger.error(f"✗ {provider_name} connection error: {e}")
-                all_success = False
-        
-        return all_success
-    
-    def create_backup(self) -> bool:
-        """Create a new backup."""
-        logger.info("Starting backup creation...")
-        
-        try:
-            # Import the CLI class
-            from ...backup import EnhancedBackupCLI
-            
-            # Create CLI instance with service config
-            cli = EnhancedBackupCLI(self.config_file)
-            
-            # Create backup
-            backup_path = cli.create_backup()
-            
-            if backup_path:
-                logger.info(f"Backup created successfully: {backup_path}")
-                return True
-            else:
-                logger.error("Failed to create backup")
+                self.logger.error(f"Failed to make backup script executable: {e}")
                 return False
+        
+        return True
+    
+    def deploy_cron_schedule(self, schedule: str) -> Dict[str, Any]:
+        """Deploy cron schedule using the cron manager."""
+        try:
+            self.logger.info(f"Deploying cron schedule: {schedule}")
+            
+            # Validate schedule format
+            if not self._validate_cron_schedule(schedule):
+                return {
+                    "success": False,
+                    "error": "Invalid cron schedule format",
+                    "schedule": schedule
+                }
+            
+            # Deploy using cron manager
+            success = self.cron_manager.deploy_cron_job(schedule)
+            
+            if success:
+                # Verify deployment
+                status = self.cron_manager.get_cron_status()
+                self.logger.info(f"Cron schedule deployed successfully: {schedule}")
+                
+                return {
+                    "success": True,
+                    "message": f"Cron schedule deployed: {schedule}",
+                    "schedule": schedule,
+                    "cron_file": status["cron_file"],
+                    "enabled": status["enabled"]
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Failed to deploy cron schedule",
+                    "schedule": schedule
+                }
                 
         except Exception as e:
-            logger.error(f"Backup creation failed: {e}")
-            return False
+            self.logger.error(f"Cron deployment failed: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "schedule": schedule
+            }
     
-    def list_backups(self) -> list:
-        """List available backups."""
+    def remove_cron_schedule(self) -> Dict[str, Any]:
+        """Remove cron schedule using the cron manager."""
         try:
-            from ...backup import EnhancedBackupCLI
-            cli = EnhancedBackupCLI(self.config_file)
-            return cli.list_backups()
+            self.logger.info("Removing cron schedule...")
+            
+            # Get current status before removal
+            status = self.cron_manager.get_cron_status()
+            current_schedule = status.get("schedule")
+            
+            # Remove using cron manager
+            success = self.cron_manager.remove_cron_job()
+            
+            if success:
+                self.logger.info("Cron schedule removed successfully")
+                return {
+                    "success": True,
+                    "message": "Cron schedule removed successfully",
+                    "previous_schedule": current_schedule,
+                    "enabled": False
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Failed to remove cron schedule"
+                }
+                
         except Exception as e:
-            logger.error(f"Failed to list backups: {e}")
-            return []
+            self.logger.error(f"Cron removal failed: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
     
-    def cleanup_old_backups(self) -> bool:
-        """Clean up old backups based on retention policy."""
-        logger.info("Cleaning up old backups...")
-        
+    def get_cron_status(self) -> Dict[str, Any]:
+        """Get comprehensive cron status."""
         try:
-            backups = self.list_backups()
-            retention_days = self.config["retention"]["days"]
-            max_backups = self.config["retention"]["max_backups"]
+            status = self.cron_manager.get_cron_status()
             
-            # Sort by modification time (newest first)
-            backups.sort(key=lambda x: x.get('mtime', 0), reverse=True)
+            # Add additional system information
+            status.update({
+                "backup_script": self.backup_script,
+                "script_exists": Path(self.backup_script).exists(),
+                "script_executable": os.access(self.backup_script, os.X_OK) if Path(self.backup_script).exists() else False,
+                "template_file": str(self.template_file),
+                "template_exists": self.template_file.exists(),
+                "timestamp": datetime.now().isoformat()
+            })
             
-            # Keep only the most recent backups
-            if len(backups) > max_backups:
-                backups_to_remove = backups[max_backups:]
-                for backup in backups_to_remove:
-                    provider_name = backup.get('provider', 'local')
-                    if provider_name in self.providers:
-                        provider = self.providers[provider_name]
-                        if provider.delete(backup['name']):
-                            logger.info(f"Removed old backup: {backup['name']}")
-                        else:
-                            logger.warning(f"Failed to remove backup: {backup['name']}")
+            return {
+                "success": True,
+                "status": status
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get cron status: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    def test_cron_deployment(self, schedule: str = "0 2 * * *") -> Dict[str, Any]:
+        """Test cron deployment without actually deploying."""
+        try:
+            self.logger.info(f"Testing cron deployment with schedule: {schedule}")
+            
+            # Validate schedule
+            if not self._validate_cron_schedule(schedule):
+                return {
+                    "success": False,
+                    "error": "Invalid cron schedule format",
+                    "schedule": schedule
+                }
+            
+            # Check if template exists
+            if not self.template_file.exists():
+                return {
+                    "success": False,
+                    "error": f"Template file not found: {self.template_file}",
+                    "schedule": schedule
+                }
+            
+            # Test template processing
+            try:
+                with open(self.template_file, 'r') as f:
+                    template_content = f.read()
+                
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                processed_content = template_content.format(
+                    SCHEDULE=schedule,
+                    TIMESTAMP=timestamp
+                )
+                
+                return {
+                    "success": True,
+                    "message": "Cron deployment test successful",
+                    "schedule": schedule,
+                    "processed_template": processed_content,
+                    "template_file": str(self.template_file),
+                    "backup_script": self.backup_script
+                }
+                
+            except Exception as e:
+                return {
+                    "success": False,
+                    "error": f"Template processing failed: {e}",
+                    "schedule": schedule
+                }
+                
+        except Exception as e:
+            self.logger.error(f"Cron deployment test failed: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "schedule": schedule
+            }
+    
+    def _validate_cron_schedule(self, schedule: str) -> bool:
+        """Validate cron schedule format."""
+        try:
+            parts = schedule.split()
+            if len(parts) != 5:
+                return False
+            
+            # Basic validation - each part should be valid cron syntax
+            for part in parts:
+                if not self._is_valid_cron_part(part):
+                    return False
             
             return True
             
-        except Exception as e:
-            logger.error(f"Backup cleanup failed: {e}")
+        except Exception:
             return False
+    
+    def _is_valid_cron_part(self, part: str) -> bool:
+        """Validate a single cron part."""
+        if part == '*':
+            return True
+        
+        # Check for ranges (e.g., 1-5)
+        if '-' in part:
+            try:
+                start, end = part.split('-', 1)
+                int(start)
+                int(end)
+                return True
+            except ValueError:
+                return False
+        
+        # Check for lists (e.g., 1,3,5)
+        if ',' in part:
+            try:
+                for item in part.split(','):
+                    int(item)
+                return True
+            except ValueError:
+                return False
+        
+        # Check for step values (e.g., */5)
+        if '/' in part:
+            try:
+                base, step = part.split('/', 1)
+                if base == '*':
+                    int(step)
+                    return True
+                else:
+                    int(base)
+                    int(step)
+                    return True
+            except ValueError:
+                return False
+        
+        # Check for simple numbers
+        try:
+            int(part)
+            return True
+        except ValueError:
+            return False
+    
+    def get_available_schedules(self) -> Dict[str, Any]:
+        """Get commonly used cron schedules."""
+        schedules = {
+            "daily_2am": "0 2 * * *",
+            "daily_3am": "0 3 * * *",
+            "daily_4am": "0 4 * * *",
+            "weekly_sunday_2am": "0 2 * * 0",
+            "weekly_monday_2am": "0 2 * * 1",
+            "monthly_1st_2am": "0 2 1 * *",
+            "every_6_hours": "0 */6 * * *",
+            "every_12_hours": "0 */12 * * *",
+            "custom": "custom"
+        }
+        
+        return {
+            "success": True,
+            "schedules": schedules,
+            "description": {
+                "daily_2am": "Daily at 2:00 AM",
+                "daily_3am": "Daily at 3:00 AM", 
+                "daily_4am": "Daily at 4:00 AM",
+                "weekly_sunday_2am": "Weekly on Sunday at 2:00 AM",
+                "weekly_monday_2am": "Weekly on Monday at 2:00 AM",
+                "monthly_1st_2am": "Monthly on the 1st at 2:00 AM",
+                "every_6_hours": "Every 6 hours",
+                "every_12_hours": "Every 12 hours",
+                "custom": "Custom schedule (user-defined)"
+            }
+        }
 
 def main():
     """Main service entry point."""
     import argparse
     
-    parser = argparse.ArgumentParser(description="HOMESERVER Backup Service")
+    parser = argparse.ArgumentParser(description="HOMESERVER Backup Service Middleman")
     parser.add_argument("--config", "-c", help="Configuration file path")
-    parser.add_argument("--test", action="store_true", help="Test provider connections")
-    parser.add_argument("--backup", action="store_true", help="Create backup")
-    parser.add_argument("--list", action="store_true", help="List backups")
-    parser.add_argument("--cleanup", action="store_true", help="Clean up old backups")
+    parser.add_argument("--deploy-cron", help="Deploy cron schedule (e.g., '0 2 * * *')")
+    parser.add_argument("--remove-cron", action="store_true", help="Remove cron schedule")
+    parser.add_argument("--cron-status", action="store_true", help="Get cron status")
+    parser.add_argument("--test-deploy", help="Test cron deployment without deploying")
+    parser.add_argument("--available-schedules", action="store_true", help="Get available schedules")
     
     args = parser.parse_args()
     
     # Initialize service
     service = BackupService(args.config)
     
-    success = True
-    
-    if args.test:
-        success = service.test_connection()
-    elif args.backup:
-        success = service.create_backup()
-    elif args.list:
-        backups = service.list_backups()
-        if backups:
-            print("Available backups:")
-            for backup in backups:
-                print(f"  {backup['name']} - {backup.get('size', 0)} bytes - {backup.get('provider', 'unknown')}")
+    try:
+        if args.deploy_cron:
+            result = service.deploy_cron_schedule(args.deploy_cron)
+            print(json.dumps(result, indent=2))
+            sys.exit(0 if result["success"] else 1)
+        elif args.remove_cron:
+            result = service.remove_cron_schedule()
+            print(json.dumps(result, indent=2))
+            sys.exit(0 if result["success"] else 1)
+        elif args.cron_status:
+            result = service.get_cron_status()
+            print(json.dumps(result, indent=2))
+            sys.exit(0 if result["success"] else 1)
+        elif args.test_deploy:
+            result = service.test_cron_deployment(args.test_deploy)
+            print(json.dumps(result, indent=2))
+            sys.exit(0 if result["success"] else 1)
+        elif args.available_schedules:
+            result = service.get_available_schedules()
+            print(json.dumps(result, indent=2))
+            sys.exit(0)
         else:
-            print("No backups found")
-    elif args.cleanup:
-        success = service.cleanup_old_backups()
-    else:
-        # Default: create backup
-        success = service.create_backup()
+            parser.print_help()
+            sys.exit(1)
     
-    sys.exit(0 if success else 1)
+    except KeyboardInterrupt:
+        print("\nOperation cancelled by user")
+        sys.exit(1)
+    except Exception as e:
+        print(f"ERROR: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

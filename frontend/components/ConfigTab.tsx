@@ -11,27 +11,25 @@ import { showToast } from '../../../components/Popup/PopupManager'; //donot touc
 interface ConfigTabProps {
   config: BackupConfig | null;
   updateConfig: (config: Partial<BackupConfig>) => Promise<boolean>;
+  onConfigUpdate?: (config: BackupConfig) => void;
 }
 
 export const ConfigTab: React.FC<ConfigTabProps> = ({
   config,
-  updateConfig
+  updateConfig,
+  onConfigUpdate
 }) => {
   const [newFilePath, setNewFilePath] = useState('');
-  const [retentionDays, setRetentionDays] = useState(config?.retention_days || 30);
   const [encryptionEnabled, setEncryptionEnabled] = useState(config?.encryption_enabled || false);
-  const [logLevel, setLogLevel] = useState(config?.logging?.log_level || 'INFO');
+  const [encryptionKey, setEncryptionKey] = useState(config?.encryption_key || '');
+  const [encryptionSalt, setEncryptionSalt] = useState(config?.encryption_salt || '');
   const [version, setVersion] = useState<string>('1.0.0');
-  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(false);
-  const [lastUpdateCheck, setLastUpdateCheck] = useState<string>('');
-  const [updateAvailable, setUpdateAvailable] = useState(false);
 
   const tooltip = useTooltip();
 
-  // Load version and auto-update status on component mount
+  // Load version info on component mount
   useEffect(() => {
     loadVersionInfo();
-    loadAutoUpdateStatus();
   }, []);
 
   const loadVersionInfo = async () => {
@@ -51,87 +49,6 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
     }
   };
 
-  const loadAutoUpdateStatus = async () => {
-    try {
-      const response = await fetch('/api/backup/auto-update/status');
-      const data = await response.json();
-      if (data.success) {
-        setAutoUpdateEnabled(data.data.enabled);
-        setLastUpdateCheck(data.data.last_check || '');
-        setUpdateAvailable(data.data.update_available || false);
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load auto-update status';
-      showToast({
-        message: errorMessage,
-        variant: 'error',
-        duration: 4000
-      });
-    }
-  };
-
-  const handleAutoUpdateToggle = async (enabled: boolean) => {
-    try {
-      const response = await fetch('/api/backup/auto-update/toggle', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ enabled }),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        setAutoUpdateEnabled(enabled);
-        showToast({
-          message: `Auto-update ${enabled ? 'enabled' : 'disabled'} successfully`,
-          variant: 'success',
-          duration: 3000
-        });
-        if (enabled) {
-          // Trigger an immediate update check when enabling
-          checkForUpdates();
-        }
-      } else {
-        showToast({
-          message: data.error || 'Failed to toggle auto-update',
-          variant: 'error',
-          duration: 4000
-        });
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to toggle auto-update';
-      showToast({
-        message: errorMessage,
-        variant: 'error',
-        duration: 4000
-      });
-    }
-  };
-
-  const checkForUpdates = async () => {
-    try {
-      const response = await fetch('/api/backup/auto-update/check', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        setLastUpdateCheck(data.data.last_check);
-        setUpdateAvailable(data.data.update_available);
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to check for updates';
-      showToast({
-        message: errorMessage,
-        variant: 'error',
-        duration: 4000
-      });
-    }
-  };
 
   const handleAddFile = async () => {
     if (!newFilePath.trim() || !config) return;
@@ -144,6 +61,11 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
       
       const success = await updateConfig(updatedConfig);
       if (success) {
+        // Update the main config state if callback is provided
+        if (onConfigUpdate) {
+          onConfigUpdate(updatedConfig);
+        }
+        
         showToast({
           message: 'File added to backup list successfully',
           variant: 'success',
@@ -172,6 +94,11 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
       
       const success = await updateConfig(updatedConfig);
       if (success) {
+        // Update the main config state if callback is provided
+        if (onConfigUpdate) {
+          onConfigUpdate(updatedConfig);
+        }
+        
         showToast({
           message: 'File removed from backup list successfully',
           variant: 'success',
@@ -194,16 +121,18 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
     try {
       const updatedConfig = {
         ...config,
-        retention_days: retentionDays,
         encryption_enabled: encryptionEnabled,
-        logging: {
-          ...config.logging,
-          log_level: logLevel
-        }
+        encryption_key: encryptionKey || null,
+        encryption_salt: encryptionSalt || null
       };
       
       const success = await updateConfig(updatedConfig);
       if (success) {
+        // Update the main config state if callback is provided
+        if (onConfigUpdate) {
+          onConfigUpdate(updatedConfig);
+        }
+        
         showToast({
           message: 'Configuration saved successfully',
           variant: 'success',
@@ -221,9 +150,9 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
   };
 
   const handleResetToDefaults = () => {
-    setRetentionDays(30);
     setEncryptionEnabled(false);
-    setLogLevel('INFO');
+    setEncryptionKey('');
+    setEncryptionSalt('');
     showToast({
       message: 'Settings reset to defaults',
       variant: 'info',
@@ -283,21 +212,10 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
           </div>
         </div>
 
+        {/* Encryption Settings */}
         <div className="config-section">
-          <h4>Backup Settings</h4>
+          <h4>Encryption Settings</h4>
           <div className="settings-grid">
-            <div className="setting-item">
-              <label htmlFor="retention-days">Retention Days</label>
-              <input
-                id="retention-days"
-                type="number"
-                value={retentionDays}
-                onChange={(e) => setRetentionDays(parseInt(e.target.value) || 30)}
-                min="1"
-                max="365"
-                placeholder="30"
-              />
-            </div>
             <div className="setting-item">
               <div className="checkbox-container">
                 {tooltip.show(
@@ -314,19 +232,38 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                 )}
               </div>
             </div>
-            <div className="setting-item">
-              <label htmlFor="log-level">Log Level</label>
-              <select 
-                id="log-level"
-                value={logLevel}
-                onChange={(e) => setLogLevel(e.target.value)}
-              >
-                <option value="DEBUG">DEBUG</option>
-                <option value="INFO">INFO</option>
-                <option value="WARNING">WARNING</option>
-                <option value="ERROR">ERROR</option>
-              </select>
-            </div>
+            {encryptionEnabled && (
+              <>
+                <div className="setting-item">
+                  <label htmlFor="encryption-key">Encryption Key</label>
+                  <input
+                    id="encryption-key"
+                    type="password"
+                    value={encryptionKey}
+                    onChange={(e) => setEncryptionKey(e.target.value)}
+                    placeholder="Leave empty to auto-generate"
+                    className="form-input"
+                  />
+                  <small className="field-help">
+                    Leave empty to auto-generate a secure key
+                  </small>
+                </div>
+                <div className="setting-item">
+                  <label htmlFor="encryption-salt">Encryption Salt</label>
+                  <input
+                    id="encryption-salt"
+                    type="password"
+                    value={encryptionSalt}
+                    onChange={(e) => setEncryptionSalt(e.target.value)}
+                    placeholder="Leave empty to auto-generate"
+                    className="form-input"
+                  />
+                  <small className="field-help">
+                    Leave empty to auto-generate a secure salt
+                  </small>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -359,43 +296,8 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
               <div className="info-item">
                 <strong>Description:</strong> HOMESERVER Professional Backup System
               </div>
-              {lastUpdateCheck && (
-                <div className="info-item">
-                  <strong>Last Update Check:</strong> {new Date(lastUpdateCheck).toLocaleString()}
-                </div>
-              )}
-              {updateAvailable && (
-                <div className="info-item update-available">
-                  <strong>Update Available:</strong> <span className="update-badge">New version available</span>
-                </div>
-              )}
             </div>
             
-            <div className="auto-update-controls">
-              <div className="setting-item">
-                <div className="checkbox-container">
-                  <input
-                    id="auto-update-enabled"
-                    type="checkbox"
-                    checked={autoUpdateEnabled}
-                    onChange={(e) => handleAutoUpdateToggle(e.target.checked)}
-                  />
-                  <label htmlFor="auto-update-enabled">Enable Auto-Update</label>
-                </div>
-                <p className="setting-description">
-                  Automatically check for and apply updates to the backup tab
-                </p>
-              </div>
-              
-              <div className="update-actions">
-                <button 
-                  className="action-button secondary"
-                  onClick={checkForUpdates}
-                >
-                  Check for Updates
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>

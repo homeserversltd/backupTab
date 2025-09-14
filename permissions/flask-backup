@@ -23,6 +23,11 @@ www-data ALL=(root) NOPASSWD: /bin/cp /etc/backupTab/settings.json* /tmp/
 www-data ALL=(root) NOPASSWD: /bin/cp /tmp/settings.json* /etc/backupTab/
 www-data ALL=(root) NOPASSWD: /bin/cp /tmp/tmp*.json /etc/backupTab/settings.json
 
+# Allow cron file management
+www-data ALL=(root) NOPASSWD: /bin/cp /tmp/*.cron /etc/cron.d/homeserver-backup
+www-data ALL=(root) NOPASSWD: /bin/rm /etc/cron.d/homeserver-backup
+www-data ALL=(root) NOPASSWD: /bin/cat /etc/cron.d/homeserver-backup
+
 # Allow directory creation and management
 www-data ALL=(root) NOPASSWD: /usr/bin/mkdir -p /opt/homeserver-backup
 www-data ALL=(root) NOPASSWD: /usr/bin/mkdir -p /tmp/homeserver-backups

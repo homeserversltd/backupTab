@@ -23,7 +23,8 @@ import {
   faSpinner
 } from '@fortawesome/free-solid-svg-icons';
 import { BackupScheduleConfig, ScheduleInfo } from '../types';
-import { showToast } from '../../../components/Popup/PopupManager'; //donot touch this
+import { showToast } from '../../../../src/components/Popup/PopupManager'; //donot touch this
+import { useTooltip } from '../../../../src/hooks/useTooltip';
 import { useBackupControls } from '../hooks/useBackupControls';
 import './ScheduleTab.css';
 
@@ -41,9 +42,24 @@ interface UpdateSchedule {
 }
 
 const BACKUP_TYPES = [
-  { value: 'full', label: 'Full Backup', description: 'Complete system backup' },
-  { value: 'incremental', label: 'Incremental', description: 'Only changed files since last backup' },
-  { value: 'differential', label: 'Differential', description: 'All changes since last full backup' }
+  { 
+    value: 'full', 
+    label: 'Full Backup', 
+    description: 'Complete system backup',
+    tooltip: 'Creates a complete backup of all selected files and directories. This is the most comprehensive backup type but requires the most storage space and time.'
+  },
+  { 
+    value: 'incremental', 
+    label: 'Incremental', 
+    description: 'Only changed files since last backup',
+    tooltip: 'Backs up only files that have changed since the last backup (full or incremental). Fast and storage-efficient, but requires all previous backups to restore.'
+  },
+  { 
+    value: 'differential', 
+    label: 'Differential', 
+    description: 'All changes since last full backup',
+    tooltip: 'Backs up all files that have changed since the last full backup. Faster than full backups but requires only the last full backup plus the differential to restore.'
+  }
 ];
 
 export const ScheduleTab: React.FC<ScheduleTabProps> = ({ 
@@ -58,6 +74,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     error: apiError,
     clearError
   } = useBackupControls();
+
+  const tooltip = useTooltip();
 
   const [updateSchedule, setUpdateSchedule] = useState<UpdateSchedule>({
     enabled: false,
@@ -76,6 +94,11 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     loadScheduleConfig();
   }, []);
 
+  // TODO: Add real-time status updates for backup progress
+  // TODO: Implement backup history/logs integration
+  // TODO: Add backup size and storage usage information
+  // TODO: Add backup validation and health checks
+
   const loadScheduleConfig = async () => {
     try {
       const schedule = await getSchedule();
@@ -85,7 +108,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       if (schedule.schedule_config) {
         const config = schedule.schedule_config;
         setUpdateSchedule({
-          enabled: schedule.timer_status === 'active',
+          enabled: Boolean(config.enabled), // Use the enabled flag from config, not timer_status
           frequency: (config.frequency as 'daily' | 'weekly' | 'monthly') || 'weekly',
           time: config.time || '02:00',
           dayOfWeek: typeof config.dayOfWeek === 'number' ? config.dayOfWeek : 0,
@@ -104,7 +127,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     }
   };
 
-  // Helper function to format schedule preview
+  // Helper function to format schedule preview (what user is configuring)
   const getSchedulePreview = () => {
     if (!updateSchedule.enabled) return null;
     
@@ -130,6 +153,74 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       default:
         return '';
     }
+  };
+
+  // Helper function to format deployed schedule (what's actually in cron)
+  const getDeployedSchedule = () => {
+    if (!scheduleInfo?.schedule_config?.enabled) return 'Not scheduled';
+    
+    const config = scheduleInfo.schedule_config;
+    
+    // If we have the frontend configuration format, use it directly
+    if (config.frequency && config.time) {
+      const timeFormatted = new Date(`2000-01-01T${config.time}`).toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      
+      switch (config.frequency) {
+        case 'daily':
+          return `Backups will run daily at ${timeFormatted}`;
+        case 'weekly': {
+          const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const dayIndex = typeof config.dayOfWeek === 'number' ? config.dayOfWeek : parseInt(config.dayOfWeek as string) || 0;
+          const dayName = days[dayIndex];
+          return `Backups will run every ${dayName} at ${timeFormatted}`;
+        }
+        case 'monthly': {
+          const dayOfMonth = typeof config.dayOfMonth === 'number' ? config.dayOfMonth : parseInt(config.dayOfMonth as string) || 1;
+          const suffix = dayOfMonth === 1 ? 'st' : dayOfMonth === 2 ? 'nd' : dayOfMonth === 3 ? 'rd' : 'th';
+          return `Backups will run on the ${dayOfMonth}${suffix} of each month at ${timeFormatted}`;
+        }
+        default:
+          return 'Schedule configured';
+      }
+    }
+    
+    // Fallback: parse cron schedule if available
+    if (config.schedule) {
+      const cronParts = config.schedule.split(' ');
+      if (cronParts.length !== 5) return config.schedule; // Fallback to raw cron if can't parse
+      
+      const [minute, hour, day, month, weekday] = cronParts;
+      
+      // Convert 24-hour to 12-hour format
+      const hourNum = parseInt(hour);
+      const timeFormatted = new Date(`2000-01-01T${hourNum.toString().padStart(2, '0')}:${minute.padStart(2, '0')}`).toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      
+      // Determine frequency based on cron pattern
+      if (weekday !== '*') {
+        // Weekly schedule
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayName = days[parseInt(weekday)];
+        return `Backups will run every ${dayName} at ${timeFormatted}`;
+      } else if (day !== '*') {
+        // Monthly schedule
+        const dayOfMonth = parseInt(day);
+        const suffix = dayOfMonth === 1 ? 'st' : dayOfMonth === 2 ? 'nd' : dayOfMonth === 3 ? 'rd' : 'th';
+        return `Backups will run on the ${dayOfMonth}${suffix} of each month at ${timeFormatted}`;
+      } else {
+        // Daily schedule
+        return `Backups will run daily at ${timeFormatted}`;
+      }
+    }
+    
+    return 'Not scheduled';
   };
 
   const saveSchedule = async () => {
@@ -216,6 +307,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="update-schedule">
@@ -320,17 +412,22 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           <div className="form-row">
             <div className="form-group">
               <label>Backup Type</label>
-              <select
-                className="form-control"
-                value={backupType}
-                onChange={(e) => setBackupType(e.target.value as any)}
-              >
-                {BACKUP_TYPES.map(type => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
+              <div className="backup-type-selector">
+                {BACKUP_TYPES.map(type => 
+                  tooltip.show(type.tooltip, (
+                    <div
+                      key={type.value}
+                      className={`backup-type-option ${backupType === type.value ? 'active' : ''}`}
+                      onClick={() => setBackupType(type.value as any)}
+                    >
+                      <div className="backup-type-header">
+                        <span className="backup-type-label">{type.label}</span>
+                      </div>
+                      <div className="backup-type-description">{type.description}</div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
             
             <div className="form-group">
@@ -370,9 +467,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             <div className="status-item">
               <strong>Next Scheduled Backup:</strong> 
               <span className="status-value">
-                {scheduleInfo?.next_run ? scheduleInfo.next_run : 'Not scheduled'}
+                {getDeployedSchedule()}
               </span>
             </div>
+            {/* TODO: Hook up last run information from backup logs - integrate with backup service logs */}
             {scheduleInfo?.last_run && (
               <div className="status-item">
                 <strong>Last Run:</strong> 

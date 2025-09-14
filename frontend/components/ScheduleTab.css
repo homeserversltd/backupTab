@@ -499,7 +499,7 @@
 
 /* Status Display */
 .schedule-status {
-  background-color: var(--secondary);
+  background-color: var(--primaryHover);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
@@ -538,6 +538,53 @@
   font-weight: 500;
 }
 
+/* Backup Type Selector */
+.backup-type-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.backup-type-option {
+  background-color: var(--secondary);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.backup-type-option:hover {
+  border-color: var(--accent);
+  background-color: var(--primaryHover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.backup-type-option.active {
+  border-color: var(--accent);
+  background-color: var(--accent-light);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.backup-type-header {
+  margin-bottom: 8px;
+}
+
+.backup-type-label {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.backup-type-description {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .schedule-actions {
@@ -548,5 +595,14 @@
   .sync-now-button,
   .save-schedule-button {
     width: 100%;
+  }
+  
+  .backup-type-selector {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .backup-type-option {
+    padding: 12px;
   }
 }
