@@ -7,6 +7,7 @@ Handles all configuration operations for the backup system
 import os
 import json
 import yaml
+import subprocess
 from datetime import datetime
 from typing import Dict, Any, Optional
 from .utils import (
@@ -56,12 +57,23 @@ class BackupConfigManager:
             if not os.path.exists(BACKUP_CONFIG_PATH):
                 return False
             
-            # Create backup of existing config
-            create_config_backup(BACKUP_CONFIG_PATH)
+            # Load current config to compare changes
+            current_config = self.get_config()
             
-            # Write new config
-            with open(BACKUP_CONFIG_PATH, 'w') as f:
-                json.dump(new_config, f, indent=2)
+            # Only create backup for significant changes (not simple provider flag toggles)
+            significant_changes = self._has_significant_changes(current_config, new_config)
+            if significant_changes:
+                create_config_backup(BACKUP_CONFIG_PATH)
+            
+            # Write new config using /usr/bin/sudo
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as temp_file:
+                json.dump(new_config, temp_file, indent=2)
+                temp_path = temp_file.name
+            
+            # Copy to final location with /usr/bin/sudo
+            subprocess.run(['/usr/bin/sudo', '/bin/cp', temp_path, BACKUP_CONFIG_PATH], check=True)
+            os.unlink(temp_path)  # Clean up temp file
             
             self.logger.info("Configuration updated successfully")
             return True
@@ -69,6 +81,26 @@ class BackupConfigManager:
         except Exception as e:
             self.logger.error(f"Failed to update configuration: {e}")
             return False
+    
+    def _has_significant_changes(self, current_config: Dict[str, Any], new_config: Dict[str, Any]) -> bool:
+        """Check if the changes are significant enough to warrant a backup"""
+        # Check if only provider enabled flags changed
+        if 'providers' in current_config and 'providers' in new_config:
+            for provider_name, provider_config in new_config['providers'].items():
+                if provider_name in current_config['providers']:
+                    current_provider = current_config['providers'][provider_name]
+                    # Check if only 'enabled' flag changed
+                    if len(provider_config) == 1 and 'enabled' in provider_config:
+                        if len(current_provider) == 1 and 'enabled' in current_provider:
+                            continue  # Only enabled flag changed, not significant
+                    # Check if only enabled flag is different
+                    significant_keys = set(provider_config.keys()) - {'enabled'}
+                    if not significant_keys and provider_config.get('enabled') != current_provider.get('enabled'):
+                        continue  # Only enabled flag changed, not significant
+                    return True  # Other changes detected
+                else:
+                    return True  # New provider added
+        return True  # Default to creating backup for safety
     
     def get_provider_config(self, provider_name: str) -> Optional[Dict[str, Any]]:
         """Get configuration for a specific provider"""
@@ -112,15 +144,23 @@ class BackupConfigManager:
             if provider_name not in config['providers']:
                 return False
             
-            # Create backup of existing config
-            create_config_backup(BACKUP_CONFIG_PATH)
+            # Only create backup for significant changes (not simple flag toggles)
+            significant_changes = any(key not in ['enabled'] for key in updates.keys())
+            if significant_changes:
+                create_config_backup(BACKUP_CONFIG_PATH)
             
             # Update provider config
             config['providers'][provider_name].update(updates)
             
-            # Write updated config
-            with open(BACKUP_CONFIG_PATH, 'w') as f:
-                json.dump(config, f, indent=2)
+            # Write updated config using /usr/bin/sudo
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as temp_file:
+                json.dump(config, temp_file, indent=2)
+                temp_path = temp_file.name
+            
+            # Copy to final location with /usr/bin/sudo
+            subprocess.run(['/usr/bin/sudo', '/bin/cp', temp_path, BACKUP_CONFIG_PATH], check=True)
+            os.unlink(temp_path)  # Clean up temp file
             
             self.logger.info(f"Provider configuration updated for {provider_name}")
             return True

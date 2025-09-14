@@ -14,24 +14,30 @@ import {
   faPlay, 
   faPause,
   faCheckCircle,
-  faExclamationTriangle
+  faExclamationTriangle,
+  faCalendarDay,
+  faCalendarWeek,
+  faCalendar,
+  faEye,
+  faSave,
+  faSpinner
 } from '@fortawesome/free-solid-svg-icons';
 import { BackupScheduleConfig } from '../types';
+import { showToast } from '../../../components/Popup/PopupManager';
+import './ScheduleTab.css';
 
 interface ScheduleTabProps {
   schedules?: BackupScheduleConfig[];
   onScheduleChange?: (schedules: BackupScheduleConfig[]) => void;
 }
 
-const DAYS_OF_WEEK = [
-  { value: 0, label: 'Sunday' },
-  { value: 1, label: 'Monday' },
-  { value: 2, label: 'Tuesday' },
-  { value: 3, label: 'Wednesday' },
-  { value: 4, label: 'Thursday' },
-  { value: 5, label: 'Friday' },
-  { value: 6, label: 'Saturday' },
-];
+interface UpdateSchedule {
+  enabled: boolean;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  time: string; // HH:MM format
+  dayOfWeek?: number; // 0-6 for weekly
+  dayOfMonth?: number; // 1-31 for monthly
+}
 
 const BACKUP_TYPES = [
   { value: 'full', label: 'Full Backup', description: 'Complete system backup' },
@@ -43,74 +49,97 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   schedules = [], 
   onScheduleChange 
 }) => {
-  const [currentSchedule, setCurrentSchedule] = useState<BackupScheduleConfig>({
-    id: '1',
-    name: 'Backup Schedule',
+  const [updateSchedule, setUpdateSchedule] = useState<UpdateSchedule>({
     enabled: false,
-    frequency: 'daily',
-    hour: 2,
-    minute: 0,
-    backupType: 'incremental',
-    retentionDays: 30,
-    repositories: [],
-    status: 'never_run'
+    frequency: 'weekly',
+    time: '02:00',
+    dayOfWeek: 0
   });
+
+  const [backupType, setBackupType] = useState<'full' | 'incremental' | 'differential'>('incremental');
+  const [retentionDays, setRetentionDays] = useState<number>(30);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Helper function to format schedule preview
   const getSchedulePreview = () => {
-    if (!currentSchedule.enabled) return null;
+    if (!updateSchedule.enabled) return null;
     
-    const timeFormatted = new Date(`2000-01-01T${currentSchedule.hour.toString().padStart(2, '0')}:${currentSchedule.minute.toString().padStart(2, '0')}`).toLocaleTimeString([], {
+    const timeFormatted = new Date(`2000-01-01T${updateSchedule.time}`).toLocaleTimeString([], {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
     });
     
-    switch (currentSchedule.frequency) {
+    switch (updateSchedule.frequency) {
       case 'daily':
         return `Backups will run daily at ${timeFormatted}`;
       case 'weekly': {
-        const dayName = DAYS_OF_WEEK[currentSchedule.day || 0]?.label;
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayName = days[updateSchedule.dayOfWeek || 0];
         return `Backups will run every ${dayName} at ${timeFormatted}`;
       }
       case 'monthly': {
-        const dayOfMonth = currentSchedule.day || 1;
+        const dayOfMonth = updateSchedule.dayOfMonth || 1;
         const suffix = dayOfMonth === 1 ? 'st' : dayOfMonth === 2 ? 'nd' : dayOfMonth === 3 ? 'rd' : 'th';
         return `Backups will run on the ${dayOfMonth}${suffix} of each month at ${timeFormatted}`;
       }
-      case 'yearly':
-        return `Backups will run yearly at ${timeFormatted}`;
-      case 'custom':
-        return `Custom schedule: ${currentSchedule.customCron || 'Not configured'}`;
       default:
         return '';
     }
   };
 
-  const updateSchedule = (updates: Partial<BackupScheduleConfig>) => {
-    const updated = { ...currentSchedule, ...updates };
-    setCurrentSchedule(updated);
-    onScheduleChange?.([updated]);
-  };
-
   const saveSchedule = async () => {
-    // Save the single schedule
-    onScheduleChange?.([currentSchedule]);
+    setIsLoading(true);
+    try {
+      // Convert UpdateSchedule to BackupScheduleConfig format
+      const [hour, minute] = updateSchedule.time.split(':').map(Number);
+      const schedule: BackupScheduleConfig = {
+        id: '1',
+        name: 'Backup Schedule',
+        enabled: updateSchedule.enabled,
+        frequency: updateSchedule.frequency,
+        hour: hour || 2,
+        minute: minute || 0,
+        day: updateSchedule.frequency === 'weekly' ? updateSchedule.dayOfWeek : 
+             updateSchedule.frequency === 'monthly' ? updateSchedule.dayOfMonth : undefined,
+        backupType: backupType,
+        retentionDays: retentionDays,
+        repositories: [],
+        status: 'never_run'
+      };
+      
+      onScheduleChange?.([schedule]);
+      
+      showToast({
+        message: `Schedule ${updateSchedule.enabled ? 'saved and enabled' : 'saved and disabled'} successfully`,
+        variant: 'success',
+        duration: 3000
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save schedule';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 4000
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="schedule-tab">
+    <div className="update-schedule">
       <div className="schedule-form">
         {/* Toggle Switch */}
         <div 
-          className={`update-schedule-toggle ${currentSchedule.enabled ? 'enabled' : ''}`}
-          onClick={() => updateSchedule({ enabled: !currentSchedule.enabled })}
+          className={`update-schedule-toggle ${updateSchedule.enabled ? 'enabled' : ''}`}
+          onClick={() => setUpdateSchedule(prev => ({ ...prev, enabled: !prev.enabled }))}
         >
-          <div className={`schedule-toggle-switch ${currentSchedule.enabled ? 'enabled' : ''}`} />
+          <div className={`schedule-toggle-switch ${updateSchedule.enabled ? 'enabled' : ''}`} />
           <div className="schedule-toggle-label">
             <h5 className="schedule-toggle-title">Automatic Backups</h5>
             <p className="schedule-toggle-description">
-              {currentSchedule.enabled 
+              {updateSchedule.enabled 
                 ? 'Automatic backups are enabled and will run according to your schedule'
                 : 'Enable automatic backups to keep your data protected with scheduled backups'
               }
@@ -119,37 +148,30 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         </div>
         
         {/* Schedule Options */}
-        <div className={`schedule-options ${currentSchedule.enabled ? 'visible' : ''}`}>
+        <div className={`schedule-options ${updateSchedule.enabled ? 'visible' : ''}`}>
           {/* Frequency Selection */}
           <div className="form-group">
             <div className="frequency-selector">
               <div 
-                className={`frequency-option ${currentSchedule.frequency === 'daily' ? 'active' : ''}`}
-                onClick={() => updateSchedule({ frequency: 'daily' })}
+                className={`frequency-option ${updateSchedule.frequency === 'daily' ? 'active' : ''}`}
+                onClick={() => setUpdateSchedule(prev => ({ ...prev, frequency: 'daily' }))}
               >
-                <FontAwesomeIcon icon={faCalendarAlt} className="icon" />
+                <FontAwesomeIcon icon={faCalendarDay} className="icon" />
                 <span>Daily</span>
               </div>
               <div 
-                className={`frequency-option ${currentSchedule.frequency === 'weekly' ? 'active' : ''}`}
-                onClick={() => updateSchedule({ frequency: 'weekly' })}
+                className={`frequency-option ${updateSchedule.frequency === 'weekly' ? 'active' : ''}`}
+                onClick={() => setUpdateSchedule(prev => ({ ...prev, frequency: 'weekly' }))}
               >
-                <FontAwesomeIcon icon={faCalendarAlt} className="icon" />
+                <FontAwesomeIcon icon={faCalendarWeek} className="icon" />
                 <span>Weekly</span>
               </div>
               <div 
-                className={`frequency-option ${currentSchedule.frequency === 'monthly' ? 'active' : ''}`}
-                onClick={() => updateSchedule({ frequency: 'monthly' })}
+                className={`frequency-option ${updateSchedule.frequency === 'monthly' ? 'active' : ''}`}
+                onClick={() => setUpdateSchedule(prev => ({ ...prev, frequency: 'monthly' }))}
               >
-                <FontAwesomeIcon icon={faCalendarAlt} className="icon" />
+                <FontAwesomeIcon icon={faCalendar} className="icon" />
                 <span>Monthly</span>
-              </div>
-              <div 
-                className={`frequency-option ${currentSchedule.frequency === 'yearly' ? 'active' : ''}`}
-                onClick={() => updateSchedule({ frequency: 'yearly' })}
-              >
-                <FontAwesomeIcon icon={faCalendarAlt} className="icon" />
-                <span>Yearly</span>
               </div>
             </div>
           </div>
@@ -161,35 +183,32 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 <input
                   type="time"
                   className="form-control"
-                  value={`${currentSchedule.hour.toString().padStart(2, '0')}:${currentSchedule.minute.toString().padStart(2, '0')}`}
-                  onChange={(e) => {
-                    const [hour, minute] = e.target.value.split(':').map(Number);
-                    updateSchedule({ hour: hour || 0, minute: minute || 0 });
-                  }}
+                  value={updateSchedule.time}
+                  onChange={(e) => setUpdateSchedule(prev => ({ ...prev, time: e.target.value }))}
                 />
               </div>
             </div>
             
-            {currentSchedule.frequency === 'weekly' && (
+            {updateSchedule.frequency === 'weekly' && (
               <div className="form-group">
                 <div className="day-selector">
-                  {DAYS_OF_WEEK.map((day, index) => (
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
                     <div
-                      key={day.value}
-                      className={`day-option ${currentSchedule.day === day.value ? 'active' : ''}`}
-                      onClick={() => updateSchedule({ day: day.value })}
+                      key={day}
+                      className={`day-option ${updateSchedule.dayOfWeek === index ? 'active' : ''}`}
+                      onClick={() => setUpdateSchedule(prev => ({ ...prev, dayOfWeek: index }))}
                     >
-                      {day.label.substring(0, 3)}
+                      {day}
                     </div>
                   ))}
                 </div>
               </div>
             )}
             
-            {currentSchedule.frequency === 'monthly' && (
+            {updateSchedule.frequency === 'monthly' && (
               <div className="form-group">
                 <label>
-                  <FontAwesomeIcon icon={faCalendarAlt} className="icon" />
+                  <FontAwesomeIcon icon={faCalendar} className="icon" />
                   Day of Month
                 </label>
                 <input
@@ -197,8 +216,11 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                   className="form-control"
                   min="1"
                   max="31"
-                  value={currentSchedule.day || 1}
-                  onChange={(e) => updateSchedule({ day: parseInt(e.target.value) })}
+                  value={updateSchedule.dayOfMonth || 1}
+                  onChange={(e) => setUpdateSchedule(prev => ({ 
+                    ...prev, 
+                    dayOfMonth: parseInt(e.target.value) 
+                  }))}
                 />
               </div>
             )}
@@ -210,8 +232,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
               <label>Backup Type</label>
               <select
                 className="form-control"
-                value={currentSchedule.backupType}
-                onChange={(e) => updateSchedule({ backupType: e.target.value as any })}
+                value={backupType}
+                onChange={(e) => setBackupType(e.target.value as any)}
               >
                 {BACKUP_TYPES.map(type => (
                   <option key={type.value} value={type.value}>
@@ -226,8 +248,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
               <input
                 type="number"
                 className="form-control"
-                value={currentSchedule.retentionDays}
-                onChange={(e) => updateSchedule({ retentionDays: parseInt(e.target.value) })}
+                value={retentionDays}
+                onChange={(e) => setRetentionDays(parseInt(e.target.value))}
                 min="1"
                 max="3650"
               />
@@ -235,10 +257,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           </div>
           
           {/* Schedule Preview */}
-          {currentSchedule.enabled && (
+          {updateSchedule.enabled && (
             <div className="schedule-preview">
               <h5>
-                <FontAwesomeIcon icon={faClock} />
+                <FontAwesomeIcon icon={faEye} />
                 Schedule Preview
               </h5>
               <div className="schedule-preview-text">
@@ -252,9 +274,19 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           type="button"
           className="save-schedule-button"
           onClick={saveSchedule}
+          disabled={isLoading}
         >
-          <FontAwesomeIcon icon={faCheckCircle} />
-          Save Schedule
+          {isLoading ? (
+            <>
+              <FontAwesomeIcon icon={faSpinner} spin />
+              Saving...
+            </>
+          ) : (
+            <>
+              <FontAwesomeIcon icon={faSave} />
+              Save Schedule
+            </>
+          )}
         </button>
       </div>
     </div>

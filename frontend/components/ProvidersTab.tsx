@@ -8,6 +8,7 @@ import { BackupConfig, CloudProvider } from '../types';
 import { ProviderSelector } from './providers/ProviderSelector';
 import { BackblazeProvider } from './providers/BackblazeProvider';
 import { LocalProvider } from './providers/LocalProvider';
+import { showToast } from '../../../components/Popup/PopupManager';
 
 interface ProvidersTabProps {
   config: BackupConfig | null;
@@ -49,9 +50,21 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
         }
       };
       
-      await updateConfig(updatedConfig);
+      const success = await updateConfig(updatedConfig);
+      if (success) {
+        showToast({
+          message: `Provider ${provider} ${enabled ? 'enabled' : 'disabled'} successfully`,
+          variant: 'success',
+          duration: 3000
+        });
+      }
     } catch (err) {
-      console.error('Failed to toggle provider:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to toggle provider';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 4000
+      });
     } finally {
       setIsLoading(false);
     }
@@ -83,9 +96,21 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
         }
       };
       
-      await updateConfig(updatedConfig);
+      const success = await updateConfig(updatedConfig);
+      if (success) {
+        showToast({
+          message: `${selectedProvider} configuration saved successfully`,
+          variant: 'success',
+          duration: 3000
+        });
+      }
     } catch (err) {
-      console.error('Failed to save provider config:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save provider config';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 4000
+      });
     } finally {
       setIsLoading(false);
     }

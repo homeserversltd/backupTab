@@ -41,7 +41,7 @@ class ScheduleHandler:
             
             # Get next run time
             try:
-                result = subprocess.run(['systemctl', 'list-timers', self.timer_name, '--no-pager'], 
+                result = subprocess.run(['/bin/systemctl', 'list-timers', self.timer_name, '--no-pager'], 
                                       capture_output=True, text=True, timeout=10)
                 if result.returncode == 0:
                     lines = result.stdout.strip().split('\n')
@@ -75,7 +75,7 @@ class ScheduleHandler:
                 raise ValueError(f'Unknown action: {action}. Valid actions: {valid_actions}')
             
             # Execute systemd command
-            result = subprocess.run(['systemctl', action, self.timer_name], 
+            result = subprocess.run(['/bin/systemctl', action, self.timer_name], 
                                   capture_output=True, text=True, timeout=10)
             
             if result.returncode != 0:
@@ -115,9 +115,9 @@ class ScheduleHandler:
             timer_status = get_systemd_service_status(self.timer_name)
             if timer_status == 'active':
                 try:
-                    subprocess.run(['systemctl', 'daemon-reload'], 
+                    subprocess.run(['/bin/systemctl', 'daemon-reload'], 
                                   capture_output=True, text=True, timeout=10)
-                    subprocess.run(['systemctl', 'restart', self.timer_name], 
+                    subprocess.run(['/bin/systemctl', 'restart', self.timer_name], 
                                   capture_output=True, text=True, timeout=10)
                 except Exception as e:
                     self.logger.warning(f"Failed to reload systemd configuration: {e}")
@@ -189,7 +189,7 @@ class ScheduleHandler:
         """Test the backup schedule by running it manually"""
         try:
             # Trigger the timer manually
-            result = subprocess.run(['systemctl', 'start', self.timer_name], 
+            result = subprocess.run(['/bin/systemctl', 'start', self.timer_name], 
                                   capture_output=True, text=True, timeout=10)
             
             if result.returncode != 0:

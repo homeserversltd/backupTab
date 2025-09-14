@@ -131,7 +131,7 @@ class BackupHandler:
             # Read log file (last 50 lines)
             if os.path.exists(BACKUP_LOG_PATH):
                 try:
-                    result = subprocess.run(['tail', '-50', BACKUP_LOG_PATH], 
+                    result = subprocess.run(['/usr/bin/tail', '-50', BACKUP_LOG_PATH], 
                                           capture_output=True, text=True, timeout=10)
                     if result.returncode == 0:
                         history['log_entries'] = result.stdout.strip().split('\n')

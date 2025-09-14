@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { showToast } from '../../../components/Popup/PopupManager';
 import { 
   BackupStatus, 
   Repository, 
@@ -55,6 +56,15 @@ export function useBackupControls(): UseBackupControlsReturn {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
+      
+      // Show error toast
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 5000,
+        priority: 10
+      });
+      
       throw err;
     } finally {
       setIsLoading(false);

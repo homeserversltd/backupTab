@@ -73,7 +73,7 @@ def create_backup_timestamp() -> str:
 def create_config_backup(config_path: str) -> str:
     """Create a backup of the configuration file"""
     backup_path = f"{config_path}.backup.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    subprocess.run(['cp', config_path, backup_path], check=True)
+    subprocess.run(['/usr/bin/sudo', '/bin/cp', config_path, backup_path], check=True)
     return backup_path
 
 def redact_sensitive_fields(config: Dict[str, Any]) -> Dict[str, Any]:
@@ -116,7 +116,7 @@ def get_systemd_service_status(service_name: str) -> str:
     """Get systemd service status"""
     try:
         result = subprocess.run(
-            ['systemctl', 'is-active', service_name], 
+            ['/bin/systemctl', 'is-active', service_name], 
             capture_output=True, 
             text=True, 
             timeout=10

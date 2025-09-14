@@ -5,6 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { BackupConfig } from '../types';
+import { useTooltip } from '../../../hooks/useTooltip';
+import { showToast } from '../../../components/Popup/PopupManager';
 
 interface ConfigTabProps {
   config: BackupConfig | null;
@@ -24,6 +26,8 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
   const [lastUpdateCheck, setLastUpdateCheck] = useState<string>('');
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
+  const tooltip = useTooltip();
+
   // Load version and auto-update status on component mount
   useEffect(() => {
     loadVersionInfo();
@@ -38,7 +42,12 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
         setVersion(data.data.version);
       }
     } catch (error) {
-      console.error('Failed to load version info:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load version info';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 4000
+      });
     }
   };
 
@@ -52,7 +61,12 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
         setUpdateAvailable(data.data.update_available || false);
       }
     } catch (error) {
-      console.error('Failed to load auto-update status:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load auto-update status';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 4000
+      });
     }
   };
 
@@ -69,15 +83,29 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
       const data = await response.json();
       if (data.success) {
         setAutoUpdateEnabled(enabled);
+        showToast({
+          message: `Auto-update ${enabled ? 'enabled' : 'disabled'} successfully`,
+          variant: 'success',
+          duration: 3000
+        });
         if (enabled) {
           // Trigger an immediate update check when enabling
           checkForUpdates();
         }
       } else {
-        console.error('Failed to toggle auto-update:', data.error);
+        showToast({
+          message: data.error || 'Failed to toggle auto-update',
+          variant: 'error',
+          duration: 4000
+        });
       }
     } catch (error) {
-      console.error('Failed to toggle auto-update:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to toggle auto-update';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 4000
+      });
     }
   };
 
@@ -96,53 +124,111 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
         setUpdateAvailable(data.data.update_available);
       }
     } catch (error) {
-      console.error('Failed to check for updates:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to check for updates';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 4000
+      });
     }
   };
 
-  const handleAddFile = () => {
+  const handleAddFile = async () => {
     if (!newFilePath.trim() || !config) return;
     
-    const updatedConfig = {
-      ...config,
-      backup_items: [...(config.backup_items || []), newFilePath.trim()]
-    };
-    
-    updateConfig(updatedConfig);
-    setNewFilePath('');
+    try {
+      const updatedConfig = {
+        ...config,
+        backup_items: [...(config.backup_items || []), newFilePath.trim()]
+      };
+      
+      const success = await updateConfig(updatedConfig);
+      if (success) {
+        showToast({
+          message: 'File added to backup list successfully',
+          variant: 'success',
+          duration: 3000
+        });
+        setNewFilePath('');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add file to backup list';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 4000
+      });
+    }
   };
 
-  const handleRemoveFile = (index: number) => {
+  const handleRemoveFile = async (index: number) => {
     if (!config) return;
     
-    const updatedConfig = {
-      ...config,
-      backup_items: config.backup_items?.filter((_, i) => i !== index) || []
-    };
-    
-    updateConfig(updatedConfig);
+    try {
+      const updatedConfig = {
+        ...config,
+        backup_items: config.backup_items?.filter((_, i) => i !== index) || []
+      };
+      
+      const success = await updateConfig(updatedConfig);
+      if (success) {
+        showToast({
+          message: 'File removed from backup list successfully',
+          variant: 'success',
+          duration: 3000
+        });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to remove file from backup list';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 4000
+      });
+    }
   };
 
   const handleSaveConfig = async () => {
     if (!config) return;
     
-    const updatedConfig = {
-      ...config,
-      retention_days: retentionDays,
-      encryption_enabled: encryptionEnabled,
-      logging: {
-        ...config.logging,
-        log_level: logLevel
+    try {
+      const updatedConfig = {
+        ...config,
+        retention_days: retentionDays,
+        encryption_enabled: encryptionEnabled,
+        logging: {
+          ...config.logging,
+          log_level: logLevel
+        }
+      };
+      
+      const success = await updateConfig(updatedConfig);
+      if (success) {
+        showToast({
+          message: 'Configuration saved successfully',
+          variant: 'success',
+          duration: 3000
+        });
       }
-    };
-    
-    await updateConfig(updatedConfig);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save configuration';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 4000
+      });
+    }
   };
 
   const handleResetToDefaults = () => {
     setRetentionDays(30);
     setEncryptionEnabled(false);
     setLogLevel('INFO');
+    showToast({
+      message: 'Settings reset to defaults',
+      variant: 'info',
+      duration: 3000
+    });
   };
 
   if (!config) {
@@ -214,13 +300,18 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
             </div>
             <div className="setting-item">
               <div className="checkbox-container">
-                <input
-                  id="encryption-enabled"
-                  type="checkbox"
-                  checked={encryptionEnabled}
-                  onChange={(e) => setEncryptionEnabled(e.target.checked)}
-                />
-                <label htmlFor="encryption-enabled">Enable Encryption</label>
+                {tooltip.show(
+                  'For every provider, we will encrypt all of your data before delivering it to the backup provider',
+                  <>
+                    <input
+                      id="encryption-enabled"
+                      type="checkbox"
+                      checked={encryptionEnabled}
+                      onChange={(e) => setEncryptionEnabled(e.target.checked)}
+                    />
+                    <label htmlFor="encryption-enabled">Enable Encryption</label>
+                  </>
+                )}
               </div>
             </div>
             <div className="setting-item">

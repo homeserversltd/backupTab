@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useBackupControls } from './hooks/useBackupControls';
+import { showToast } from '../../components/Popup/PopupManager';
 import { 
   BackupStatus, 
   CloudProvider,
@@ -26,9 +27,7 @@ const BackupTablet: React.FC = () => {
     getConfig,
     updateConfig,
     getSchedule,
-    isLoading,
-    error,
-    clearError
+    isLoading
   } = useBackupControls();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'providers' | 'schedule' | 'config'>('overview');
@@ -53,7 +52,12 @@ const BackupTablet: React.FC = () => {
       setConfig(configData);
       setScheduleInfo(scheduleData);
     } catch (err) {
-      console.error('Failed to load initial data:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load initial data';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 5000
+      });
     }
   };
 
@@ -87,16 +91,6 @@ const BackupTablet: React.FC = () => {
       </div>
 
       <div className="backup-tablet-content">
-        {error && (
-          <div className="error-banner">
-            <span>⚠</span>
-            <span>{error}</span>
-            <button onClick={clearError} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>
-              ✕
-            </button>
-          </div>
-        )}
-
         {isLoading && (
           <div className="loading-banner">
             <span>Loading backup system data...</span>

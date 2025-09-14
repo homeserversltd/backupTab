@@ -16,6 +16,13 @@ www-data ALL=(root) NOPASSWD: /usr/bin/python3 /opt/homeserver-backup/homeserver
 www-data ALL=(root) NOPASSWD: /usr/bin/cp /opt/homeserver-backup/config.yaml*
 www-data ALL=(root) NOPASSWD: /usr/bin/tail /var/log/homeserver-backup/backup.log
 
+# Allow backup tab configuration operations
+www-data ALL=(root) NOPASSWD: /bin/cp /etc/backupTab/settings.json*
+www-data ALL=(root) NOPASSWD: /bin/cp /etc/backupTab/settings.json /etc/backupTab/settings.json.backup.*
+www-data ALL=(root) NOPASSWD: /bin/cp /etc/backupTab/settings.json* /tmp/
+www-data ALL=(root) NOPASSWD: /bin/cp /tmp/settings.json* /etc/backupTab/
+www-data ALL=(root) NOPASSWD: /bin/cp /tmp/tmp*.json /etc/backupTab/settings.json
+
 # Allow directory creation and management
 www-data ALL=(root) NOPASSWD: /usr/bin/mkdir -p /opt/homeserver-backup
 www-data ALL=(root) NOPASSWD: /usr/bin/mkdir -p /tmp/homeserver-backups

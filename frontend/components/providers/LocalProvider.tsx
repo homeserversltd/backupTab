@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { CloudProvider } from '../../types';
+import { showToast } from '../../../../components/Popup/PopupManager';
 
 interface LocalProviderProps {
   config: CloudProvider | null;
@@ -38,7 +39,16 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
   };
 
   const handleSave = async () => {
-    await onSave();
+    try {
+      await onSave();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save Local provider configuration';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 4000
+      });
+    }
   };
 
   return (
