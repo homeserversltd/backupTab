@@ -58,7 +58,10 @@
       "schedule_handlers": "backend/schedule_handlers.py",
       "refactoring_summary": "backend/REFACTORING_SUMMARY.md",
       "routes_old": "backend/routes_old.py",
-      "routes_new": "backend/routes_new.py"
+      "routes_new": "backend/routes_new.py",
+      "backup_manager": "backend/src/backup_manager.py",
+      "provider_factory": "backend/src/providers/provider_factory.py",
+      "keyman_integration": "backend/src/utils/keyman_integration.py"
     },
     "frontend": {
       "index": "frontend/index.json",
@@ -95,7 +98,8 @@
       "ProviderSelector": "frontend/components/providers/ProviderSelector.tsx",
       "BackblazeProvider": "frontend/components/providers/BackblazeProvider.tsx",
       "LocalProvider": "frontend/components/providers/LocalProvider.tsx",
-      "ScheduleTab_css": "frontend/components/ScheduleTab.css"
+      "ScheduleTab_css": "frontend/components/ScheduleTab.css",
+      "backupTyping": "frontend/utils/backupTyping.ts"
     },
     "permissions": {
       "flask_backup": "permissions/flask-backup"

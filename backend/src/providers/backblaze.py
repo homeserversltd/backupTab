@@ -3,6 +3,7 @@ Backblaze B2 Provider
 Copyright (C) 2024 HOMESERVER LLC
 
 Provider for Backblaze B2 storage with enhanced features for enterprise backup.
+Integrated with keyman credential management system.
 """
 
 import b2sdk
@@ -20,17 +21,36 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import base64
 import os
 from .base import BaseProvider
+from ..utils.keyman_integration import KeymanIntegration
 
 class BackblazeProvider(BaseProvider):
-    """Backblaze B2 provider with enhanced enterprise features."""
+    """Backblaze B2 provider with enhanced enterprise features and keyman integration."""
     
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.logger = logging.getLogger(f'homeserver_backup.backblaze')
+        self.keyman = KeymanIntegration()
         
-        # Configuration with validation
-        self.application_key_id = config.get('application_key_id')
-        self.application_key = config.get('application_key')
+        # Check if keyman credentials are available
+        self.keyman_configured = self.keyman.service_configured('backblaze')
+        
+        if self.keyman_configured:
+            # Load credentials from keyman
+            credentials = self.keyman.get_service_credentials('backblaze')
+            if credentials:
+                self.application_key_id = credentials.get('username')
+                self.application_key = credentials.get('password')
+                self.logger.info("Loaded Backblaze credentials from keyman system")
+            else:
+                self.logger.error("Failed to load credentials from keyman system")
+                self.application_key_id = None
+                self.application_key = None
+        else:
+            # Fallback to config-based credentials
+            self.application_key_id = config.get('application_key_id')
+            self.application_key = config.get('application_key')
+            self.logger.info("Using config-based credentials (keyman not configured)")
+        
         self.bucket_name = config.get('bucket', 'homeserver-backups')
         self.region = config.get('region', 'us-west-000')  # Default B2 region
         
@@ -805,5 +825,40 @@ class BackblazeProvider(BaseProvider):
                 'max_retries': self.max_retries,
                 'retry_delay': self.retry_delay,
                 'timeout': self.timeout
+            },
+            'keyman_integration': {
+                'configured': self.keyman_configured,
+                'credentials_available': bool(self.application_key_id and self.application_key)
             }
         }
+    
+    def is_keyman_configured(self) -> bool:
+        """Check if keyman credentials are configured for this provider."""
+        return self.keyman_configured
+    
+    def create_keyman_credentials(self, application_key_id: str, application_key: str) -> bool:
+        """Create keyman credentials for this provider."""
+        return self.keyman.create_service_credentials('backblaze', application_key_id, application_key)
+    
+    def update_keyman_credentials(self, new_application_key: str, application_key_id: str = None, old_application_key: str = None) -> bool:
+        """Update keyman credentials for this provider."""
+        return self.keyman.update_service_credentials('backblaze', new_application_key, application_key_id, old_application_key)
+    
+    def delete_keyman_credentials(self) -> bool:
+        """Delete keyman credentials for this provider."""
+        return self.keyman.delete_service_credentials('backblaze')
+    
+    def refresh_keyman_credentials(self) -> bool:
+        """Refresh credentials from keyman system."""
+        if not self.keyman_configured:
+            return False
+        
+        credentials = self.keyman.get_service_credentials('backblaze')
+        if credentials:
+            self.application_key_id = credentials.get('username')
+            self.application_key = credentials.get('password')
+            self.logger.info("Refreshed credentials from keyman system")
+            return True
+        else:
+            self.logger.error("Failed to refresh credentials from keyman system")
+            return False

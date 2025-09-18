@@ -822,6 +822,248 @@
   border-top: 1px solid var(--border);
 }
 
+/* Backup Type Configuration Styles */
+.backup-type-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.backup-type-option {
+  background: var(--hiddenTabBackground);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.backup-type-option:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.backup-type-option.active {
+  border-color: var(--accent);
+  background: var(--primary);
+  box-shadow: 0 4px 12px rgba(144, 207, 243, 0.3);
+}
+
+.backup-type-option.active::before {
+  content: '✓';
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: var(--accent);
+  color: var(--background);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.backup-type-header {
+  margin-bottom: 10px;
+}
+
+.backup-type-label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  display: block;
+}
+
+.backup-type-description {
+  font-size: 0.9rem;
+  color: var(--text);
+  opacity: 0.8;
+  margin-bottom: 8px;
+}
+
+.backup-type-retention {
+  font-size: 0.85rem;
+  color: var(--text);
+  opacity: 0.7;
+  margin-bottom: 8px;
+  font-family: 'Courier New', monospace;
+}
+
+.backup-type-summary {
+  font-size: 0.8rem;
+  color: var(--text);
+  opacity: 0.6;
+  font-style: italic;
+  line-height: 1.4;
+  background: var(--background);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border-left: 3px solid var(--accent);
+}
+
+/* Advanced Configuration Toggle */
+.advanced-config-toggle {
+  background: var(--primary);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 15px;
+}
+
+.advanced-config-toggle:hover {
+  background: var(--primaryHover);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Advanced Configuration Panel */
+.advanced-config-panel {
+  background: var(--hiddenTabBackground);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.advanced-config-panel h5 {
+  margin: 0 0 20px 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 10px;
+}
+
+/* Configuration Summary */
+.config-summary {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 20px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.config-summary h6 {
+  margin: 0 0 15px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.config-summary h6::before {
+  content: '📊';
+  font-size: 1.1rem;
+  color: var(--accent);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.summary-item {
+  background: var(--primary);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border-left: 3px solid var(--accent);
+  font-size: 0.85rem;
+}
+
+.summary-item strong {
+  color: var(--text);
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.backup-impact-summary {
+  background: var(--primary);
+  padding: 12px 15px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.backup-impact-summary strong {
+  color: var(--accent);
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+/* Form Controls in Advanced Config */
+.advanced-config-panel .form-group {
+  margin-bottom: 15px;
+}
+
+.advanced-config-panel .form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.advanced-config-panel .form-control {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--background);
+  color: var(--text);
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.advanced-config-panel .form-control:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(144, 207, 243, 0.2);
+}
+
+.advanced-config-panel .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.advanced-config-panel .checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.range-value {
+  margin-left: 8px;
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
 /* Responsive adjustments for About section */
 @media (max-width: 768px) {
   .about-info {
@@ -834,5 +1076,23 @@
   
   .update-actions .action-button {
     flex: 1;
+  }
+  
+  /* Backup type selector responsive */
+  .backup-type-selector {
+    grid-template-columns: 1fr;
+  }
+  
+  .backup-type-option {
+    padding: 15px;
+  }
+  
+  /* Advanced config responsive */
+  .advanced-config-panel .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .summary-grid {
+    grid-template-columns: 1fr;
   }
 }

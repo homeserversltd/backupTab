@@ -22,7 +22,7 @@ import {
   faSave,
   faSpinner
 } from '@fortawesome/free-solid-svg-icons';
-import { BackupScheduleConfig, ScheduleInfo } from '../types';
+import { BackupScheduleConfig, ScheduleInfo, BackupConfig } from '../types';
 import { showToast } from '../../../../src/components/Popup/PopupManager'; //donot touch this
 import { useTooltip } from '../../../../src/hooks/useTooltip';
 import { useBackupControls } from '../hooks/useBackupControls';
@@ -31,6 +31,7 @@ import './ScheduleTab.css';
 interface ScheduleTabProps {
   schedules?: BackupScheduleConfig[];
   onScheduleChange?: () => void;
+  config?: BackupConfig | null;
 }
 
 interface UpdateSchedule {
@@ -39,32 +40,35 @@ interface UpdateSchedule {
   time: string; // HH:MM format
   dayOfWeek?: number; // 0-6 for weekly
   dayOfMonth?: number; // 1-31 for monthly
+  activeBackupType: 'full' | 'incremental' | 'differential';
 }
 
-const BACKUP_TYPES = [
+
+const BACKUP_TYPE_INFO = [
   { 
     value: 'full', 
     label: 'Full Backup', 
     description: 'Complete system backup',
-    tooltip: 'Creates a complete backup of all selected files and directories. This is the most comprehensive backup type but requires the most storage space and time.'
+    tooltip: 'Creates a complete backup of all selected files and directories. This is the most comprehensive backup type but requires the most storage space and time. Recommended for weekly/monthly schedules.'
   },
   { 
     value: 'incremental', 
     label: 'Incremental', 
     description: 'Only changed files since last backup',
-    tooltip: 'Backs up only files that have changed since the last backup (full or incremental). Fast and storage-efficient, but requires all previous backups to restore.'
+    tooltip: 'Backs up only files that have changed since the last backup (full or incremental). Fast and storage-efficient, but requires all previous backups to restore. Recommended for daily schedules.'
   },
   { 
     value: 'differential', 
     label: 'Differential', 
     description: 'All changes since last full backup',
-    tooltip: 'Backs up all files that have changed since the last full backup. Faster than full backups but requires only the last full backup plus the differential to restore.'
+    tooltip: 'Backs up all files that have changed since the last full backup. Faster than full backups but requires only the last full backup plus the differential to restore. Recommended for bi-weekly schedules.'
   }
 ];
 
 export const ScheduleTab: React.FC<ScheduleTabProps> = ({ 
   schedules = [], 
-  onScheduleChange 
+  onScheduleChange,
+  config
 }) => {
   const {
     getSchedule,
@@ -81,11 +85,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     enabled: false,
     frequency: 'weekly',
     time: '02:00',
-    dayOfWeek: 0
+    dayOfWeek: 0,
+    activeBackupType: 'incremental'
   });
 
-  const [backupType, setBackupType] = useState<'full' | 'incremental' | 'differential'>('incremental');
-  const [retentionDays, setRetentionDays] = useState<number>(30);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [scheduleInfo, setScheduleInfo] = useState<ScheduleInfo | null>(null);
 
@@ -107,15 +110,15 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       // Parse existing schedule configuration if available
       if (schedule.schedule_config) {
         const config = schedule.schedule_config;
+        
         setUpdateSchedule({
-          enabled: Boolean(config.enabled), // Use the enabled flag from config, not timer_status
+          enabled: Boolean(config.enabled),
           frequency: (config.frequency as 'daily' | 'weekly' | 'monthly') || 'weekly',
           time: config.time || '02:00',
           dayOfWeek: typeof config.dayOfWeek === 'number' ? config.dayOfWeek : 0,
-          dayOfMonth: typeof config.dayOfMonth === 'number' ? config.dayOfMonth : 1
+          dayOfMonth: typeof config.dayOfMonth === 'number' ? config.dayOfMonth : 1,
+          activeBackupType: (config.activeBackupType as 'full' | 'incremental' | 'differential') || 'incremental'
         });
-        setBackupType((config.backupType as 'full' | 'incremental' | 'differential') || 'incremental');
-        setRetentionDays(typeof config.retentionDays === 'number' ? config.retentionDays : 30);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load schedule configuration';
@@ -235,30 +238,13 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         minute: minute || 0,
         dayOfWeek: updateSchedule.frequency === 'weekly' ? updateSchedule.dayOfWeek : undefined,
         dayOfMonth: updateSchedule.frequency === 'monthly' ? updateSchedule.dayOfMonth : undefined,
-        backupType: backupType,
-        retentionDays: retentionDays,
+        activeBackupType: updateSchedule.activeBackupType,
         repositories: [],
         time: updateSchedule.time
       };
       
       // Save to backend
       await setScheduleConfig(scheduleConfig);
-      
-      // Update local state
-      const updatedSchedule: BackupScheduleConfig = {
-        id: '1',
-        name: 'Backup Schedule',
-        enabled: updateSchedule.enabled,
-        frequency: updateSchedule.frequency,
-        hour: hour || 2,
-        minute: minute || 0,
-        day: updateSchedule.frequency === 'weekly' ? updateSchedule.dayOfWeek : 
-             updateSchedule.frequency === 'monthly' ? updateSchedule.dayOfMonth : undefined,
-        backupType: backupType,
-        retentionDays: retentionDays,
-        repositories: [],
-        status: updateSchedule.enabled ? 'active' : 'paused'
-      };
       
       onScheduleChange?.();
       
@@ -408,40 +394,33 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             )}
           </div>
 
-          {/* Backup Type and Retention */}
-          <div className="form-row">
-            <div className="form-group">
-              <label>Backup Type</label>
-              <div className="backup-type-selector">
-                {BACKUP_TYPES.map(type => 
-                  tooltip.show(type.tooltip, (
-                    <div
-                      key={type.value}
-                      className={`backup-type-option ${backupType === type.value ? 'active' : ''}`}
-                      onClick={() => setBackupType(type.value as any)}
-                    >
-                      <div className="backup-type-header">
-                        <span className="backup-type-label">{type.label}</span>
-                      </div>
-                      <div className="backup-type-description">{type.description}</div>
+          {/* Backup Type Selection */}
+          <div className="form-group">
+            <label>Backup Type</label>
+            <div className="backup-type-selector">
+              {BACKUP_TYPE_INFO.map(type => 
+                tooltip.show(type.tooltip, (
+                  <div
+                    key={type.value}
+                    className={`backup-type-option ${updateSchedule.activeBackupType === type.value ? 'active' : ''}`}
+                    onClick={() => setUpdateSchedule(prev => ({ 
+                      ...prev, 
+                      activeBackupType: type.value as 'full' | 'incremental' | 'differential' 
+                    }))}
+                  >
+                    <div className="backup-type-header">
+                      <span className="backup-type-label">{type.label}</span>
                     </div>
-                  ))
-                )}
-              </div>
-            </div>
-            
-            <div className="form-group">
-              <label>Retention (Days)</label>
-              <input
-                type="number"
-                className="form-control"
-                value={retentionDays}
-                onChange={(e) => setRetentionDays(parseInt(e.target.value))}
-                min="1"
-                max="3650"
-              />
+                    <div className="backup-type-description">{type.description}</div>
+                    <div className="backup-type-note">
+                      Configure advanced settings in the Config tab
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
+
           
           {/* Schedule Preview */}
           {updateSchedule.enabled && (

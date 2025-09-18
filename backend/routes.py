@@ -13,6 +13,7 @@ from .config_manager import BackupConfigManager
 from .provider_handlers import ProviderHandler
 from .backup_handlers import BackupHandler
 from .schedule_handlers import ScheduleHandler
+from .src.backup_manager import BackupManager
 
 # Create blueprint
 bp = Blueprint('backup', __name__, url_prefix='/api/backup')
@@ -22,6 +23,7 @@ config_manager = BackupConfigManager()
 provider_handler = ProviderHandler()
 backup_handler = BackupHandler()
 schedule_handler = ScheduleHandler()
+backup_manager = BackupManager()
 
 def create_response(success: bool, data: dict = None, error: str = None, status_code: int = 200):
     """Create standardized API response"""
@@ -83,11 +85,16 @@ def _is_provider_configured(provider_name: str, provider_config: dict) -> bool:
         return True
     
     elif provider_name == 'backblaze':
-        # Backblaze needs application_key_id and application_key
-        return bool(
-            provider_config.get('application_key_id', '').strip() and
-            provider_config.get('application_key', '').strip()
-        )
+        # Check if keyman integration is enabled
+        if provider_config.get('keyman_integrated', False):
+            keyman_service_name = provider_config.get('keyman_service_name', provider_name)
+            return backup_manager.keyman.service_configured(keyman_service_name)
+        else:
+            # Fallback to traditional config-based credentials
+            return bool(
+                provider_config.get('application_key_id', '').strip() and
+                provider_config.get('application_key', '').strip()
+            )
     
     elif provider_name == 'google_drive':
         # Google Drive needs credentials_file and token_file
@@ -146,15 +153,26 @@ def get_repositories():
 def get_providers_status():
     """Get status of all providers in a simple, iterable format"""
     try:
-        # Get the full config
+        # Use BackupManager to get configured providers
+        configured_providers = backup_manager.get_configured_providers()
+        
+        # Get the full config for additional metadata
         config = config_manager.get_safe_config()
-        providers = config.get('providers', {})
+        all_providers = config.get('providers', {})
         
         # Create simple status list for frontend iteration
         provider_status = []
-        for provider_name, provider_config in providers.items():
+        for provider_name, provider_config in all_providers.items():
             is_available = _is_provider_available(provider_name)
             is_configured = _is_provider_configured(provider_name, provider_config)
+            
+            # Check keyman integration status
+            keyman_integrated = provider_config.get('keyman_integrated', False)
+            keyman_configured = False
+            if keyman_integrated:
+                keyman_service_name = provider_config.get('keyman_service_name', provider_name)
+                keyman_configured = backup_manager.keyman.service_configured(keyman_service_name)
+            
             provider_status.append({
                 'name': provider_name,
                 'enabled': provider_config.get('enabled', False),
@@ -162,7 +180,12 @@ def get_providers_status():
                 'configured': is_configured,
                 'display_name': provider_name.replace('_', ' ').title(),
                 'description': _get_provider_description(provider_name),
-                'icon': _get_provider_icon(provider_name)
+                'icon': _get_provider_icon(provider_name),
+                'keyman_integration': {
+                    'integrated': keyman_integrated,
+                    'configured': keyman_configured,
+                    'service_name': provider_config.get('keyman_service_name', provider_name) if keyman_integrated else None
+                }
             })
         
         return create_response(True, {'providers': provider_status})
@@ -179,7 +202,8 @@ def run_backup():
         backup_type = data.get('type', 'daily')
         repositories = data.get('repositories', [])
         
-        result = backup_handler.run_backup(backup_type, repositories)
+        # Use BackupManager for backup operations
+        result = backup_manager.create_backup(backup_type, repositories)
         return create_response(True, result)
     except Exception as e:
         get_logger().error(f"Backup execution failed: {e}")
@@ -276,6 +300,16 @@ def get_backup_history():
         get_logger().error(f"History retrieval failed: {e}")
         return create_response(False, error=str(e), status_code=500)
 
+@bp.route('/backup/list/<provider_name>', methods=['GET'])
+def list_backups(provider_name):
+    """List backups from a specific provider using BackupManager"""
+    try:
+        result = backup_manager.list_backups(provider_name)
+        return create_response(True, result)
+    except Exception as e:
+        get_logger().error(f"Backup listing failed for {provider_name}: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
 # Schedule Routes
 @bp.route('/schedule', methods=['GET'])
 def get_schedule():
@@ -340,8 +374,12 @@ def update_provider_config(provider_name):
         if not data:
             return create_response(False, error='No configuration data provided', status_code=400)
         
-        result = provider_handler.update_provider_config(provider_name, data)
-        return create_response(True, result)
+        # Use BackupManager for provider config updates
+        success = backup_manager.update_provider_config(provider_name, data)
+        if success:
+            return create_response(True, {'message': f'Configuration updated for {provider_name}'})
+        else:
+            return create_response(False, error=f'Failed to update configuration for {provider_name}', status_code=500)
     except Exception as e:
         get_logger().error(f"Provider config update failed for {provider_name}: {e}")
         if "not found" in str(e).lower():
@@ -352,7 +390,8 @@ def update_provider_config(provider_name):
 def test_provider_connection(provider_name):
     """Test connection to a specific provider"""
     try:
-        result = provider_handler.test_provider_connection(provider_name)
+        # Use BackupManager for testing connections
+        result = backup_manager.test_provider_connection(provider_name)
         return create_response(True, result)
     except Exception as e:
         get_logger().error(f"Provider connection test failed for {provider_name}: {e}")
@@ -582,4 +621,152 @@ def check_for_updates():
         })
     except Exception as e:
         get_logger().error(f"Update check failed: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+# Keyman Integration Routes
+@bp.route('/keyman/services', methods=['GET'])
+def get_keyman_services():
+    """Get list of all configured keyman services"""
+    try:
+        services = backup_manager.get_keyman_services()
+        return create_response(True, {'services': services})
+    except Exception as e:
+        get_logger().error(f"Error getting keyman services: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/keyman/credentials/<service_name>', methods=['GET'])
+def get_keyman_credentials(service_name):
+    """Get credentials for a specific keyman service"""
+    try:
+        credentials = backup_manager.keyman.get_service_credentials(service_name)
+        if credentials:
+            return create_response(True, {'credentials': credentials})
+        else:
+            return create_response(False, error='Service not configured or credentials not available', status_code=404)
+    except Exception as e:
+        get_logger().error(f"Error getting credentials for {service_name}: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/keyman/credentials/<service_name>', methods=['POST'])
+def create_keyman_credentials(service_name):
+    """Create credentials for a keyman service"""
+    try:
+        data = request.get_json()
+        if not data or 'username' not in data or 'password' not in data:
+            return create_response(False, error='Username and password are required', status_code=400)
+        
+        success = backup_manager.keyman.create_service_credentials(
+            service_name,
+            data['username'],
+            data['password']
+        )
+        
+        if success:
+            return create_response(True, {'message': f'Credentials created for {service_name}'})
+        else:
+            return create_response(False, error=f'Failed to create credentials for {service_name}', status_code=500)
+            
+    except Exception as e:
+        get_logger().error(f"Error creating credentials for {service_name}: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/keyman/credentials/<service_name>', methods=['PUT'])
+def update_keyman_credentials(service_name):
+    """Update credentials for a keyman service"""
+    try:
+        data = request.get_json()
+        if not data or 'password' not in data:
+            return create_response(False, error='Password is required', status_code=400)
+        
+        success = backup_manager.keyman.update_service_credentials(
+            service_name,
+            data['password'],
+            data.get('username'),
+            data.get('old_password')
+        )
+        
+        if success:
+            return create_response(True, {'message': f'Credentials updated for {service_name}'})
+        else:
+            return create_response(False, error=f'Failed to update credentials for {service_name}', status_code=500)
+            
+    except Exception as e:
+        get_logger().error(f"Error updating credentials for {service_name}: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/keyman/credentials/<service_name>', methods=['DELETE'])
+def delete_keyman_credentials(service_name):
+    """Delete credentials for a keyman service"""
+    try:
+        success = backup_manager.keyman.delete_service_credentials(service_name)
+        
+        if success:
+            return create_response(True, {'message': f'Credentials deleted for {service_name}'})
+        else:
+            return create_response(False, error=f'Failed to delete credentials for {service_name}', status_code=500)
+            
+    except Exception as e:
+        get_logger().error(f"Error deleting credentials for {service_name}: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/keyman/check/<service_name>', methods=['GET'])
+def check_keyman_service_configured(service_name):
+    """Check if a keyman service is configured"""
+    try:
+        configured = backup_manager.keyman.service_configured(service_name)
+        return create_response(True, {'configured': configured})
+    except Exception as e:
+        get_logger().error(f"Error checking keyman service {service_name}: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/keyman/providers', methods=['GET'])
+def get_keyman_providers():
+    """Get list of providers that are keyman-configured"""
+    try:
+        providers = []
+        config = config_manager.get_safe_config()
+        configured_providers = config.get('providers', {})
+        
+        for provider_name, provider_config in configured_providers.items():
+            if provider_config.get('keyman_integrated', False):
+                keyman_service_name = provider_config.get('keyman_service_name', provider_name)
+                is_configured = backup_manager.keyman.service_configured(keyman_service_name)
+                
+                providers.append({
+                    'name': provider_name,
+                    'keyman_service_name': keyman_service_name,
+                    'configured': is_configured,
+                    'enabled': provider_config.get('enabled', False)
+                })
+        
+        return create_response(True, {'providers': providers})
+    except Exception as e:
+        get_logger().error(f"Error getting keyman providers: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+# Provider Management Routes using BackupManager
+@bp.route('/providers/<provider_name>/enable', methods=['POST'])
+def enable_provider(provider_name):
+    """Enable a provider using BackupManager"""
+    try:
+        success = backup_manager.enable_provider(provider_name)
+        if success:
+            return create_response(True, {'message': f'Provider {provider_name} enabled successfully'})
+        else:
+            return create_response(False, error=f'Failed to enable provider {provider_name}', status_code=500)
+    except Exception as e:
+        get_logger().error(f"Error enabling provider {provider_name}: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/providers/<provider_name>/disable', methods=['POST'])
+def disable_provider(provider_name):
+    """Disable a provider using BackupManager"""
+    try:
+        success = backup_manager.disable_provider(provider_name)
+        if success:
+            return create_response(True, {'message': f'Provider {provider_name} disabled successfully'})
+        else:
+            return create_response(False, error=f'Failed to disable provider {provider_name}', status_code=500)
+    except Exception as e:
+        get_logger().error(f"Error disabling provider {provider_name}: {e}")
         return create_response(False, error=str(e), status_code=500)

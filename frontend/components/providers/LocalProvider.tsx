@@ -21,7 +21,7 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
   isLoading = false
 }) => {
   const [localConfig, setLocalConfig] = useState<Partial<CloudProvider>>({});
-  const [isBackupProcessExpanded, setIsBackupProcessExpanded] = useState(false);
+  const [isBackupProcessExpanded, setIsBackupProcessExpanded] = useState(true);
   const [isStorageRequirementsExpanded, setIsStorageRequirementsExpanded] = useState(false);
 
   // Initialize local config when prop changes
@@ -96,28 +96,33 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
               ▼
             </span>
           </div>
-          <div className={`collapsible-content ${isBackupProcessExpanded ? 'expanded' : ''}`}>
-            <div className="info-box">
-              <div className="info-item">
-                <strong>Target Sources:</strong> All items configured in the Overview tab
-              </div>
-              <div className="info-item">
-                <strong>Process:</strong> Glob targets → Create tarball → Encrypt → Store on NAS
-              </div>
-              <div className="info-item">
-                <strong>NAS Path:</strong> /mnt/nas/backups/homeserver (default)
-              </div>
-              <div className="info-item">
-                <strong>Backup Format:</strong> Encrypted .tar.gz archives
-              </div>
-              <div className="info-item">
-                <strong>Permissions:</strong> 755 (drwxr-xr-x)
-              </div>
-              <div className="info-item">
-                <strong>Owner:</strong> root:root
+          {isBackupProcessExpanded && (
+            <div className="collapsible-content expanded">
+              <div className="info-box">
+                <div className="info-item">
+                  <strong>Target Sources:</strong> All items configured in the Config tab (e.g., /opt/gogs/repositories, /etc/postgresql/15/main)
+                </div>
+                <div className="info-item">
+                  <strong>Process:</strong> Glob targets → Create compressed tarball → Store on NAS
+                </div>
+                <div className="info-item">
+                  <strong>NAS Path:</strong> /mnt/nas/backups/homeserver (default)
+                </div>
+                <div className="info-item">
+                  <strong>Backup Format:</strong> Compressed .tar.gz archives (never encrypted - local storage only)
+                </div>
+                <div className="info-item">
+                  <strong>Smart Filtering:</strong> Only moves items that aren't already on the NAS - skips redundant local-to-local copies
+                </div>
+                <div className="info-item">
+                  <strong>Permissions:</strong> 755 (drwxr-xr-x)
+                </div>
+                <div className="info-item">
+                  <strong>Owner:</strong> root:root
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
 

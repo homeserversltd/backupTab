@@ -48,10 +48,8 @@
         "credentials_key": "backblaze",
         "container": "homeserver-backups",
         "container_type": "bucket",
-        "username": "",
-        "password": "",
-        "application_key_id": "",
-        "application_key": "",
+        "keyman_integrated": true,
+        "keyman_service_name": "backblaze",
         "region": "us-west-000",
         "max_retries": 3,
         "retry_delay": 1.0,
@@ -61,7 +59,11 @@
         "encryption_enabled": false,
         "encryption_key": null,
         "encryption_salt": null,
-        "connection_pool_size": 5
+        "connection_pool_size": 5,
+        "fallback_credentials": {
+          "application_key_id": "",
+          "application_key": ""
+        }
       }
     },
     "retention_days": 30,

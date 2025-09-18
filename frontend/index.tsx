@@ -128,7 +128,10 @@ const BackupTablet: React.FC = () => {
         )}
 
         {activeTab === 'schedule' && (
-          <ScheduleTab onScheduleChange={refreshScheduleData} />
+          <ScheduleTab 
+            config={config}
+            onScheduleChange={refreshScheduleData} 
+          />
         )}
 
         {activeTab === 'config' && (

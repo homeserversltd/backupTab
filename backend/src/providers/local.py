@@ -1,182 +1,193 @@
 """
-Local File System Provider
+Local Provider
 Copyright (C) 2024 HOMESERVER LLC
 
-Provider for local file system storage with tarball creation and encryption.
+Provider for local file system storage.
 """
 
-import os
 import shutil
-import tarfile
-import tempfile
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Callable
+import logging
+import os
 from .base import BaseProvider
 
 class LocalProvider(BaseProvider):
-    """Local file system provider with tarball creation and encryption."""
+    """Local file system provider."""
     
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        # Use 'container' field for NAS path (matches CloudProvider type)
-        self.storage_path = Path(config.get('container', '/mnt/nas/backups/homeserver'))
-        self.storage_path.mkdir(parents=True, exist_ok=True)
-        self.temp_dir = Path(tempfile.gettempdir()) / "homeserver-local-backup"
-        self.temp_dir.mkdir(parents=True, exist_ok=True)
+        self.logger = logging.getLogger(f'homeserver_backup.local')
+        
+        # Configuration
+        self.container = config.get('container', '/mnt/nas/backups/homeserver')
+        self.base_path = Path(self.container)
+        
+        # Ensure base path exists
+        self.base_path.mkdir(parents=True, exist_ok=True)
+        
+        self.logger.info(f"Local provider initialized with base path: {self.base_path}")
     
-    def create_backup_tarball(self, backup_items: List[str], timestamp: str) -> Optional[Path]:
-        """Create encrypted tarball from backup items."""
+    def upload(self, file_path: Path, remote_name: str, progress_callback: Optional[Callable] = None) -> bool:
+        """Upload file to local storage."""
         try:
-            tarball_name = f"homeserver_backup_{timestamp}.tar.gz"
-            tarball_path = self.temp_dir / tarball_name
-            
-            print(f"Creating backup tarball: {tarball_name}")
-            
-            # Create tar.gz archive with maximum compression
-            with tarfile.open(tarball_path, "w:gz", compresslevel=9) as tar:
-                for item in backup_items:
-                    item_path = Path(item)
-                    if item_path.exists():
-                        # Add with relative path to avoid absolute paths in archive
-                        arcname = item_path.name if item_path.is_file() else item_path.name
-                        tar.add(item, arcname=arcname)
-                        print(f"  Added: {item}")
-                    else:
-                        print(f"  WARNING: Item not found: {item}")
-            
-            print(f"Created tarball: {tarball_path}")
-            return tarball_path
-            
-        except Exception as e:
-            print(f"ERROR: Failed to create backup tarball: {e}")
-            return None
-    
-    def encrypt_tarball(self, tarball_path: Path) -> Optional[Path]:
-        """Encrypt the tarball using FAK encryption."""
-        try:
-            # Import encryption manager
-            from ..utils import EncryptionManager
-            
-            encryption_manager = EncryptionManager()
-            
-            if not encryption_manager.is_encryption_available():
-                print("WARNING: FAK key not available, storing unencrypted tarball")
-                return tarball_path
-            
-            print("Encrypting backup tarball...")
-            encrypted_path = encryption_manager.encrypt_file(tarball_path)
-            
-            if encrypted_path:
-                # Clean up unencrypted tarball
-                tarball_path.unlink()
-                print(f"Encrypted tarball: {encrypted_path}")
-                return encrypted_path
-            else:
-                print("ERROR: Failed to encrypt tarball")
-                return None
-                
-        except Exception as e:
-            print(f"ERROR: Failed to encrypt tarball: {e}")
-            return None
-    
-    def upload(self, file_path: Path, remote_name: str) -> bool:
-        """Upload file to local NAS storage."""
-        try:
-            dest_path = self.storage_path / remote_name
-            shutil.copy2(file_path, dest_path)
-            print(f"Uploaded to NAS: {dest_path}")
-            return True
-        except Exception as e:
-            print(f"ERROR: Failed to upload {file_path} to NAS storage: {e}")
-            return False
-    
-    def download(self, remote_name: str, local_path: Path) -> bool:
-        """Download file from local storage."""
-        try:
-            source_path = self.storage_path / remote_name
-            if not source_path.exists():
-                print(f"ERROR: File not found in local storage: {remote_name}")
+            if not file_path.exists():
+                self.logger.error(f"Source file not found: {file_path}")
                 return False
             
-            shutil.copy2(source_path, local_path)
+            # Create destination path
+            dest_path = self.base_path / remote_name
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Copy file
+            if progress_callback:
+                progress_callback(0, file_path.stat().st_size)
+            
+            shutil.copy2(file_path, dest_path)
+            
+            if progress_callback:
+                progress_callback(file_path.stat().st_size, file_path.stat().st_size)
+            
+            self.logger.info(f"Successfully uploaded {file_path} to {dest_path}")
             return True
+            
         except Exception as e:
-            print(f"ERROR: Failed to download {remote_name} from local storage: {e}")
+            self.logger.error(f"Failed to upload {file_path}: {e}")
             return False
     
-    def list_files(self) -> List[Dict[str, Any]]:
+    def download(self, remote_name: str, local_path: Path, progress_callback: Optional[Callable] = None) -> bool:
+        """Download file from local storage."""
+        try:
+            source_path = self.base_path / remote_name
+            
+            if not source_path.exists():
+                self.logger.error(f"File not found: {source_path}")
+                return False
+            
+            # Ensure local directory exists
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            if progress_callback:
+                progress_callback(0, source_path.stat().st_size)
+            
+            shutil.copy2(source_path, local_path)
+            
+            if progress_callback:
+                progress_callback(source_path.stat().st_size, source_path.stat().st_size)
+            
+            self.logger.info(f"Successfully downloaded {source_path} to {local_path}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to download {remote_name}: {e}")
+            return False
+    
+    def list_files(self, prefix: str = "", max_files: int = 1000) -> List[Dict[str, Any]]:
         """List files in local storage."""
         files = []
+        
         try:
-            for file_path in self.storage_path.iterdir():
+            for file_path in self.base_path.rglob('*'):
                 if file_path.is_file():
+                    # Apply prefix filtering
+                    relative_path = file_path.relative_to(self.base_path)
+                    if prefix and not str(relative_path).startswith(prefix):
+                        continue
+                    
+                    # Apply max_files limit
+                    if len(files) >= max_files:
+                        break
+                    
                     stat = file_path.stat()
                     files.append({
-                        'name': file_path.name,
+                        'name': str(relative_path),
                         'size': stat.st_size,
                         'mtime': stat.st_mtime,
                         'path': str(file_path)
                     })
+            
+            self.logger.info(f"Found {len(files)} files in local storage")
+            
         except Exception as e:
-            print(f"ERROR: Failed to list files in local storage: {e}")
+            self.logger.error(f"Error listing files: {e}")
         
         return files
     
     def delete(self, remote_name: str) -> bool:
         """Delete file from local storage."""
         try:
-            file_path = self.storage_path / remote_name
-            if file_path.exists():
-                file_path.unlink()
-                return True
-            else:
-                print(f"WARNING: File not found for deletion: {remote_name}")
+            file_path = self.base_path / remote_name
+            
+            if not file_path.exists():
+                self.logger.warning(f"File not found for deletion: {file_path}")
                 return False
+            
+            file_path.unlink()
+            self.logger.info(f"Successfully deleted {file_path}")
+            return True
+            
         except Exception as e:
-            print(f"ERROR: Failed to delete {remote_name} from local storage: {e}")
+            self.logger.error(f"Failed to delete {remote_name}: {e}")
             return False
-    
-    def create_backup(self, backup_items: List[str], timestamp: str) -> Optional[Path]:
-        """Create complete backup: tarball + encrypt + upload to NAS."""
-        try:
-            # Step 1: Create tarball from backup items
-            tarball_path = self.create_backup_tarball(backup_items, timestamp)
-            if not tarball_path:
-                return None
-            
-            # Step 2: Encrypt tarball
-            encrypted_path = self.encrypt_tarball(tarball_path)
-            if not encrypted_path:
-                return None
-            
-            # Step 3: Upload to NAS
-            remote_name = encrypted_path.name
-            if self.upload(encrypted_path, remote_name):
-                # Clean up temp file
-                encrypted_path.unlink()
-                return self.storage_path / remote_name
-            else:
-                return None
-                
-        except Exception as e:
-            print(f"ERROR: Failed to create backup: {e}")
-            return None
     
     def test_connection(self) -> bool:
-        """Test connection to NAS storage."""
+        """Test connection to local storage."""
         try:
-            # Test NAS directory access
-            test_file = self.storage_path / '.test_connection'
-            test_file.touch()
+            # Test if we can read and write to the base path
+            test_file = self.base_path / '.test_connection'
+            
+            # Test write
+            test_file.write_text('test')
+            
+            # Test read
+            content = test_file.read_text()
+            if content != 'test':
+                return False
+            
+            # Clean up
             test_file.unlink()
             
-            # Test temp directory access
-            temp_test = self.temp_dir / '.test_connection'
-            temp_test.touch()
-            temp_test.unlink()
-            
-            print(f"✓ NAS storage test successful: {self.storage_path}")
+            self.logger.info("Local storage connection test successful")
             return True
+            
         except Exception as e:
-            print(f"ERROR: NAS storage test failed: {e}")
+            self.logger.error(f"Local storage connection test failed: {e}")
             return False
+    
+    def get_storage_info(self) -> Dict[str, Any]:
+        """Get storage information."""
+        try:
+            # Get disk usage
+            statvfs = os.statvfs(self.base_path)
+            
+            # Calculate sizes
+            total_bytes = statvfs.f_frsize * statvfs.f_blocks
+            free_bytes = statvfs.f_frsize * statvfs.f_available
+            used_bytes = total_bytes - free_bytes
+            
+            return {
+                'total_bytes': total_bytes,
+                'used_bytes': used_bytes,
+                'free_bytes': free_bytes,
+                'total_gb': round(total_bytes / (1024**3), 2),
+                'used_gb': round(used_bytes / (1024**3), 2),
+                'free_gb': round(free_bytes / (1024**3), 2),
+                'usage_percent': round((used_bytes / total_bytes) * 100, 2)
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get storage info: {e}")
+            return {}
+    
+    def get_provider_status(self) -> Dict[str, Any]:
+        """Get comprehensive provider status information."""
+        storage_info = self.get_storage_info()
+        
+        return {
+            'name': self.name,
+            'base_path': str(self.base_path),
+            'path_exists': self.base_path.exists(),
+            'path_writable': os.access(self.base_path, os.W_OK),
+            'storage_info': storage_info,
+            'connection_test': self.test_connection()
+        }

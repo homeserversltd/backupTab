@@ -57,6 +57,11 @@ export interface BackupConfig {
   encryption_key?: string | null;
   encryption_salt?: string | null;
   backup_count: number;
+  backupTypes?: {
+    full: BackupTypeConfig;
+    incremental: BackupTypeConfig;
+    differential: BackupTypeConfig;
+  };
   logging: {
     enabled: boolean;
     log_file: string;
@@ -101,6 +106,50 @@ export interface ScheduleInfo {
   schedule_config: Record<string, string>;
 }
 
+// Backup type specific configuration
+export interface BackupTypeConfig {
+  type: 'full' | 'incremental' | 'differential';
+  retention: {
+    days: number;
+    maxBackups?: number; // Maximum number of backups to keep
+    keepForever?: boolean; // Override days if true
+  };
+  compression: {
+    enabled: boolean;
+    level: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9; // Compression level
+    algorithm: 'gzip' | 'lz4' | 'zstd';
+  };
+  encryption: {
+    enabled: boolean;
+    algorithm: 'AES-256-GCM' | 'AES-128-GCM' | 'ChaCha20-Poly1305';
+    keyId?: string;
+  };
+  deduplication: {
+    enabled: boolean;
+    algorithm: 'blake2' | 'sha256';
+  };
+  verification: {
+    enabled: boolean;
+    frequency: 'every_backup' | 'weekly' | 'monthly';
+    integrityCheck: boolean;
+  };
+  performance: {
+    maxBandwidth?: number | null; // KB/s, null for unlimited
+    parallelJobs: number;
+    chunkSize: number; // MB
+  };
+  cleanup: {
+    autoCleanup: boolean;
+    cleanupAfterDays: number;
+    keepAtLeast: number; // Minimum backups to keep
+  };
+  scheduling: {
+    priority: 'low' | 'medium' | 'high';
+    timeout: number; // seconds
+    retryAttempts: number;
+  };
+}
+
 export interface BackupScheduleConfig {
   id: string;
   name: string;
@@ -110,8 +159,12 @@ export interface BackupScheduleConfig {
   hour: number; // 0-23
   minute: number; // 0-59
   customCron?: string; // For custom schedules
-  backupType: 'full' | 'incremental' | 'differential';
-  retentionDays: number;
+  backupTypes: {
+    full: BackupTypeConfig;
+    incremental: BackupTypeConfig;
+    differential: BackupTypeConfig;
+  };
+  activeBackupType: 'full' | 'incremental' | 'differential';
   repositories: string[];
   lastRun?: string;
   nextRun?: string;
@@ -162,3 +215,134 @@ export interface UseBackupControlsReturn {
   error: string | null;
   clearError: () => void;
 }
+
+// Default backup type configurations
+export const DEFAULT_BACKUP_TYPES: {
+  full: BackupTypeConfig;
+  incremental: BackupTypeConfig;
+  differential: BackupTypeConfig;
+} = {
+  full: {
+    type: 'full',
+    retention: {
+      days: 90,
+      maxBackups: 12,
+      keepForever: false
+    },
+    compression: {
+      enabled: true,
+      algorithm: 'zstd',
+      level: 6
+    },
+    encryption: {
+      enabled: true,
+      algorithm: 'AES-256-GCM'
+    },
+    deduplication: {
+      enabled: true,
+      algorithm: 'blake2'
+    },
+    verification: {
+      enabled: true,
+      frequency: 'every_backup',
+      integrityCheck: true
+    },
+    performance: {
+      maxBandwidth: null,
+      parallelJobs: 4,
+      chunkSize: 64
+    },
+    cleanup: {
+      autoCleanup: true,
+      cleanupAfterDays: 90,
+      keepAtLeast: 3
+    },
+    scheduling: {
+      priority: 'high',
+      timeout: 7200, // 2 hours
+      retryAttempts: 3
+    }
+  },
+  incremental: {
+    type: 'incremental',
+    retention: {
+      days: 30,
+      maxBackups: 30,
+      keepForever: false
+    },
+    compression: {
+      enabled: true,
+      algorithm: 'lz4',
+      level: 3
+    },
+    encryption: {
+      enabled: true,
+      algorithm: 'AES-256-GCM'
+    },
+    deduplication: {
+      enabled: true,
+      algorithm: 'blake2'
+    },
+    verification: {
+      enabled: true,
+      frequency: 'weekly',
+      integrityCheck: true
+    },
+    performance: {
+      maxBandwidth: null,
+      parallelJobs: 8,
+      chunkSize: 32
+    },
+    cleanup: {
+      autoCleanup: true,
+      cleanupAfterDays: 30,
+      keepAtLeast: 5
+    },
+    scheduling: {
+      priority: 'medium',
+      timeout: 3600, // 1 hour
+      retryAttempts: 5
+    }
+  },
+  differential: {
+    type: 'differential',
+    retention: {
+      days: 60,
+      maxBackups: 8,
+      keepForever: false
+    },
+    compression: {
+      enabled: true,
+      algorithm: 'gzip',
+      level: 6
+    },
+    encryption: {
+      enabled: true,
+      algorithm: 'AES-256-GCM'
+    },
+    deduplication: {
+      enabled: true,
+      algorithm: 'blake2'
+    },
+    verification: {
+      enabled: true,
+      frequency: 'monthly',
+      integrityCheck: true
+    },
+    performance: {
+      maxBandwidth: null,
+      parallelJobs: 6,
+      chunkSize: 48
+    },
+    cleanup: {
+      autoCleanup: true,
+      cleanupAfterDays: 60,
+      keepAtLeast: 2
+    },
+    scheduling: {
+      priority: 'medium',
+      timeout: 5400, // 1.5 hours
+      retryAttempts: 4
+    }
+  }
+};
