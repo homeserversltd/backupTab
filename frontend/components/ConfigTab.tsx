@@ -12,16 +12,17 @@ import {
   faSave,
   faSpinner
 } from '@fortawesome/free-solid-svg-icons';
-import { BackupConfig, BackupTypeConfig, DEFAULT_BACKUP_TYPES } from '../types';
-import { useTooltip } from '../../../../src/hooks/useTooltip'; //donot touch this
-import { showToast } from '../../../../src/components/Popup/PopupManager'; //donot touch this
 import { 
+  BackupConfig, 
+  BackupTypeConfig, 
+  DEFAULT_BACKUP_TYPES,
   getBackupTypeInfo, 
   generateBackupSummary, 
   getConfigurationSummary,
-  validateBackupConfig,
-  calculateBackupImpact
-} from '../utils/backupTyping';
+  validateBackupConfig
+} from '../types';
+import { useTooltip } from '../../../../src/hooks/useTooltip'; //donot touch this
+import { showToast } from '../../../../src/components/Popup/PopupManager'; //donot touch this
 
 interface ConfigTabProps {
   config: BackupConfig | null;
@@ -483,7 +484,10 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                       }
                     </div>
                     <div className="backup-type-summary">
-                      {generateBackupSummary(backupTypes[type.value as keyof typeof backupTypes])}
+                      {generateBackupSummary(
+                        backupTypes[type.value as keyof typeof backupTypes], 
+                        type.value === 'full' ? 'daily' : type.value === 'differential' ? 'daily' : 'daily'
+                      )}
                     </div>
                   </div>
                 ))
@@ -522,7 +526,10 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                   })()}
                 </div>
                 <div className="backup-impact-summary">
-                  <strong>Backup Impact:</strong> {generateBackupSummary(backupTypes[activeBackupType])}
+                  <strong>Backup Impact:</strong> {generateBackupSummary(
+                    backupTypes[activeBackupType],
+                    activeBackupType === 'full' ? 'daily' : activeBackupType === 'differential' ? 'daily' : 'daily'
+                  )}
                 </div>
               </div>
               

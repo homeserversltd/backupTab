@@ -168,13 +168,6 @@
       "type": "copy",
       "identifier": null,
       "description": "Config subtab component"
-    },
-    {
-      "source": "frontend/utils/backupTyping.ts",
-      "target": "/var/www/homeserver/src/tablets/backupTab/utils/backupTyping.ts",
-      "type": "copy",
-      "identifier": null,
-      "description": "Backup type configuration utilities and plain English summaries"
     }
   ]
 }

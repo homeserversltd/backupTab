@@ -3,7 +3,7 @@
  * Providers and backup files management
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { BackupConfig, ScheduleInfo } from '../types';
 
 interface OverviewTabProps {
@@ -17,6 +17,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   scheduleInfo,
   onConfigChange
 }) => {
+  const [clickedProvider, setClickedProvider] = useState<string | null>(null);
+
+  const handleProviderClick = (providerKey: string) => {
+    setClickedProvider(providerKey);
+    // Reset the animation state after 300ms
+    setTimeout(() => {
+      setClickedProvider(null);
+    }, 300);
+  };
 
   const formatNextBackup = (nextRun: string | null): string => {
     if (!nextRun || nextRun === 'Not scheduled') return 'Not scheduled';
@@ -93,7 +102,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         
         <div className="provider-list">
           {config?.providers ? Object.entries(config.providers).map(([key, provider]) => (
-            <div key={key} className={`provider-item ${provider.enabled ? 'enabled' : 'disabled'}`}>
+            <div 
+              key={key} 
+              className={`provider-item ${provider.enabled ? 'enabled' : 'disabled'} ${clickedProvider === key ? 'clicked' : ''}`}
+              onClick={() => handleProviderClick(key)}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="provider-icon">💾</div>
               <div className="provider-info">
                 <div className="provider-name">{key}</div>

@@ -98,8 +98,7 @@
       "ProviderSelector": "frontend/components/providers/ProviderSelector.tsx",
       "BackblazeProvider": "frontend/components/providers/BackblazeProvider.tsx",
       "LocalProvider": "frontend/components/providers/LocalProvider.tsx",
-      "ScheduleTab_css": "frontend/components/ScheduleTab.css",
-      "backupTyping": "frontend/utils/backupTyping.ts"
+      "ScheduleTab_css": "frontend/components/ScheduleTab.css"
     },
     "permissions": {
       "flask_backup": "permissions/flask-backup"

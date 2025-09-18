@@ -142,6 +142,26 @@
   box-shadow: 0 2px 4px var(--border);
 }
 
+/* Click animation */
+.provider-item.clicked {
+  animation: providerClick 0.3s ease-out;
+}
+
+@keyframes providerClick {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 2px 4px var(--border);
+  }
+  50% {
+    transform: scale(0.95);
+    box-shadow: 0 0 12px var(--accent);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 2px 4px var(--border);
+  }
+}
+
 .provider-item:hover {
   background: var(--primaryHover);
   border-color: var(--border);
