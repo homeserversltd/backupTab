@@ -5,8 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { BackupConfig } from '../types';
-import { useTooltip } from '../../../hooks/useTooltip'; //donot touch this
-import { showToast } from '../../../components/Popup/PopupManager'; //donot touch this
+import { useTooltip } from '../../../../src/hooks/useTooltip'; //donot touch this
+import { showToast } from '../../../../src/components/Popup/PopupManager'; //donot touch this
 
 interface ConfigTabProps {
   config: BackupConfig | null;
@@ -24,13 +24,75 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
   const [encryptionKey, setEncryptionKey] = useState(config?.encryption_key || '');
   const [encryptionSalt, setEncryptionSalt] = useState(config?.encryption_salt || '');
   const [version, setVersion] = useState<string>('1.0.0');
+  const [recommendedPaths, setRecommendedPaths] = useState<string[]>([]);
 
   const tooltip = useTooltip();
+
+  // Professional backup presets - the grunge way
+  const backupPresets = [
+
+    // Application data
+    '/var/www/homeserver',
+    '/var/lib/postgresql',
+    '/var/lib/mysql',
+    
+    // Configuration files
+    '/etc/nginx',
+    '/etc/apache2',
+    '/etc/ssh',
+    '/etc/ssl',
+    '/etc/systemd',
+    
+    // User data
+    '/home/*/Documents',
+    '/home/*/Pictures',
+    '/home/*/Music',
+    '/home/*/Videos',
+    '/home/*/.ssh',
+    '/home/*/.config',
+    
+    // System state
+    '/proc/mounts',
+    '/etc/fstab',
+    '/etc/hosts',
+    '/etc/resolv.conf',
+    
+    // Custom application paths
+    '/var/www/homeserver',
+    '/var/www/html',
+    '/srv',
+    '/mnt',
+    
+    // Logs and monitoring
+    '/var/log/syslog',
+    '/var/log/auth.log',
+    '/var/log/nginx',
+    '/var/log/apache2'
+  ];
 
   // Load version info on component mount
   useEffect(() => {
     loadVersionInfo();
+    initializeRecommendedPaths();
   }, []);
+
+  // Initialize recommended paths by filtering out already added ones
+  const initializeRecommendedPaths = () => {
+    if (!config?.backup_items) {
+      setRecommendedPaths(backupPresets);
+      return;
+    }
+    
+    const availablePresets = backupPresets.filter(preset => 
+      !config.backup_items.includes(preset)
+    );
+    setRecommendedPaths(availablePresets);
+  };
+
+  // Update recommended paths when config changes
+  useEffect(() => {
+    initializeRecommendedPaths();
+  }, [config?.backup_items]);
 
   const loadVersionInfo = async () => {
     try {
@@ -83,10 +145,43 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
     }
   };
 
+  const handleAddRecommendedPath = async (path: string) => {
+    if (!config) return;
+    
+    try {
+      const updatedConfig = {
+        ...config,
+        backup_items: [...(config.backup_items || []), path]
+      };
+      
+      const success = await updateConfig(updatedConfig);
+      if (success) {
+        // Update the main config state if callback is provided
+        if (onConfigUpdate) {
+          onConfigUpdate(updatedConfig);
+        }
+        
+        showToast({
+          message: `Added ${path} to backup list`,
+          variant: 'success',
+          duration: 2000
+        });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add recommended path';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 4000
+      });
+    }
+  };
+
   const handleRemoveFile = async (index: number) => {
     if (!config) return;
     
     try {
+      const removedPath = config.backup_items?.[index];
       const updatedConfig = {
         ...config,
         backup_items: config.backup_items?.filter((_, i) => i !== index) || []
@@ -97,6 +192,11 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
         // Update the main config state if callback is provided
         if (onConfigUpdate) {
           onConfigUpdate(updatedConfig);
+        }
+        
+        // Return to recommended list if it was a preset
+        if (removedPath && backupPresets.includes(removedPath)) {
+          setRecommendedPaths(prev => [...prev, removedPath]);
         }
         
         showToast({
@@ -177,11 +277,35 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
         
         <div className="config-section">
           <h4>Files & Directories to Backup</h4>
+          
+          {/* Recommended Paths Header Bar */}
+          {recommendedPaths.length > 0 && (
+            <div className="recommended-paths">
+              <div className="recommended-header">
+                <h5>Recommended</h5>
+                <span className="recommended-count">{recommendedPaths.length} available</span>
+              </div>
+              <div className="recommended-pills">
+                {recommendedPaths.map((path, index) => (
+                  <button
+                    key={index}
+                    className="recommended-pill"
+                    onClick={() => handleAddRecommendedPath(path)}
+                    title={`Add ${path} to backup list`}
+                  >
+                    {path}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Manual Input Section */}
           <div className="file-selection">
             <div className="file-input-group">
               <input
                 type="text"
-                placeholder="Enter file or directory path"
+                placeholder="Enter file or directory path (manual entry)"
                 className="file-path-input"
                 value={newFilePath}
                 onChange={(e) => setNewFilePath(e.target.value)}
@@ -195,7 +319,12 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                 Add
               </button>
             </div>
+            
+            {/* Current Backup Items */}
             <div className="file-list">
+              <div className="file-list-header">
+                <h5>Current Backup Items ({config.backup_items?.length || 0})</h5>
+              </div>
               {config.backup_items?.map((item, index) => (
                 <div key={index} className="file-item">
                   <span className="file-path">{item}</span>
@@ -208,6 +337,11 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                   </button>
                 </div>
               ))}
+              {(!config.backup_items || config.backup_items.length === 0) && (
+                <div className="empty-state">
+                  <span>No backup items configured. Add paths manually or use recommended presets above.</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

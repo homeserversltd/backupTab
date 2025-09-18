@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 from .logger import get_logger
+from .config_manager import BACKUP_SCRIPT_PATH, BACKUP_LOG_PATH
 
 
 class CronManager:
@@ -45,7 +46,9 @@ class CronManager:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             cron_content = template_content.format(
                 SCHEDULE=schedule,
-                TIMESTAMP=timestamp
+                TIMESTAMP=timestamp,
+                BACKUP_SCRIPT_PATH=BACKUP_SCRIPT_PATH,
+                BACKUP_LOG_PATH=BACKUP_LOG_PATH
             )
             
             # Write to temporary file first

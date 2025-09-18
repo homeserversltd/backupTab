@@ -11,6 +11,12 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from .logger import get_logger
 
+# Centralized configuration paths
+BACKUP_BASE_DIR = "/var/www/homeserver/premium/backupTab/backend"
+BACKUP_SCRIPT_PATH = f"{BACKUP_BASE_DIR}/backup"
+BACKUP_CONFIG_PATH = "/etc/backupTab/settings.json"
+BACKUP_LOG_PATH = "/var/log/homeserver/backup.log"
+
 
 class ConfigManager:
     """Manages backup configuration operations."""
@@ -37,7 +43,7 @@ class ConfigManager:
             "providers": {
                 "local": {
                     "enabled": True,
-                    "path": "/var/www/homeserver/backup"
+                    "path": BACKUP_BASE_DIR
                 },
                 "aws_s3": {
                     "enabled": False,

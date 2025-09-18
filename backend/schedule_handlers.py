@@ -18,6 +18,7 @@ from .utils import (
 )
 from .config_manager import BackupConfigManager
 from .src.service.backup_service import BackupService
+from .src.utils.config_manager import BACKUP_SCRIPT_PATH
 
 class ScheduleHandler:
     """Handles backup schedule management using cron jobs"""
@@ -82,7 +83,7 @@ class ScheduleHandler:
                     'schedule': None,
                     'cron_file': '/etc/cron.d/homeserver-backup',
                     'file_exists': False,
-                    'backup_script': '/var/www/homeserver/backup/backup',
+                    'backup_script': BACKUP_SCRIPT_PATH,
                     'script_executable': False,
                     'next_run': None,
                     'last_run': None,

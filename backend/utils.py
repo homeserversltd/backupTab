@@ -13,10 +13,11 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 # Configuration paths
-BACKUP_CONFIG_PATH = "/etc/backupTab/settings.json"
+# Import centralized paths from config_manager
+from .src.utils.config_manager import BACKUP_CONFIG_PATH, BACKUP_LOG_PATH, BACKUP_BASE_DIR
+
 BACKUP_STATE_PATH = "/opt/homeserver-backup/backup_state.json"
-BACKUP_LOG_PATH = "/var/log/homeserver-backup/backup.log"
-BACKUP_CLI_PATH = "/var/www/homeserver/premium/backupTab/backend"
+BACKUP_CLI_PATH = BACKUP_BASE_DIR
 
 def get_logger():
     """Get logger for backup operations"""

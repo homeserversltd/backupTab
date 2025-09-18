@@ -22,6 +22,7 @@ sys.path.insert(0, str(src_dir))
 
 from ..utils.cron_manager import CronManager
 from ..utils.logger import get_logger
+from ..utils.config_manager import BACKUP_SCRIPT_PATH
 
 class BackupService:
     """Backup service middleman for cron job management."""
@@ -31,7 +32,7 @@ class BackupService:
         self.logger = get_logger()
         self.cron_manager = CronManager()
         self.template_file = current_dir / "homeserver-backup.cron"
-        self.backup_script = "/var/www/homeserver/backup/backup"
+        self.backup_script = BACKUP_SCRIPT_PATH
         
         # Ensure backup script exists and is executable
         self._ensure_backup_script()

@@ -26,11 +26,13 @@ try:
     # Try relative import first (when used as module)
     from .src.providers import get_provider, PROVIDERS
     from .src.utils import get_logger, CronManager, ConfigManager, EncryptionManager
+    from .src.utils.config_manager import BACKUP_BASE_DIR
 except ImportError:
     try:
         # Fall back to absolute import (when run as script)
         from src.providers import get_provider, PROVIDERS
         from src.utils import get_logger, CronManager, ConfigManager, EncryptionManager
+        from src.utils.config_manager import BACKUP_BASE_DIR
     except ImportError as e:
         print(f"ERROR: Failed to import providers: {e}")
         print(f"Current directory: {current_dir}")
@@ -49,7 +51,7 @@ class EnhancedBackupCLI:
         else:
             self.config_file = config_file
         self.temp_dir = Path("/tmp/homeserver-backup-cli-enhanced")
-        self.backup_dir = Path("/var/www/homeserver/backup")
+        self.backup_dir = Path(BACKUP_BASE_DIR)
         
         # Initialize utilities
         self.logger = get_logger()
