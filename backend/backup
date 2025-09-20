@@ -181,13 +181,15 @@ class EnhancedBackupCLI:
             self.logger.log_backup_failure("Failed to create backup package")
             return None
         
-        # Encrypt if enabled
-        if self.config["encryption"]["enabled"]:
+        # Encrypt if enabled (skip encryption for local provider)
+        if self.config["encryption"]["enabled"] and "local" not in self.providers:
             encrypted_path = self._encrypt_backup(package_path)
             if not encrypted_path:
                 self.logger.log_backup_failure("Failed to encrypt backup package")
                 return None
             package_path = encrypted_path
+        elif "local" in self.providers:
+            self.logger.info("Skipping encryption for local provider - local backups are compressed only")
         
         # Upload to all enabled providers
         upload_results = {}
@@ -212,12 +214,34 @@ class EnhancedBackupCLI:
             local_path = self.backup_dir / package_path.name
             shutil.move(str(package_path), str(local_path))
             self.logger.log_backup_success(str(local_path), upload_results)
+            
+            # Increment backup count in settings.json
+            try:
+                success = self.config_manager.increment_backup_count()
+                if success:
+                    self.logger.info("Backup count incremented successfully")
+                else:
+                    self.logger.warning("Failed to increment backup count, but backup was successful")
+            except Exception as count_error:
+                self.logger.warning(f"Failed to increment backup count: {count_error}")
+            
             return local_path
         else:
             # Local provider already handled storage, clean up temp package
             if package_path.exists():
                 package_path.unlink()
             self.logger.log_backup_success("NAS storage", upload_results)
+            
+            # Increment backup count in settings.json
+            try:
+                success = self.config_manager.increment_backup_count()
+                if success:
+                    self.logger.info("Backup count incremented successfully")
+                else:
+                    self.logger.warning("Failed to increment backup count, but backup was successful")
+            except Exception as count_error:
+                self.logger.warning(f"Failed to increment backup count: {count_error}")
+            
             return None  # Local provider returns its own path
     
     def list_backups(self, provider_name: Optional[str] = None) -> List[Dict[str, Any]]:

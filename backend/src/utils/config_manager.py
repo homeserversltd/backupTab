@@ -157,3 +157,27 @@ class ConfigManager:
         """Check if a provider is enabled."""
         provider_config = self.get_provider_config(provider_name)
         return provider_config.get("enabled", False) if provider_config else False
+    
+    def increment_backup_count(self) -> bool:
+        """Increment the backup count in the configuration file."""
+        try:
+            # Load current config
+            config = self.load_config()
+            
+            # Increment backup count
+            current_count = config.get('backup_count', 0)
+            config['backup_count'] = current_count + 1
+            
+            # Save updated config
+            success = self.save_config(config)
+            
+            if success:
+                self.logger.info(f"Backup count incremented to {config['backup_count']}")
+            else:
+                self.logger.error("Failed to save config after incrementing backup count")
+            
+            return success
+        
+        except Exception as e:
+            self.logger.error(f"Failed to increment backup count: {e}")
+            return False

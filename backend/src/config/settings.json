@@ -2,9 +2,20 @@
     "backup_items": [
       "/tmp/test.txt"
     ],
+    "compression": {
+      "enabled": true,
+      "level": 6
+    },
+    "encryption": {
+      "enabled": true
+    },
+    "timestamp_chains": {
+      "enabled": true,
+      "format": "%Y%m%d_%H%M%S"
+    },
     "providers": {
       "local": {
-        "enabled": false,
+        "enabled": true,
         "container": "/mnt/nas/backups/homeserver"
       },
       "google_drive": {

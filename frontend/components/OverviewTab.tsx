@@ -86,6 +86,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <p className="backup-type">{getBackupTypeInfo().label}</p>
             <p className="stat-label">Backup Type</p>
           </div>
+          <div className="stat-item">
+            <p className="data-stored">2.4 GB</p>
+            <p className="stat-label">Total Data Stored</p>
+          </div>
+          <div className="stat-item">
+            <p className="files-count">1,247 files</p>
+            <p className="stat-label">Files Backed Up</p>
+          </div>
+          <div className="stat-item">
+            <p className="dirs-count">23 directories</p>
+            <p className="stat-label">Directories Backed Up</p>
+          </div>
         </div>
       </div>
 

@@ -571,24 +571,18 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                               const fullIntervalDays = genericBackupConfig[activeBackupType].userConfig.fullRefreshIntervalUnit === 'weeks' 
                                 ? (genericBackupConfig[activeBackupType].userConfig.fullRefreshInterval ?? 4) * 7
                                 : (genericBackupConfig[activeBackupType].userConfig.fullRefreshInterval ?? 4) * 30;
-                              
-                              // Calculate how many full backup cycles fit in the retention period
-                              const fullBackupCycles = Math.ceil(retentionDays / fullIntervalDays);
-                              const fullBackups = fullBackupCycles;
-                              const incrementalDays = retentionDays;
-                              const totalStorage = fullBackups + (incrementalDays * 0.1);
+                              const fullBackups = Math.ceil(retentionDays / fullIntervalDays);
+                              // Each day gets one incremental backup (0.1GB), plus full backups (1GB each)
+                              const totalStorage = fullBackups + (retentionDays * 0.1);
                               estimatedStorage = `${Math.round(totalStorage * 100) / 100}GB`;
                             } else if (activeBackupType === 'differential') {
                               // Differential: mix of full backups + growing differentials
                               const fullIntervalDays = genericBackupConfig[activeBackupType].userConfig.fullRefreshIntervalUnit === 'weeks' 
                                 ? (genericBackupConfig[activeBackupType].userConfig.fullRefreshInterval ?? 4) * 7
                                 : (genericBackupConfig[activeBackupType].userConfig.fullRefreshInterval ?? 4) * 30;
-                              
-                              // Calculate how many full backup cycles fit in the retention period
-                              const fullBackupCycles = Math.ceil(retentionDays / fullIntervalDays);
-                              const fullBackups = fullBackupCycles;
-                              const differentialDays = retentionDays;
-                              const totalStorage = fullBackups + (differentialDays * 0.3);
+                              const fullBackups = Math.ceil(retentionDays / fullIntervalDays);
+                              // Each day gets one differential backup (0.3GB), plus full backups (1GB each)
+                              const totalStorage = fullBackups + (retentionDays * 0.3);
                               estimatedStorage = `${Math.round(totalStorage * 100) / 100}GB`;
                             }
                             

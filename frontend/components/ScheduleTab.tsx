@@ -31,6 +31,7 @@ import './ScheduleTab.css';
 interface ScheduleTabProps {
   schedules?: BackupScheduleConfig[];
   onScheduleChange?: () => void;
+  onConfigRefresh?: () => void;
   config?: BackupConfig | null;
 }
 
@@ -50,6 +51,7 @@ const GENERIC_BACKUP_TYPE_INFO = getGenericBackupTypeInfo();
 export const ScheduleTab: React.FC<ScheduleTabProps> = ({ 
   schedules = [], 
   onScheduleChange,
+  onConfigRefresh,
   config
 }) => {
   const {
@@ -322,28 +324,51 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   };
 
   const runBackupNow = async () => {
+    console.log('=== FRONTEND SYNC NOW STARTED ===');
+    console.log('Setting loading state to true');
     setIsLoading(true);
+    
     try {
-      // Run backup script directly
+      console.log('Calling syncNow() API...');
       const result = await syncNow();
+      console.log('syncNow() API response:', result);
       
+      console.log('Showing success toast');
       showToast({
         message: 'Backup completed successfully',
         variant: 'success',
         duration: 3000
       });
       
+      console.log('Reloading schedule config...');
       // Reload schedule info to get updated last run time
       await loadScheduleConfig();
+      console.log('Schedule config reloaded successfully');
+      
+      console.log('Reloading main config...');
+      // Reload main config to get updated backup count
+      if (onConfigRefresh) {
+        await onConfigRefresh();
+        console.log('Main config reloaded successfully');
+      }
     } catch (error) {
+      console.error('=== FRONTEND SYNC NOW ERROR ===');
+      console.error('Error type:', typeof error);
+      console.error('Error instance of Error:', error instanceof Error);
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Full error object:', error);
+      
       const errorMessage = error instanceof Error ? error.message : 'Failed to run backup';
+      console.log('Showing error toast with message:', errorMessage);
       showToast({
         message: errorMessage,
         variant: 'error',
         duration: 4000
       });
     } finally {
+      console.log('Setting loading state to false');
       setIsLoading(false);
+      console.log('=== FRONTEND SYNC NOW COMPLETED ===');
     }
   };
 

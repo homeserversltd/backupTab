@@ -14,7 +14,6 @@ from .utils import (
     BACKUP_CONFIG_PATH, 
     get_logger, 
     check_and_update_config, 
-    create_config_backup,
     redact_sensitive_fields,
     validate_config_schema
 )
@@ -60,10 +59,7 @@ class BackupConfigManager:
             # Load current config to compare changes
             current_config = self.get_config()
             
-            # Only create backup for significant changes (not simple provider flag toggles)
-            significant_changes = self._has_significant_changes(current_config, new_config)
-            if significant_changes:
-                create_config_backup(BACKUP_CONFIG_PATH)
+            # No need to create backups of the configuration file
             
             # Write new config using /usr/bin/sudo
             import tempfile
@@ -82,25 +78,6 @@ class BackupConfigManager:
             self.logger.error(f"Failed to update configuration: {e}")
             return False
     
-    def _has_significant_changes(self, current_config: Dict[str, Any], new_config: Dict[str, Any]) -> bool:
-        """Check if the changes are significant enough to warrant a backup"""
-        # Check if only provider enabled flags changed
-        if 'providers' in current_config and 'providers' in new_config:
-            for provider_name, provider_config in new_config['providers'].items():
-                if provider_name in current_config['providers']:
-                    current_provider = current_config['providers'][provider_name]
-                    # Check if only 'enabled' flag changed
-                    if len(provider_config) == 1 and 'enabled' in provider_config:
-                        if len(current_provider) == 1 and 'enabled' in current_provider:
-                            continue  # Only enabled flag changed, not significant
-                    # Check if only enabled flag is different
-                    significant_keys = set(provider_config.keys()) - {'enabled'}
-                    if not significant_keys and provider_config.get('enabled') != current_provider.get('enabled'):
-                        continue  # Only enabled flag changed, not significant
-                    return True  # Other changes detected
-                else:
-                    return True  # New provider added
-        return True  # Default to creating backup for safety
     
     def get_provider_config(self, provider_name: str) -> Optional[Dict[str, Any]]:
         """Get configuration for a specific provider"""
@@ -144,10 +121,7 @@ class BackupConfigManager:
             if provider_name not in config['providers']:
                 return False
             
-            # Only create backup for significant changes (not simple flag toggles)
-            significant_changes = any(key not in ['enabled'] for key in updates.keys())
-            if significant_changes:
-                create_config_backup(BACKUP_CONFIG_PATH)
+            # No need to create backups of the configuration file
             
             # Update provider config
             config['providers'][provider_name].update(updates)
@@ -596,6 +570,41 @@ class BackupConfigManager:
                 }
             }
         }
+    
+    def increment_backup_count(self) -> bool:
+        """Increment the backup count in the configuration file."""
+        try:
+            # Check and update configuration if needed before processing
+            if not check_and_update_config():
+                self.logger.warning("Configuration update check failed, continuing with existing config")
+            
+            if not os.path.exists(BACKUP_CONFIG_PATH):
+                self.logger.error("Configuration file not found")
+                return False
+            
+            # Load current config
+            config = self.get_config()
+            
+            # Increment backup count
+            current_count = config.get('backup_count', 0)
+            config['backup_count'] = current_count + 1
+            
+            # Write updated config using /usr/bin/sudo
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as temp_file:
+                json.dump(config, temp_file, indent=2)
+                temp_path = temp_file.name
+            
+            # Copy to final location with /usr/bin/sudo
+            subprocess.run(['/usr/bin/sudo', '/bin/cp', temp_path, BACKUP_CONFIG_PATH], check=True)
+            os.unlink(temp_path)  # Clean up temp file
+            
+            self.logger.info(f"Backup count incremented to {config['backup_count']}")
+            return True
+        
+        except Exception as e:
+            self.logger.error(f"Failed to increment backup count: {e}")
+            return False
     
     def get_global_schema(self) -> Dict[str, Any]:
         """Get global configuration schema"""

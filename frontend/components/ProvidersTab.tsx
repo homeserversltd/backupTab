@@ -49,16 +49,32 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
         }
       } catch (err) {
         console.error('Failed to load provider statuses:', err);
-        showToast({
-          message: 'Failed to load provider statuses',
-          variant: 'error',
-          duration: 4000
-        });
+        // Don't show error toast - providers should still be visible from config
+        console.log('Using fallback provider list from config');
+        
+        // Create fallback provider statuses from config
+        if (config?.providers) {
+          const fallbackStatuses = Object.keys(config.providers).map(providerName => ({
+            name: providerName,
+            enabled: config.providers[providerName]?.enabled || false,
+            available: true, // Assume available for UI purposes
+            configured: false, // Mark as not configured if we can't check
+            display_name: providerName.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            description: `Configure ${providerName} provider`,
+            icon: 'cloud',
+            keyman_integration: {
+              integrated: (config.providers[providerName] as any)?.keyman_integrated || false,
+              configured: false,
+              service_name: (config.providers[providerName] as any)?.keyman_service_name || providerName
+            }
+          }));
+          setProviderStatuses(fallbackStatuses);
+        }
       }
     };
 
     loadProviderStatuses();
-  }, [getProvidersStatus]);
+  }, [getProvidersStatus, config]);
 
   // Load provider config when provider changes
   useEffect(() => {

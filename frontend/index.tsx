@@ -75,6 +75,20 @@ const BackupTablet: React.FC = () => {
     }
   };
 
+  const refreshConfigData = async () => {
+    try {
+      const configData = await getConfig();
+      setConfig(configData);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to refresh config data';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 5000
+      });
+    }
+  };
+
   return (
     <div className="backup-tablet">
       <div className="backup-tablet-nav">
@@ -130,7 +144,8 @@ const BackupTablet: React.FC = () => {
         {activeTab === 'schedule' && (
           <ScheduleTab 
             config={config}
-            onScheduleChange={refreshScheduleData} 
+            onScheduleChange={refreshScheduleData}
+            onConfigRefresh={refreshConfigData}
           />
         )}
 

@@ -93,9 +93,22 @@ export function useBackupControls(): UseBackupControlsReturn {
   }, [handleApiCall]);
 
   const syncNow = useCallback(async (): Promise<any> => {
-    return handleApiCall<any>('/backup/sync-now', {
-      method: 'POST',
-    });
+    console.log('=== useBackupControls.syncNow() CALLED ===');
+    console.log('Making API call to /backup/sync-now with POST method');
+    
+    try {
+      const result = await handleApiCall<any>('/backup/sync-now', {
+        method: 'POST',
+      });
+      console.log('handleApiCall returned successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('=== useBackupControls.syncNow() ERROR ===');
+      console.error('handleApiCall threw error:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+      throw error;
+    }
   }, [handleApiCall]);
 
   const testCloudConnections = useCallback(async (): Promise<CloudTestResult> => {

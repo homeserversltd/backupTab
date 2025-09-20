@@ -19,8 +19,8 @@ class LocalProvider(BaseProvider):
         super().__init__(config)
         self.logger = logging.getLogger(f'homeserver_backup.local')
         
-        # Configuration
-        self.container = config.get('container', '/mnt/nas/backups/homeserver')
+        # Configuration - support both 'container' and 'path' for compatibility
+        self.container = config.get('container') or config.get('path', '/mnt/nas/backups/homeserver')
         self.base_path = Path(self.container)
         
         # Ensure base path exists
@@ -179,6 +179,33 @@ class LocalProvider(BaseProvider):
             self.logger.error(f"Failed to get storage info: {e}")
             return {}
     
+    def create_backup(self, backup_items: List[str], timestamp: str) -> Optional[Path]:
+        """Create a compressed backup tarball of the specified items (no encryption)."""
+        try:
+            backup_name = f"homeserver_backup_{timestamp}.tar.gz"
+            backup_path = self.base_path / backup_name
+            
+            # Ensure base path exists
+            self.base_path.mkdir(parents=True, exist_ok=True)
+            
+            # Create compressed tarball (no encryption - handled by main script)
+            import tarfile
+            with tarfile.open(backup_path, "w:gz", compresslevel=6) as tar:
+                for item in backup_items:
+                    item_path = Path(item)
+                    if item_path.exists():
+                        tar.add(item, arcname=item_path.name)
+                        self.logger.info(f"Added to backup: {item}")
+                    else:
+                        self.logger.warning(f"Item not found: {item}")
+            
+            self.logger.info(f"Created local backup: {backup_path}")
+            return backup_path
+            
+        except Exception as e:
+            self.logger.error(f"Failed to create backup: {e}")
+            return None
+
     def get_provider_status(self) -> Dict[str, Any]:
         """Get comprehensive provider status information."""
         storage_info = self.get_storage_info()

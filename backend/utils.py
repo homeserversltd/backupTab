@@ -71,11 +71,6 @@ def create_backup_timestamp() -> str:
     """Create a timestamp string for backup operations"""
     return datetime.now().isoformat()
 
-def create_config_backup(config_path: str) -> str:
-    """Create a backup of the configuration file"""
-    backup_path = f"{config_path}.backup.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    subprocess.run(['/usr/bin/sudo', '/bin/cp', config_path, backup_path], check=True)
-    return backup_path
 
 def redact_sensitive_fields(config: Dict[str, Any]) -> Dict[str, Any]:
     """Redact sensitive fields from configuration"""

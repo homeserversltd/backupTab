@@ -153,9 +153,6 @@ def get_repositories():
 def get_providers_status():
     """Get status of all providers in a simple, iterable format"""
     try:
-        # Use BackupManager to get configured providers
-        configured_providers = backup_manager.get_configured_providers()
-        
         # Get the full config for additional metadata
         config = config_manager.get_safe_config()
         all_providers = config.get('providers', {})
@@ -163,15 +160,24 @@ def get_providers_status():
         # Create simple status list for frontend iteration
         provider_status = []
         for provider_name, provider_config in all_providers.items():
+            # Always show providers regardless of key file status
             is_available = _is_provider_available(provider_name)
             is_configured = _is_provider_configured(provider_name, provider_config)
             
-            # Check keyman integration status
+            # Check keyman integration status - handle errors gracefully
             keyman_integrated = provider_config.get('keyman_integrated', False)
             keyman_configured = False
             if keyman_integrated:
-                keyman_service_name = provider_config.get('keyman_service_name', provider_name)
-                keyman_configured = backup_manager.keyman.service_configured(keyman_service_name)
+                try:
+                    keyman_service_name = provider_config.get('keyman_service_name', provider_name)
+                    keyman_configured = backup_manager.keyman.service_configured(keyman_service_name)
+                except (FileNotFoundError, PermissionError) as e:
+                    # Key files don't exist yet - this is normal for new setups
+                    get_logger().info(f"Keyman keys not found for {provider_name} (normal for new setup): {e}")
+                    keyman_configured = False
+                except Exception as e:
+                    get_logger().warning(f"Keyman check failed for {provider_name}: {e}")
+                    keyman_configured = False
             
             provider_status.append({
                 'name': provider_name,
@@ -191,7 +197,30 @@ def get_providers_status():
         return create_response(True, {'providers': provider_status})
     except Exception as e:
         get_logger().error(f"Provider status retrieval failed: {e}")
-        return create_response(False, error=str(e), status_code=500)
+        # Even if there's an error, return a basic provider list so UI doesn't break
+        try:
+            config = config_manager.get_safe_config()
+            all_providers = config.get('providers', {})
+            fallback_providers = []
+            for provider_name, provider_config in all_providers.items():
+                fallback_providers.append({
+                    'name': provider_name,
+                    'enabled': provider_config.get('enabled', False),
+                    'available': True,  # Assume available for UI purposes
+                    'configured': False,  # Mark as not configured if we can't check
+                    'display_name': provider_name.replace('_', ' ').title(),
+                    'description': _get_provider_description(provider_name),
+                    'icon': _get_provider_icon(provider_name),
+                    'keyman_integration': {
+                        'integrated': provider_config.get('keyman_integrated', False),
+                        'configured': False,
+                        'service_name': provider_config.get('keyman_service_name', provider_name) if provider_config.get('keyman_integrated', False) else None
+                    }
+                })
+            return create_response(True, {'providers': fallback_providers})
+        except Exception as fallback_error:
+            get_logger().error(f"Fallback provider status also failed: {fallback_error}")
+            return create_response(False, error=str(e), status_code=500)
 
 # Backup Operations Routes
 @bp.route('/backup/run', methods=['POST'])
@@ -212,16 +241,43 @@ def run_backup():
 @bp.route('/backup/sync-now', methods=['POST'])
 def sync_now():
     """Run backup script directly (Sync Now button)"""
+    logger = get_logger()
+    logger.info("=== SYNC NOW REQUEST STARTED ===")
+    
     try:
         # Path to the backup script
         backup_script = '/var/www/homeserver/premium/backupTab/backend/backup'
+        logger.info(f"Backup script path: {backup_script}")
         
         # Check if script exists
         if not os.path.exists(backup_script):
+            logger.error(f"Backup script not found at: {backup_script}")
             return create_response(False, error='Backup script not found', status_code=404)
+        
+        logger.info("Backup script exists, checking permissions...")
         
         # Make script executable
         os.chmod(backup_script, 0o755)
+        logger.info("Made backup script executable")
+        
+        # Check current working directory
+        cwd = '/var/www/homeserver/premium/backupTab/backend'
+        logger.info(f"Working directory: {cwd}")
+        logger.info(f"Directory exists: {os.path.exists(cwd)}")
+        
+        # List files in working directory
+        try:
+            files = os.listdir(cwd)
+            logger.info(f"Files in working directory: {files}")
+        except Exception as e:
+            logger.warning(f"Could not list directory contents: {e}")
+        
+        # Check if settings.json exists
+        settings_path = os.path.join(cwd, 'src/config/settings.json')
+        logger.info(f"Settings file path: {settings_path}")
+        logger.info(f"Settings file exists: {os.path.exists(settings_path)}")
+        
+        logger.info("Starting backup script execution...")
         
         # Run the backup script
         result = subprocess.run(
@@ -229,24 +285,33 @@ def sync_now():
             capture_output=True,
             text=True,
             timeout=300,  # 5 minute timeout
-            cwd='/var/www/homeserver/premium/backupTab/backend'
+            cwd=cwd
         )
         
+        logger.info(f"Backup script completed with return code: {result.returncode}")
+        logger.info(f"STDOUT: {result.stdout}")
+        logger.info(f"STDERR: {result.stderr}")
+        
         if result.returncode == 0:
+            logger.info("Backup completed successfully")
             return create_response(True, {
                 'message': 'Backup completed successfully',
                 'output': result.stdout,
                 'timestamp': create_backup_timestamp()
             })
         else:
-            return create_response(False, error=f'Backup failed: {result.stderr}', status_code=500)
+            error_msg = f'Backup failed with return code {result.returncode}. STDOUT: {result.stdout}. STDERR: {result.stderr}'
+            logger.error(error_msg)
+            return create_response(False, error=error_msg, status_code=500)
             
-    except subprocess.TimeoutExpired:
-        get_logger().error("Backup script timed out")
+    except subprocess.TimeoutExpired as e:
+        logger.error(f"Backup script timed out after 300 seconds: {e}")
         return create_response(False, error='Backup timed out', status_code=408)
     except Exception as e:
-        get_logger().error(f"Sync now failed: {e}")
-        return create_response(False, error=str(e), status_code=500)
+        logger.error(f"Sync now failed with exception: {e}", exc_info=True)
+        return create_response(False, error=f'Sync now failed: {str(e)}', status_code=500)
+    finally:
+        logger.info("=== SYNC NOW REQUEST COMPLETED ===")
 
 @bp.route('/cloud/test', methods=['POST'])
 def test_cloud_connections():
@@ -729,8 +794,12 @@ def get_keyman_providers():
         
         for provider_name, provider_config in configured_providers.items():
             if provider_config.get('keyman_integrated', False):
-                keyman_service_name = provider_config.get('keyman_service_name', provider_name)
-                is_configured = backup_manager.keyman.service_configured(keyman_service_name)
+                try:
+                    keyman_service_name = provider_config.get('keyman_service_name', provider_name)
+                    is_configured = backup_manager.keyman.service_configured(keyman_service_name)
+                except Exception as e:
+                    get_logger().warning(f"Keyman check failed for {provider_name}: {e}")
+                    is_configured = False
                 
                 providers.append({
                     'name': provider_name,
