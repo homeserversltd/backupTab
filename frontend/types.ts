@@ -103,20 +103,84 @@ export interface ScheduleInfo {
   timer_status: 'active' | 'inactive' | 'failed' | 'unknown';
   next_run: string | null;
   last_run: string | null;
-  schedule_config: Record<string, string>;
+  schedule_config: {
+    enabled?: boolean;
+    frequency?: string;
+    hour?: number;
+    minute?: number;
+    dayOfWeek?: number;
+    dayOfMonth?: number;
+    activeBackupType?: 'full' | 'incremental' | 'differential';
+    backupType?: 'full' | 'incremental' | 'differential';
+    time?: string;
+    schedule?: string;
+    [key: string]: any;
+  };
 }
 
-// Backup type specific configuration
+// Generic backup type configuration - system makes intelligent decisions
+export interface GenericBackupConfig {
+  type: 'full' | 'incremental' | 'differential';
+  
+  // User-configurable parameters (system handles the rest)
+  userConfig: {
+    // For Full: user chooses frequency and retention count
+    // For Differential: user chooses retention count (system handles daily + weekly full)
+    // For Incremental: user chooses full refresh interval and retention count
+    retentionCount: number; // How many backups to keep in rotation
+    fullRefreshInterval?: number; // For incremental: weeks between full refreshes
+    fullRefreshIntervalUnit?: 'weeks' | 'months'; // Unit for full refresh interval
+  };
+  
+  // System-managed advanced settings (not user configurable)
+  systemConfig: {
+    compression: {
+      enabled: boolean;
+      level: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+      algorithm: 'gzip' | 'lz4' | 'zstd';
+    };
+    encryption: {
+      enabled: boolean;
+      algorithm: 'AES-256-GCM' | 'AES-128-GCM' | 'ChaCha20-Poly1305';
+    };
+    deduplication: {
+      enabled: boolean;
+      algorithm: 'blake2' | 'sha256';
+    };
+    verification: {
+      enabled: boolean;
+      frequency: 'every_backup' | 'weekly' | 'monthly';
+      integrityCheck: boolean;
+    };
+    performance: {
+      maxBandwidth?: number | null;
+      parallelJobs: number;
+      chunkSize: number;
+    };
+    cleanup: {
+      autoCleanup: boolean;
+      cleanupAfterDays: number;
+      keepAtLeast: number;
+    };
+    scheduling: {
+      priority: 'low' | 'medium' | 'high';
+      timeout: number;
+      retryAttempts: number;
+    };
+  };
+}
+
+// Legacy interface for backward compatibility (will be phased out)
 export interface BackupTypeConfig {
   type: 'full' | 'incremental' | 'differential';
   retention: {
     days: number;
-    maxBackups?: number; // Maximum number of backups to keep
-    keepForever?: boolean; // Override days if true
+    maxBackups?: number;
+    keepForever?: boolean;
   };
   compression: {
     enabled: boolean;
-    level: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9; // Compression level
+    level: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
     algorithm: 'gzip' | 'lz4' | 'zstd';
   };
   encryption: {
@@ -134,18 +198,18 @@ export interface BackupTypeConfig {
     integrityCheck: boolean;
   };
   performance: {
-    maxBandwidth?: number | null; // KB/s, null for unlimited
+    maxBandwidth?: number | null;
     parallelJobs: number;
-    chunkSize: number; // MB
+    chunkSize: number;
   };
   cleanup: {
     autoCleanup: boolean;
     cleanupAfterDays: number;
-    keepAtLeast: number; // Minimum backups to keep
+    keepAtLeast: number;
   };
   scheduling: {
     priority: 'low' | 'medium' | 'high';
-    timeout: number; // seconds
+    timeout: number;
     retryAttempts: number;
   };
 }
@@ -216,7 +280,28 @@ export interface UseBackupControlsReturn {
   clearError: () => void;
 }
 
-// Default backup type configurations
+// Generic backup type information - intelligent presets
+export interface GenericBackupTypeInfo {
+  value: 'full' | 'incremental' | 'differential';
+  label: string;
+  description: string;
+  tooltip: string;
+  summary: string;
+  
+  // Type-specific configuration constraints
+  constraints: {
+    allowedFrequencies: ('daily' | 'weekly' | 'monthly')[];
+    requiresFullRefresh?: boolean; // For incremental
+    autoSchedulesFull?: boolean; // For differential
+    defaultRetentionCount: number;
+    maxRetentionCount: number;
+  };
+  
+  // System-generated schedule description
+  getScheduleDescription: (config: GenericBackupConfig) => string;
+}
+
+// Default backup type configurations (legacy)
 export interface BackupTypeInfo {
   value: 'full' | 'incremental' | 'differential';
   label: string;
@@ -232,6 +317,139 @@ export interface BackupCalculation {
   storageImpact: string;
   restoreComplexity: string;
 }
+
+// Generic backup type configurations with intelligent defaults
+export const GENERIC_BACKUP_TYPES: {
+  full: GenericBackupConfig;
+  incremental: GenericBackupConfig;
+  differential: GenericBackupConfig;
+} = {
+  full: {
+    type: 'full',
+    userConfig: {
+      retentionCount: 12, // 12 backups in rotation
+    },
+    systemConfig: {
+      compression: {
+        enabled: true,
+        algorithm: 'zstd',
+        level: 6
+      },
+      encryption: {
+        enabled: true,
+        algorithm: 'AES-256-GCM'
+      },
+      deduplication: {
+        enabled: true,
+        algorithm: 'blake2'
+      },
+      verification: {
+        enabled: true,
+        frequency: 'every_backup',
+        integrityCheck: true
+      },
+      performance: {
+        maxBandwidth: null,
+        parallelJobs: 4,
+        chunkSize: 64
+      },
+      cleanup: {
+        autoCleanup: true,
+        cleanupAfterDays: 90,
+        keepAtLeast: 3
+      },
+      scheduling: {
+        priority: 'high',
+        timeout: 7200,
+        retryAttempts: 3
+      }
+    }
+  },
+  incremental: {
+    type: 'incremental',
+    userConfig: {
+      retentionCount: 30,
+      fullRefreshInterval: 4,
+      fullRefreshIntervalUnit: 'weeks'
+    },
+    systemConfig: {
+      compression: {
+        enabled: true,
+        algorithm: 'lz4',
+        level: 3
+      },
+      encryption: {
+        enabled: true,
+        algorithm: 'AES-256-GCM'
+      },
+      deduplication: {
+        enabled: true,
+        algorithm: 'blake2'
+      },
+      verification: {
+        enabled: true,
+        frequency: 'weekly',
+        integrityCheck: true
+      },
+      performance: {
+        maxBandwidth: null,
+        parallelJobs: 8,
+        chunkSize: 32
+      },
+      cleanup: {
+        autoCleanup: true,
+        cleanupAfterDays: 30,
+        keepAtLeast: 5
+      },
+      scheduling: {
+        priority: 'medium',
+        timeout: 3600,
+        retryAttempts: 5
+      }
+    }
+  },
+  differential: {
+    type: 'differential',
+    userConfig: {
+      retentionCount: 30,
+    },
+    systemConfig: {
+      compression: {
+        enabled: true,
+        algorithm: 'gzip',
+        level: 6
+      },
+      encryption: {
+        enabled: true,
+        algorithm: 'AES-256-GCM'
+      },
+      deduplication: {
+        enabled: true,
+        algorithm: 'blake2'
+      },
+      verification: {
+        enabled: true,
+        frequency: 'weekly',
+        integrityCheck: true
+      },
+      performance: {
+        maxBandwidth: null,
+        parallelJobs: 6,
+        chunkSize: 48
+      },
+      cleanup: {
+        autoCleanup: true,
+        cleanupAfterDays: 60,
+        keepAtLeast: 2
+      },
+      scheduling: {
+        priority: 'medium',
+        timeout: 5400,
+        retryAttempts: 4
+      }
+    }
+  }
+};
 
 export const DEFAULT_BACKUP_TYPES: {
   full: BackupTypeConfig;
@@ -477,7 +695,67 @@ export function generateBackupSummary(
 }
 
 /**
- * Get backup type information with enhanced descriptions
+ * Get generic backup type information with intelligent presets
+ */
+export function getGenericBackupTypeInfo(): GenericBackupTypeInfo[] {
+  return [
+    {
+      value: 'full',
+      label: 'Full Backup',
+      description: 'Rolling full backups with smart rotation',
+      tooltip: 'Creates complete backups at your chosen frequency. System manages intelligent rotation to keep your specified number of backups. Perfect for critical data that needs complete, independent restore points.',
+      summary: 'Complete backups with intelligent rotation - simple restore, higher storage usage',
+      constraints: {
+        allowedFrequencies: ['daily', 'weekly', 'monthly'],
+        defaultRetentionCount: 12,
+        maxRetentionCount: 100
+      },
+      getScheduleDescription: (config) => {
+        const count = config.userConfig.retentionCount;
+        return `Full backups with ${count} backup rotation (system manages GFS-style retention)`;
+      }
+    },
+    {
+      value: 'differential',
+      label: 'Differential',
+      description: 'Daily differentials + weekly full backups',
+      tooltip: 'System automatically runs daily differential backups plus weekly full backups. You only need to specify how many backups to keep. Restore requires only the latest weekly full plus the latest differential - optimal balance of storage and simplicity.',
+      summary: 'Daily differentials + weekly fulls - efficient storage, simple restore (2 files needed)',
+      constraints: {
+        allowedFrequencies: ['daily'], // System enforces daily + weekly full
+        autoSchedulesFull: true,
+        defaultRetentionCount: 30,
+        maxRetentionCount: 90
+      },
+      getScheduleDescription: (config) => {
+        const count = config.userConfig.retentionCount;
+        return `Daily differentials + weekly full backups (${count} backups retained)`;
+      }
+    },
+    {
+      value: 'incremental',
+      label: 'Incremental',
+      description: 'Daily incrementals + periodic full refresh',
+      tooltip: 'System runs daily incremental backups and automatically refreshes with full backups at your specified interval. You choose how often to refresh the full backup (weeks/months) and retention count. Most storage-efficient but requires all backups for restore.',
+      summary: 'Daily incrementals + periodic full refresh - lowest storage, most complex restore',
+      constraints: {
+        allowedFrequencies: ['daily'], // System enforces daily + periodic full
+        requiresFullRefresh: true,
+        defaultRetentionCount: 30,
+        maxRetentionCount: 180
+      },
+      getScheduleDescription: (config) => {
+        const count = config.userConfig.retentionCount;
+        const interval = config.userConfig.fullRefreshInterval || 4;
+        const unit = config.userConfig.fullRefreshIntervalUnit || 'weeks';
+        return `Daily incrementals + full refresh every ${interval} ${unit} (${count} backups retained)`;
+      }
+    }
+  ];
+}
+
+/**
+ * Get backup type information with enhanced descriptions (legacy)
  */
 export function getBackupTypeInfo(): BackupTypeInfo[] {
   return [
@@ -506,7 +784,125 @@ export function getBackupTypeInfo(): BackupTypeInfo[] {
 }
 
 /**
- * Get detailed configuration summary for advanced settings
+ * Helper functions for generic backup configuration
+ */
+
+// Convert generic config to legacy format for backward compatibility
+export function convertGenericToLegacy(genericConfig: GenericBackupConfig): BackupTypeConfig {
+  const type = genericConfig.type;
+  const userConfig = genericConfig.userConfig;
+  const systemConfig = genericConfig.systemConfig;
+  
+  // Calculate retention days based on type and retention count
+  let retentionDays = 30;
+  if (type === 'full') {
+    retentionDays = userConfig.retentionCount * 7; // Assume weekly frequency for full
+  } else if (type === 'differential') {
+    retentionDays = userConfig.retentionCount * 7; // Daily differentials, weekly full
+  } else if (type === 'incremental') {
+    const intervalWeeks = userConfig.fullRefreshIntervalUnit === 'months' 
+      ? (userConfig.fullRefreshInterval || 4) * 4 
+      : (userConfig.fullRefreshInterval || 4);
+    retentionDays = userConfig.retentionCount * intervalWeeks * 7;
+  }
+  
+  return {
+    type,
+    retention: {
+      days: retentionDays,
+      maxBackups: userConfig.retentionCount,
+      keepForever: false
+    },
+    compression: systemConfig.compression,
+    encryption: systemConfig.encryption,
+    deduplication: systemConfig.deduplication,
+    verification: systemConfig.verification,
+    performance: systemConfig.performance,
+    cleanup: systemConfig.cleanup,
+    scheduling: systemConfig.scheduling
+  };
+}
+
+// Convert legacy config to generic format
+export function convertLegacyToGeneric(legacyConfig: BackupTypeConfig): GenericBackupConfig {
+  return {
+    type: legacyConfig.type,
+    userConfig: {
+      retentionCount: legacyConfig.retention.maxBackups || 30,
+      fullRefreshInterval: legacyConfig.type === 'incremental' ? 4 : undefined,
+      fullRefreshIntervalUnit: legacyConfig.type === 'incremental' ? 'weeks' : undefined
+    },
+    systemConfig: {
+      compression: legacyConfig.compression,
+      encryption: legacyConfig.encryption,
+      deduplication: legacyConfig.deduplication,
+      verification: legacyConfig.verification,
+      performance: legacyConfig.performance,
+      cleanup: legacyConfig.cleanup,
+      scheduling: legacyConfig.scheduling
+    }
+  };
+}
+
+// Get default generic config for a backup type
+export function getDefaultGenericConfig(type: 'full' | 'incremental' | 'differential'): GenericBackupConfig {
+  return { ...GENERIC_BACKUP_TYPES[type] };
+}
+
+// Validate generic backup configuration
+export function validateGenericBackupConfig(config: GenericBackupConfig): {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+} {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  // Validate retention count
+  const typeInfo = getGenericBackupTypeInfo().find(info => info.value === config.type);
+  if (typeInfo) {
+    const { defaultRetentionCount, maxRetentionCount } = typeInfo.constraints;
+    
+    if (config.userConfig.retentionCount < 1) {
+      errors.push('Retention count must be at least 1');
+    }
+    
+    if (config.userConfig.retentionCount > maxRetentionCount) {
+      errors.push(`Retention count cannot exceed ${maxRetentionCount} for ${config.type} backups`);
+    }
+    
+    if (config.userConfig.retentionCount > defaultRetentionCount * 2) {
+      warnings.push(`High retention count (${config.userConfig.retentionCount}) will use significant storage space`);
+    }
+  }
+  
+  // Validate incremental-specific settings
+  if (config.type === 'incremental') {
+    const interval = config.userConfig.fullRefreshInterval;
+    const unit = config.userConfig.fullRefreshIntervalUnit;
+    
+    if (!interval || interval < 1) {
+      errors.push('Full refresh interval must be at least 1');
+    }
+    
+    if (unit === 'weeks' && interval && interval > 12) {
+      warnings.push('Full refresh interval longer than 12 weeks may impact restore performance');
+    }
+    
+    if (unit === 'months' && interval && interval > 3) {
+      warnings.push('Full refresh interval longer than 3 months may impact restore performance');
+    }
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings
+  };
+}
+
+/**
+ * Get detailed configuration summary for advanced settings (legacy)
  */
 export function getConfigurationSummary(config: BackupTypeConfig): {
   retention: string;

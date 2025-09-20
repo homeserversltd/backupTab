@@ -10,7 +10,9 @@ import {
   faEdit, 
   faCog,
   faSave,
-  faSpinner
+  faSpinner,
+  faCheckCircle,
+  faCalendarAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { 
   BackupConfig, 
@@ -19,7 +21,14 @@ import {
   getBackupTypeInfo, 
   generateBackupSummary, 
   getConfigurationSummary,
-  validateBackupConfig
+  validateBackupConfig,
+  GenericBackupConfig,
+  GENERIC_BACKUP_TYPES,
+  getGenericBackupTypeInfo,
+  getDefaultGenericConfig,
+  validateGenericBackupConfig,
+  convertGenericToLegacy,
+  convertLegacyToGeneric
 } from '../types';
 import { useTooltip } from '../../../../src/hooks/useTooltip'; //donot touch this
 import { showToast } from '../../../../src/components/Popup/PopupManager'; //donot touch this
@@ -28,19 +37,23 @@ interface ConfigTabProps {
   config: BackupConfig | null;
   updateConfig: (config: Partial<BackupConfig>) => Promise<boolean>;
   onConfigUpdate?: (config: BackupConfig) => void;
+  activeBackupType?: 'full' | 'incremental' | 'differential' | null; // From schedule tab
+  hasActiveSchedule?: boolean; // Whether there's an active schedule
 }
 
-interface BackupTypeConfigState {
-  full: BackupTypeConfig;
-  incremental: BackupTypeConfig;
-  differential: BackupTypeConfig;
+interface GenericBackupConfigState {
+  full: GenericBackupConfig;
+  incremental: GenericBackupConfig;
+  differential: GenericBackupConfig;
 }
 
 
 export const ConfigTab: React.FC<ConfigTabProps> = ({
   config,
   updateConfig,
-  onConfigUpdate
+  onConfigUpdate,
+  activeBackupType = null,
+  hasActiveSchedule = false
 }) => {
   const [newFilePath, setNewFilePath] = useState('');
   const [encryptionEnabled, setEncryptionEnabled] = useState(config?.encryption_enabled || false);
@@ -48,8 +61,12 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
   const [encryptionSalt, setEncryptionSalt] = useState(config?.encryption_salt || '');
   const [version, setVersion] = useState<string>('1.0.0');
   const [recommendedPaths, setRecommendedPaths] = useState<string[]>([]);
-  const [backupTypes, setBackupTypes] = useState<BackupTypeConfigState>({ ...DEFAULT_BACKUP_TYPES });
-  const [activeBackupType, setActiveBackupType] = useState<'full' | 'incremental' | 'differential'>('incremental');
+  const [genericBackupConfig, setGenericBackupConfig] = useState<GenericBackupConfigState>({
+    full: getDefaultGenericConfig('full'),
+    incremental: getDefaultGenericConfig('incremental'),
+    differential: getDefaultGenericConfig('differential')
+  });
+  // Remove local activeBackupType state - it comes from schedule tab now
   const [showAdvancedConfig, setShowAdvancedConfig] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
@@ -61,19 +78,19 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
     `/etc/postgresql/15/main`,
   ];
 
-  // Get backup type information from utility module
-  const BACKUP_TYPE_INFO = getBackupTypeInfo();
+  // Get generic backup type information from utility module
+  const GENERIC_BACKUP_TYPE_INFO = getGenericBackupTypeInfo();
 
   // Load version info on component mount
   useEffect(() => {
     loadVersionInfo();
     initializeRecommendedPaths();
-    loadBackupTypesFromConfig();
+    loadGenericBackupConfigFromConfig();
   }, []);
 
-  // Load backup types from config when config changes
+  // Load generic backup config from config when config changes
   useEffect(() => {
-    loadBackupTypesFromConfig();
+    loadGenericBackupConfigFromConfig();
   }, [config]);
 
   // Initialize recommended paths by filtering out already added ones
@@ -112,23 +129,38 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
   };
 
 
-  const loadBackupTypesFromConfig = () => {
+  const loadGenericBackupConfigFromConfig = () => {
     if (!config) return;
     
-    // Load backup types configuration if available
-    let backupTypesConfig = { ...DEFAULT_BACKUP_TYPES };
+    // Load generic backup configuration if available
+    let genericConfig = {
+      full: getDefaultGenericConfig('full'),
+      incremental: getDefaultGenericConfig('incremental'),
+      differential: getDefaultGenericConfig('differential')
+    };
+    
     if (config.backupTypes) {
       try {
         const parsedBackupTypes = typeof config.backupTypes === 'string' 
           ? JSON.parse(config.backupTypes) 
           : config.backupTypes;
-        backupTypesConfig = { ...DEFAULT_BACKUP_TYPES, ...parsedBackupTypes };
+        
+        // Convert legacy config to generic format if needed
+        if (parsedBackupTypes.full) {
+          genericConfig.full = convertLegacyToGeneric(parsedBackupTypes.full);
+        }
+        if (parsedBackupTypes.incremental) {
+          genericConfig.incremental = convertLegacyToGeneric(parsedBackupTypes.incremental);
+        }
+        if (parsedBackupTypes.differential) {
+          genericConfig.differential = convertLegacyToGeneric(parsedBackupTypes.differential);
+        }
       } catch (e) {
         console.warn('Failed to parse backup types config, using defaults');
       }
     }
     
-    setBackupTypes(backupTypesConfig);
+    setGenericBackupConfig(genericConfig);
   };
 
 
@@ -238,19 +270,44 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
   const handleSaveConfig = async () => {
     if (!config) return;
     
-    // Validate all backup type configurations
-    const validationResults = Object.entries(backupTypes).map(([type, typeConfig]) => ({
+    // Additional validation for incremental/differential backup logic
+    const additionalErrors: string[] = [];
+    const additionalWarnings: string[] = [];
+    
+    if (activeBackupType === 'incremental' || activeBackupType === 'differential') {
+      const typeConfig = genericBackupConfig[activeBackupType];
+      const interval = typeConfig.userConfig.fullRefreshInterval || 4;
+      const unit = typeConfig.userConfig.fullRefreshIntervalUnit || 'weeks';
+      const intervalDays = unit === 'weeks' ? interval * 7 : interval * 30;
+      const retentionCount = typeConfig.userConfig.retentionCount;
+      
+      // If retention count is less than or equal to interval days, it's essentially daily full backups
+      if (retentionCount <= intervalDays) {
+        additionalWarnings.push(`${activeBackupType} backup with ${retentionCount} retention and ${interval} ${unit} interval is essentially daily full backups - consider using full backup type instead`);
+      }
+      
+      // If retention count is much higher than interval, warn about storage usage
+      if (retentionCount > intervalDays * 3) {
+        additionalWarnings.push(`High retention count (${retentionCount} days) with ${interval} ${unit} interval will use significant storage space`);
+      }
+    }
+    
+    // Validate all generic backup type configurations
+    const validationResults = Object.entries(genericBackupConfig).map(([type, typeConfig]) => ({
       type,
-      ...validateBackupConfig(typeConfig)
+      ...validateGenericBackupConfig(typeConfig)
     }));
     
-    const hasErrors = validationResults.some(result => !result.isValid);
-    const allWarnings = validationResults.flatMap(result => result.warnings);
+    const hasErrors = validationResults.some(result => !result.isValid) || additionalErrors.length > 0;
+    const allWarnings = [...validationResults.flatMap(result => result.warnings), ...additionalWarnings];
     
     if (hasErrors) {
-      const errorMessages = validationResults
-        .filter(result => !result.isValid)
-        .flatMap(result => result.errors.map(error => `${result.type}: ${error}`));
+      const errorMessages = [
+        ...validationResults
+          .filter(result => !result.isValid)
+          .flatMap(result => result.errors.map(error => `${result.type}: ${error}`)),
+        ...additionalErrors
+      ];
       
       showToast({
         message: `Configuration errors: ${errorMessages.join(', ')}`,
@@ -270,12 +327,19 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
     
     setIsSaving(true);
     try {
+      // Convert generic configs to legacy format for backend compatibility
+      const legacyBackupTypes = {
+        full: convertGenericToLegacy(genericBackupConfig.full),
+        incremental: convertGenericToLegacy(genericBackupConfig.incremental),
+        differential: convertGenericToLegacy(genericBackupConfig.differential)
+      };
+      
       const updatedConfig = {
         ...config,
         encryption_enabled: encryptionEnabled,
         encryption_key: encryptionKey || null,
         encryption_salt: encryptionSalt || null,
-        backupTypes: backupTypes
+        backupTypes: legacyBackupTypes
       };
       
       const success = await updateConfig(updatedConfig);
@@ -307,8 +371,11 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
     setEncryptionEnabled(false);
     setEncryptionKey('');
     setEncryptionSalt('');
-    setBackupTypes({ ...DEFAULT_BACKUP_TYPES });
-    setActiveBackupType('incremental');
+    setGenericBackupConfig({
+      full: getDefaultGenericConfig('full'),
+      incremental: getDefaultGenericConfig('incremental'),
+      differential: getDefaultGenericConfig('differential')
+    });
     setShowAdvancedConfig(false);
     showToast({
       message: 'Settings reset to defaults',
@@ -458,80 +525,100 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
           </div>
         </div>
 
-        {/* Backup Type Configuration */}
-        <div className="config-section">
-          <h4>Backup Type Configuration</h4>
-          
-          {/* Backup Type Selection */}
-          <div className="form-group">
-            <label>Active Backup Type</label>
-            <div className="backup-type-selector">
-              {BACKUP_TYPE_INFO.map(type => 
-                tooltip.show(type.tooltip, (
-                  <div
-                    key={type.value}
-                    className={`backup-type-option ${activeBackupType === type.value ? 'active' : ''}`}
-                    onClick={() => setActiveBackupType(type.value as 'full' | 'incremental' | 'differential')}
-                  >
-                    <div className="backup-type-header">
-                      <span className="backup-type-label">{type.label}</span>
+        {/* Backup Type Configuration - Only show if there's an active schedule */}
+        {hasActiveSchedule && activeBackupType && (
+          <div className="config-section">
+            <h4>Backup Type Configuration</h4>
+            
+            {/* Current Active Backup Type Display */}
+            <div className="form-group">
+              <div className="active-backup-type-display">
+                {(() => {
+                  const typeInfo = GENERIC_BACKUP_TYPE_INFO.find(type => type.value === activeBackupType);
+                  if (!typeInfo) return null;
+                  
+                  return (
+                    <div className="backup-type-display-card active">
+                      <div className="backup-type-retention">
+                        {(() => {
+                          const retentionCount = genericBackupConfig[activeBackupType].userConfig.retentionCount;
+                          const interval = genericBackupConfig[activeBackupType].userConfig.fullRefreshInterval;
+                          const unit = genericBackupConfig[activeBackupType].userConfig.fullRefreshIntervalUnit;
+                          
+                          if (activeBackupType === 'full') {
+                            return `Retaining ${retentionCount} days of backups (${retentionCount} full backups)`;
+                          } else if (activeBackupType === 'incremental' || activeBackupType === 'differential') {
+                            const intervalDays = unit === 'weeks' ? (interval || 4) * 7 : (interval || 4) * 30;
+                            
+                            if (retentionCount <= intervalDays) {
+                              return `Retaining ${retentionCount} days of backups (${retentionCount} full backups - essentially daily full backups)`;
+                            } else {
+                              return `Retaining ${retentionCount} days of backups (full backup every ${interval} ${unit}, ${activeBackupType} backups daily)`;
+                            }
+                          }
+                          return `Retaining ${retentionCount} days of backups`;
+                        })()}
+                        <div className="storage-projection">
+                          {(() => {
+                            const retentionDays = genericBackupConfig[activeBackupType].userConfig.retentionCount;
+                            let estimatedStorage = '1GB';
+                            
+                            if (activeBackupType === 'full') {
+                              // Full backups: retention days * 1GB per backup
+                              estimatedStorage = `${retentionDays}GB`;
+                            } else if (activeBackupType === 'incremental') {
+                              // Incremental: mix of full backups + daily incrementals
+                              const fullIntervalDays = genericBackupConfig[activeBackupType].userConfig.fullRefreshIntervalUnit === 'weeks' 
+                                ? (genericBackupConfig[activeBackupType].userConfig.fullRefreshInterval ?? 4) * 7
+                                : (genericBackupConfig[activeBackupType].userConfig.fullRefreshInterval ?? 4) * 30;
+                              
+                              // Calculate how many full backup cycles fit in the retention period
+                              const fullBackupCycles = Math.ceil(retentionDays / fullIntervalDays);
+                              const fullBackups = fullBackupCycles;
+                              const incrementalDays = retentionDays;
+                              const totalStorage = fullBackups + (incrementalDays * 0.1);
+                              estimatedStorage = `${Math.round(totalStorage * 100) / 100}GB`;
+                            } else if (activeBackupType === 'differential') {
+                              // Differential: mix of full backups + growing differentials
+                              const fullIntervalDays = genericBackupConfig[activeBackupType].userConfig.fullRefreshIntervalUnit === 'weeks' 
+                                ? (genericBackupConfig[activeBackupType].userConfig.fullRefreshInterval ?? 4) * 7
+                                : (genericBackupConfig[activeBackupType].userConfig.fullRefreshInterval ?? 4) * 30;
+                              
+                              // Calculate how many full backup cycles fit in the retention period
+                              const fullBackupCycles = Math.ceil(retentionDays / fullIntervalDays);
+                              const fullBackups = fullBackupCycles;
+                              const differentialDays = retentionDays;
+                              const totalStorage = fullBackups + (differentialDays * 0.3);
+                              estimatedStorage = `${Math.round(totalStorage * 100) / 100}GB`;
+                            }
+                            
+                            return `This will turn 1GB into ${estimatedStorage}`;
+                          })()}
+                        </div>
+                      </div>
                     </div>
-                    <div className="backup-type-description">{type.description}</div>
-                    <div className="backup-type-retention">
-                      Retention: {backupTypes[type.value as keyof typeof backupTypes].retention.days} days
-                      {backupTypes[type.value as keyof typeof backupTypes].retention.maxBackups && 
-                        ` (max ${backupTypes[type.value as keyof typeof backupTypes].retention.maxBackups} backups)`
-                      }
-                    </div>
-                    <div className="backup-type-summary">
-                      {generateBackupSummary(
-                        backupTypes[type.value as keyof typeof backupTypes], 
-                        type.value === 'full' ? 'daily' : type.value === 'differential' ? 'daily' : 'daily'
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
+                  );
+                })()}
+              </div>
             </div>
-          </div>
 
-          {/* Advanced Configuration Toggle */}
-          <div className="form-group">
-            <button
-              type="button"
-              className="advanced-config-toggle"
-              onClick={() => setShowAdvancedConfig(!showAdvancedConfig)}
-            >
-              <FontAwesomeIcon icon={showAdvancedConfig ? faEye : faEdit} />
-              {showAdvancedConfig ? 'Hide' : 'Show'} Advanced Configuration
-            </button>
-          </div>
+            {/* Advanced Configuration Toggle */}
+            <div className="form-group">
+              <button
+                type="button"
+                className="advanced-config-toggle"
+                onClick={() => setShowAdvancedConfig(!showAdvancedConfig)}
+              >
+                <FontAwesomeIcon icon={showAdvancedConfig ? faEye : faEdit} />
+                {showAdvancedConfig ? 'Hide' : 'Show'} Configuration for {activeBackupType.charAt(0).toUpperCase() + activeBackupType.slice(1)} Backup
+              </button>
+            </div>
 
-          {/* Advanced Configuration Panel */}
+          {/* User Configuration Panel */}
           {showAdvancedConfig && (
             <div className="advanced-config-panel">
-              <h5>Advanced Configuration - {activeBackupType.charAt(0).toUpperCase() + activeBackupType.slice(1)} Backup</h5>
+              <h5>Configuration - {activeBackupType.charAt(0).toUpperCase() + activeBackupType.slice(1)} Backup</h5>
               
-              {/* Configuration Summary */}
-              <div className="config-summary">
-                <h6>Current Configuration Summary</h6>
-                <div className="summary-grid">
-                  {(() => {
-                    const summary = getConfigurationSummary(backupTypes[activeBackupType]);
-                    return Object.entries(summary).map(([key, value]) => (
-                      <div key={key} className="summary-item">
-                        <strong>{key.charAt(0).toUpperCase() + key.slice(1)}:</strong> {value}
-                      </div>
-                    ));
-                  })()}
-                </div>
-                <div className="backup-impact-summary">
-                  <strong>Backup Impact:</strong> {generateBackupSummary(
-                    backupTypes[activeBackupType],
-                    activeBackupType === 'full' ? 'daily' : activeBackupType === 'differential' ? 'daily' : 'daily'
-                  )}
-                </div>
-              </div>
               
               <div className="config-sections">
                 {/* Retention Settings */}
@@ -539,276 +626,112 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                   <h6>Retention Policy</h6>
                   <div className="form-row">
                     <div className="form-group">
-                      <label>Retention Days</label>
+                      <label>Number of Backups to Keep</label>
                       <input
                         type="number"
                         className="form-control"
-                        value={backupTypes[activeBackupType].retention.days}
-                        onChange={(e) => setBackupTypes(prev => ({
+                        value={genericBackupConfig[activeBackupType].userConfig.retentionCount}
+                        onChange={(e) => setGenericBackupConfig(prev => ({
                           ...prev,
                           [activeBackupType]: {
                             ...prev[activeBackupType],
-                            retention: {
-                              ...prev[activeBackupType].retention,
-                              days: parseInt(e.target.value) || 30
+                            userConfig: {
+                              ...prev[activeBackupType].userConfig,
+                              retentionCount: parseInt(e.target.value) || 1
                             }
                           }
                         }))}
                         min="1"
-                        max="3650"
+                        max={(() => {
+                          if (activeBackupType === 'incremental' || activeBackupType === 'differential') {
+                            // For incremental/differential, max retention should be reasonable based on frequency
+                            const interval = genericBackupConfig[activeBackupType].userConfig.fullRefreshInterval || 4;
+                            const unit = genericBackupConfig[activeBackupType].userConfig.fullRefreshIntervalUnit || 'weeks';
+                            const intervalDays = unit === 'weeks' ? interval * 7 : interval * 30;
+                            // Allow up to 2x the interval for reasonable retention
+                            return Math.min(intervalDays * 2, 365);
+                          }
+                          return GENERIC_BACKUP_TYPE_INFO.find(t => t.value === activeBackupType)?.constraints.maxRetentionCount || 100;
+                        })()}
                       />
-                    </div>
-                    <div className="form-group">
-                      <label>Max Backups</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        value={backupTypes[activeBackupType].retention.maxBackups || ''}
-                        onChange={(e) => setBackupTypes(prev => ({
-                          ...prev,
-                          [activeBackupType]: {
-                            ...prev[activeBackupType],
-                            retention: {
-                              ...prev[activeBackupType].retention,
-                              maxBackups: e.target.value ? parseInt(e.target.value) : undefined
+                      <small className="field-help">
+                        {(() => {
+                          if (activeBackupType === 'incremental' || activeBackupType === 'differential') {
+                            const interval = genericBackupConfig[activeBackupType].userConfig.fullRefreshInterval || 4;
+                            const unit = genericBackupConfig[activeBackupType].userConfig.fullRefreshIntervalUnit || 'weeks';
+                            const intervalDays = unit === 'weeks' ? interval * 7 : interval * 30;
+                            const retentionCount = genericBackupConfig[activeBackupType].userConfig.retentionCount;
+                            
+                            if (retentionCount <= intervalDays) {
+                              return `System manages intelligent rotation to keep this many backups (${retentionCount} days = ${retentionCount} full backups)`;
+                            } else {
+                              return `System manages intelligent rotation to keep this many backups (${retentionCount} days = mix of full and ${activeBackupType} backups)`;
                             }
                           }
-                        }))}
-                        min="1"
-                        max="1000"
-                        placeholder="Unlimited"
-                      />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={backupTypes[activeBackupType].retention.keepForever}
-                        onChange={(e) => setBackupTypes(prev => ({
-                          ...prev,
-                          [activeBackupType]: {
-                            ...prev[activeBackupType],
-                            retention: {
-                              ...prev[activeBackupType].retention,
-                              keepForever: e.target.checked
-                            }
-                          }
-                        }))}
-                      />
-                      Keep forever (override retention days)
-                    </label>
-                  </div>
-                </div>
-
-                {/* Compression Settings */}
-                <div className="config-section">
-                  <h6>Compression</h6>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={backupTypes[activeBackupType].compression.enabled}
-                          onChange={(e) => setBackupTypes(prev => ({
-                            ...prev,
-                            [activeBackupType]: {
-                              ...prev[activeBackupType],
-                              compression: {
-                                ...prev[activeBackupType].compression,
-                                enabled: e.target.checked
-                              }
-                            }
-                          }))}
-                        />
-                        Enable compression
-                      </label>
-                    </div>
-                    <div className="form-group">
-                      <label>Algorithm</label>
-                      <select
-                        className="form-control"
-                        value={backupTypes[activeBackupType].compression.algorithm}
-                        onChange={(e) => setBackupTypes(prev => ({
-                          ...prev,
-                          [activeBackupType]: {
-                            ...prev[activeBackupType],
-                            compression: {
-                              ...prev[activeBackupType].compression,
-                              algorithm: e.target.value as 'gzip' | 'lz4' | 'zstd'
-                            }
-                          }
-                        }))}
-                        disabled={!backupTypes[activeBackupType].compression.enabled}
-                      >
-                        <option value="gzip">Gzip (balanced)</option>
-                        <option value="lz4">LZ4 (fast)</option>
-                        <option value="zstd">Zstandard (efficient)</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Level</label>
-                      <input
-                        type="range"
-                        className="form-control"
-                        min="1"
-                        max="9"
-                        value={backupTypes[activeBackupType].compression.level}
-                        onChange={(e) => setBackupTypes(prev => ({
-                          ...prev,
-                          [activeBackupType]: {
-                            ...prev[activeBackupType],
-                            compression: {
-                              ...prev[activeBackupType].compression,
-                              level: parseInt(e.target.value) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
-                            }
-                          }
-                        }))}
-                        disabled={!backupTypes[activeBackupType].compression.enabled}
-                      />
-                      <span className="range-value">{backupTypes[activeBackupType].compression.level}</span>
+                          return 'System manages intelligent rotation to keep this many backups';
+                        })()}
+                      </small>
                     </div>
                   </div>
                 </div>
 
-                {/* Performance Settings */}
-                <div className="config-section">
-                  <h6>Performance</h6>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Parallel Jobs</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        value={backupTypes[activeBackupType].performance.parallelJobs}
-                        onChange={(e) => setBackupTypes(prev => ({
-                          ...prev,
-                          [activeBackupType]: {
-                            ...prev[activeBackupType],
-                            performance: {
-                              ...prev[activeBackupType].performance,
-                              parallelJobs: parseInt(e.target.value) || 1
+                {/* Full Backup Frequency for Incremental and Differential */}
+                {(activeBackupType === 'incremental' || activeBackupType === 'differential') && (
+                  <div className="config-section">
+                    <h6>Full Backup Frequency</h6>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Frequency Interval</label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          value={genericBackupConfig[activeBackupType].userConfig.fullRefreshInterval || 4}
+                          onChange={(e) => setGenericBackupConfig(prev => ({
+                            ...prev,
+                            [activeBackupType]: {
+                              ...prev[activeBackupType],
+                              userConfig: {
+                                ...prev[activeBackupType].userConfig,
+                                fullRefreshInterval: parseInt(e.target.value) || 1
+                              }
                             }
-                          }
-                        }))}
-                        min="1"
-                        max="16"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Chunk Size (MB)</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        value={backupTypes[activeBackupType].performance.chunkSize}
-                        onChange={(e) => setBackupTypes(prev => ({
-                          ...prev,
-                          [activeBackupType]: {
-                            ...prev[activeBackupType],
-                            performance: {
-                              ...prev[activeBackupType].performance,
-                              chunkSize: parseInt(e.target.value) || 32
+                          }))}
+                          min="1"
+                          max={genericBackupConfig[activeBackupType].userConfig.fullRefreshIntervalUnit === 'months' ? 12 : 52}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Interval Unit</label>
+                        <select
+                          className="form-control"
+                          value={genericBackupConfig[activeBackupType].userConfig.fullRefreshIntervalUnit || 'weeks'}
+                          onChange={(e) => setGenericBackupConfig(prev => ({
+                            ...prev,
+                            [activeBackupType]: {
+                              ...prev[activeBackupType],
+                              userConfig: {
+                                ...prev[activeBackupType].userConfig,
+                                fullRefreshIntervalUnit: e.target.value as 'weeks' | 'months'
+                              }
                             }
-                          }
-                        }))}
-                        min="1"
-                        max="1024"
-                      />
+                          }))}
+                        >
+                          <option value="weeks">Weeks</option>
+                          <option value="months">Months</option>
+                        </select>
+                      </div>
                     </div>
-                    <div className="form-group">
-                      <label>Max Bandwidth (KB/s)</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        value={backupTypes[activeBackupType].performance.maxBandwidth || ''}
-                        onChange={(e) => setBackupTypes(prev => ({
-                          ...prev,
-                          [activeBackupType]: {
-                            ...prev[activeBackupType],
-                            performance: {
-                              ...prev[activeBackupType].performance,
-                              maxBandwidth: e.target.value ? parseInt(e.target.value) : null
-                            }
-                          }
-                        }))}
-                        min="1"
-                        placeholder="Unlimited"
-                      />
-                    </div>
+                    <small className="field-help">
+                      System will automatically create full backups at this interval and run {activeBackupType} backups daily
+                    </small>
                   </div>
-                </div>
+                )}
 
-                {/* Verification Settings */}
-                <div className="config-section">
-                  <h6>Verification</h6>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={backupTypes[activeBackupType].verification.enabled}
-                          onChange={(e) => setBackupTypes(prev => ({
-                            ...prev,
-                            [activeBackupType]: {
-                              ...prev[activeBackupType],
-                              verification: {
-                                ...prev[activeBackupType].verification,
-                                enabled: e.target.checked
-                              }
-                            }
-                          }))}
-                        />
-                        Enable verification
-                      </label>
-                    </div>
-                    <div className="form-group">
-                      <label className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={backupTypes[activeBackupType].verification.integrityCheck}
-                          onChange={(e) => setBackupTypes(prev => ({
-                            ...prev,
-                            [activeBackupType]: {
-                              ...prev[activeBackupType],
-                              verification: {
-                                ...prev[activeBackupType].verification,
-                                integrityCheck: e.target.checked
-                              }
-                            }
-                          }))}
-                          disabled={!backupTypes[activeBackupType].verification.enabled}
-                        />
-                        Integrity check
-                      </label>
-                    </div>
-                    <div className="form-group">
-                      <label>Verify Frequency</label>
-                      <select
-                        className="form-control"
-                        value={backupTypes[activeBackupType].verification.frequency}
-                        onChange={(e) => setBackupTypes(prev => ({
-                          ...prev,
-                          [activeBackupType]: {
-                            ...prev[activeBackupType],
-                            verification: {
-                              ...prev[activeBackupType].verification,
-                              frequency: e.target.value as 'every_backup' | 'weekly' | 'monthly'
-                            }
-                          }
-                        }))}
-                        disabled={!backupTypes[activeBackupType].verification.enabled}
-                      >
-                        <option value="every_backup">Every backup</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           )}
-        </div>
+          </div>
+        )}
 
         <div className="config-actions">
           <button 

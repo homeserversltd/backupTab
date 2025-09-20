@@ -139,6 +139,8 @@ const BackupTablet: React.FC = () => {
             config={config}
             updateConfig={updateConfig}
             onConfigUpdate={setConfig}
+            activeBackupType={scheduleInfo?.schedule_config?.backupType || scheduleInfo?.schedule_config?.activeBackupType as 'full' | 'incremental' | 'differential' | undefined}
+            hasActiveSchedule={Boolean(scheduleInfo?.schedule_config?.enabled)}
           />
         )}
       </div>

@@ -51,6 +51,10 @@ class ScheduleHandler:
             # Get cron status from backup service
             result = self.backup_service.get_cron_status()
             
+            # Get stored schedule configuration from config file
+            config = self.config_manager.get_config()
+            stored_schedule_config = config.get('schedule', {})
+            
             if result["success"]:
                 status = result["status"]
                 
@@ -59,7 +63,24 @@ class ScheduleHandler:
                 if status['enabled'] and status['schedule']:
                     next_run = self._calculate_next_run(status['schedule'])
                 
+                # Merge cron status with stored schedule configuration
+                schedule_config = {
+                    'enabled': status['enabled'],
+                    'schedule': status['schedule'],
+                    'type': 'cron',
+                    # Include stored configuration fields
+                    'frequency': stored_schedule_config.get('frequency'),
+                    'hour': stored_schedule_config.get('hour'),
+                    'minute': stored_schedule_config.get('minute'),
+                    'dayOfWeek': stored_schedule_config.get('dayOfWeek'),
+                    'dayOfMonth': stored_schedule_config.get('dayOfMonth'),
+                    'activeBackupType': stored_schedule_config.get('activeBackupType'),
+                    'backupType': stored_schedule_config.get('backupType'),
+                    'time': stored_schedule_config.get('time')
+                }
+                
                 schedule = {
+                    'timer_status': 'active' if status['enabled'] else 'inactive',
                     'cron_status': 'enabled' if status['enabled'] else 'disabled',
                     'schedule': status['schedule'],
                     'cron_file': status['cron_file'],
@@ -70,14 +91,11 @@ class ScheduleHandler:
                     'template_exists': status['template_exists'],
                     'next_run': next_run or 'Not scheduled',
                     'last_run': 'Check backup logs for last run',
-                    'schedule_config': {
-                        'enabled': status['enabled'],
-                        'schedule': status['schedule'],
-                        'type': 'cron'
-                    }
+                    'schedule_config': schedule_config
                 }
             else:
                 schedule = {
+                    'timer_status': 'failed',
                     'cron_status': 'error',
                     'error': result['error'],
                     'schedule': None,
@@ -90,7 +108,16 @@ class ScheduleHandler:
                     'schedule_config': {
                         'enabled': False,
                         'schedule': None,
-                        'type': 'cron'
+                        'type': 'cron',
+                        # Include stored configuration fields even on error
+                        'frequency': stored_schedule_config.get('frequency'),
+                        'hour': stored_schedule_config.get('hour'),
+                        'minute': stored_schedule_config.get('minute'),
+                        'dayOfWeek': stored_schedule_config.get('dayOfWeek'),
+                        'dayOfMonth': stored_schedule_config.get('dayOfMonth'),
+                        'activeBackupType': stored_schedule_config.get('activeBackupType'),
+                        'backupType': stored_schedule_config.get('backupType'),
+                        'time': stored_schedule_config.get('time')
                     }
                 }
             

@@ -21,7 +21,7 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
   isLoading = false
 }) => {
   const [localConfig, setLocalConfig] = useState<Partial<CloudProvider>>({});
-  const [isBackupProcessExpanded, setIsBackupProcessExpanded] = useState(true);
+  const [isBackupProcessExpanded, setIsBackupProcessExpanded] = useState(false);
   const [isStorageRequirementsExpanded, setIsStorageRequirementsExpanded] = useState(false);
 
   // Initialize local config when prop changes
