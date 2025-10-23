@@ -184,8 +184,7 @@ except ImportError as e:
 PROVIDERS = {
     'local': LocalProvider,
     'aws_s3': AWSS3Provider,
-    'google_drive': GoogleDriveProvider,
-    'dropbox': DropboxProvider,
+    'google_cloud_storage': GoogleCloudStorageProvider,
     'backblaze': BackblazeProvider,
     'new_provider': NewProvider  # Add new provider
 }

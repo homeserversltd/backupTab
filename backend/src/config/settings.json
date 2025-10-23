@@ -18,20 +18,6 @@
         "enabled": true,
         "container": "/mnt/nas/backups/homeserver"
       },
-      "google_drive": {
-        "enabled": false,
-        "credentials_key": "google_drive",
-        "container": "HOMESERVER Backups",
-        "container_type": "folder",
-        "credentials_file": "credentials.json",
-        "token_file": "token.json",
-        "folder_id": "",
-        "max_retries": 3,
-        "retry_delay": 1.0,
-        "timeout": 300,
-        "username": "",
-        "password": ""
-      },
       "google_cloud_storage": {
         "enabled": false,
         "credentials_key": "google_cloud_storage",
@@ -46,13 +32,18 @@
         "username": "",
         "password": ""
       },
-      "dropbox": {
+      "aws_s3": {
         "enabled": false,
-        "credentials_key": "dropbox",
-        "container": "/HOMESERVER Backups",
-        "container_type": "folder",
-        "username": "",
-        "password": ""
+        "credentials_key": "aws_s3",
+        "container": "homeserver-backups",
+        "container_type": "bucket",
+        "bucket_name": "homeserver-backups",
+        "region": "us-west-2",
+        "access_key_id": "",
+        "secret_access_key": "",
+        "max_retries": 3,
+        "retry_delay": 1.0,
+        "timeout": 300
       },
       "backblaze": {
         "enabled": false,

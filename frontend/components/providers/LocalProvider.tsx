@@ -21,8 +21,6 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
   isLoading = false
 }) => {
   const [localConfig, setLocalConfig] = useState<Partial<CloudProvider>>({});
-  const [isBackupProcessExpanded, setIsBackupProcessExpanded] = useState(false);
-  const [isStorageRequirementsExpanded, setIsStorageRequirementsExpanded] = useState(false);
 
   // Initialize local config when prop changes
   useEffect(() => {
@@ -87,63 +85,23 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
 
         {/* Backup Process Information */}
         <div className="config-section">
-          <div 
-            className="collapsible-header"
-            onClick={() => setIsBackupProcessExpanded(!isBackupProcessExpanded)}
-          >
-            <h5>Backup Process</h5>
-            <span className={`collapse-icon ${isBackupProcessExpanded ? 'expanded' : ''}`}>
-              ▼
-            </span>
-          </div>
-          {isBackupProcessExpanded && (
-            <div className="collapsible-content expanded">
-              <div className="info-box">
-                <div className="info-item">
-                  <strong>Target Sources:</strong> All items configured in the Config tab (e.g., /opt/gogs/repositories, /etc/postgresql/15/main)
-                </div>
-                <div className="info-item">
-                  <strong>Process:</strong> Glob targets → Create compressed tarball → Store on NAS
-                </div>
-                <div className="info-item">
-                  <strong>NAS Path:</strong> /mnt/nas/backups/homeserver (default)
-                </div>
-                <div className="info-item">
-                  <strong>Backup Format:</strong> Compressed .tar.gz archives (never encrypted - local storage only)
-                </div>
-                <div className="info-item">
-                  <strong>Smart Filtering:</strong> Only moves items that aren't already on the NAS - skips redundant local-to-local copies
-                </div>
-                <div className="info-item">
-                  <strong>Permissions:</strong> 755 (drwxr-xr-x)
-                </div>
-                <div className="info-item">
-                  <strong>Owner:</strong> root:root
-                </div>
-              </div>
+          <div className="info-summary-item">
+            <div className="info-icon">⚙️</div>
+            <div className="info-content">
+              <div className="info-title">Backup Process</div>
+              <div className="info-description">Creates compressed tarballs from configured items and stores them on NAS</div>
             </div>
-          )}
+          </div>
         </div>
 
 
         {/* Storage Requirements */}
         <div className="config-section">
-          <div 
-            className="collapsible-header"
-            onClick={() => setIsStorageRequirementsExpanded(!isStorageRequirementsExpanded)}
-          >
-            <h5>Storage Requirements</h5>
-            <span className={`collapse-icon ${isStorageRequirementsExpanded ? 'expanded' : ''}`}>
-              ▼
-            </span>
-          </div>
-          <div className={`collapsible-content ${isStorageRequirementsExpanded ? 'expanded' : ''}`}>
-            <div className="warning-box">
-              <div className="warning-icon">⚠</div>
-              <div className="warning-content">
-                <strong>Important:</strong> Ensure sufficient NAS disk space is available for encrypted backup tarballs.
-                NAS backups provide local redundancy but are not protected against site-wide disasters - consider using cloud providers for off-site redundancy.
-              </div>
+          <div className="info-summary-item">
+            <div className="info-icon">💾</div>
+            <div className="info-content">
+              <div className="info-title">Storage Requirements</div>
+              <div className="info-description">Ensure sufficient NAS disk space for backup tarballs - local redundancy only</div>
             </div>
           </div>
         </div>

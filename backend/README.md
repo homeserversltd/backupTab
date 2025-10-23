@@ -13,8 +13,7 @@ backend/
     │   ├── base.py          # Abstract base provider
     │   ├── local.py         # Local filesystem provider
     │   ├── aws_s3.py        # AWS S3 provider
-    │   ├── google_drive.py  # Google Drive provider
-    │   ├── dropbox.py       # Dropbox provider
+    │   ├── google_cloud_storage.py  # Google Cloud Storage provider
     │   └── backblaze.py     # Backblaze B2 provider
     ├── service/              # Service layer
     │   ├── __init__.py
@@ -164,29 +163,16 @@ Stores backups in Amazon S3.
 }
 ```
 
-### Google Drive Provider
-Stores backups in Google Drive.
+### Google Cloud Storage Provider
+Stores backups in Google Cloud Storage.
 
 ```json
 {
-  "google_drive": {
+  "google_cloud_storage": {
     "enabled": true,
-    "credentials_file": "/path/to/credentials.json",
-    "token_file": "token.json",
-    "folder_id": "your_folder_id"
-  }
-}
-```
-
-### Dropbox Provider
-Stores backups in Dropbox.
-
-```json
-{
-  "dropbox": {
-    "enabled": true,
-    "access_token": "your_access_token",
-    "folder_path": "/HOMESERVER Backups"
+    "credentials_file": "/path/to/service-account-key.json",
+    "project_id": "your-project-id",
+    "bucket_name": "homeserver-backups"
   }
 }
 ```

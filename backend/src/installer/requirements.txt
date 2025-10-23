@@ -19,8 +19,5 @@ google-api-python-client>=2.70.0
 # Google Cloud Storage support
 google-cloud-storage>=2.10.0
 
-# Dropbox support
-dropbox>=11.36.0
-
 # Backblaze B2 support
 b2sdk>=1.19.0

@@ -18,7 +18,7 @@ import {
   faCalendar,
   faEye
 } from '@fortawesome/free-solid-svg-icons';
-import { BackupScheduleConfig, ScheduleInfo, BackupConfig, getGenericBackupTypeInfo } from '../types';
+import { BackupScheduleConfig, ScheduleInfo, BackupConfig } from '../types';
 import { showToast } from '../../../../src/components/Popup/PopupManager'; //donot touch this
 import { useTooltip } from '../../../../src/hooks/useTooltip';
 import { useBackupControls } from '../hooks/useBackupControls';
@@ -59,9 +59,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   } = useBackupControls();
 
   const tooltip = useTooltip();
-
-  // Get generic backup type information from utility module
-  const GENERIC_BACKUP_TYPE_INFO = getGenericBackupTypeInfo();
 
   const [updateSchedule, setUpdateSchedule] = useState<UpdateSchedule>({
     enabled: false,
@@ -365,26 +362,24 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         
         {/* Schedule Options */}
         <div className={`schedule-options ${updateSchedule.enabled ? 'visible' : ''}`}>
-          {/* Frequency Selection - constrained by backup type */}
+          {/* Frequency Selection - all options available */}
           <div className="form-group">
             <div className="frequency-selector">
-              {GENERIC_BACKUP_TYPE_INFO
-                .find(type => type.value === updateSchedule.activeBackupType)
-                ?.constraints.allowedFrequencies.map(frequency => {
-                  const isActive = updateSchedule.frequency === frequency;
-                  const icon = frequency === 'daily' ? faCalendarDay : frequency === 'weekly' ? faCalendarWeek : faCalendar;
-                  
-                  return (
-                    <div 
-                      key={frequency}
-                      className={`frequency-option ${isActive ? 'active' : ''}`}
-                      onClick={() => setUpdateSchedule(prev => ({ ...prev, frequency }))}
-                    >
-                      <FontAwesomeIcon icon={icon} className="icon" />
-                      <span>{frequency.charAt(0).toUpperCase() + frequency.slice(1)}</span>
-                    </div>
-                  );
-                })}
+              {['daily', 'weekly', 'monthly'].map(frequency => {
+                const isActive = updateSchedule.frequency === frequency;
+                const icon = frequency === 'daily' ? faCalendarDay : frequency === 'weekly' ? faCalendarWeek : faCalendar;
+                
+                return (
+                  <div 
+                    key={frequency}
+                    className={`frequency-option ${isActive ? 'active' : ''}`}
+                    onClick={() => setUpdateSchedule(prev => ({ ...prev, frequency }))}
+                  >
+                    <FontAwesomeIcon icon={icon} className="icon" />
+                    <span>{frequency.charAt(0).toUpperCase() + frequency.slice(1)}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
           

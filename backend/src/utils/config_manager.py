@@ -52,16 +52,11 @@ class ConfigManager:
                     "access_key": "",
                     "secret_key": ""
                 },
-                "google_drive": {
+                "google_cloud_storage": {
                     "enabled": False,
                     "credentials_file": "",
-                    "token_file": "token.json",
-                    "folder_id": ""
-                },
-                "dropbox": {
-                    "enabled": False,
-                    "access_token": "",
-                    "folder_path": "/HOMESERVER Backups"
+                    "project_id": "",
+                    "bucket_name": "homeserver-backups"
                 },
                 "backblaze": {
                     "enabled": False,

@@ -68,7 +68,7 @@ HOMESERVER Backup System
 A comprehensive backup solution designed for the HOMESERVER platform with:
 
 Features:
-- Multiple storage providers (Local, AWS S3, Google Drive, Dropbox, Backblaze)
+- Multiple storage providers (Local, AWS S3, Google Cloud Storage, Backblaze)
 - FAK-based encryption using skeleton.key
 - Configurable compression levels
 - Automated service management via systemd

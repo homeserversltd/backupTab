@@ -342,13 +342,6 @@ class EnhancedBackupCLI:
             updates["application_key"] = password
             updates["container"] = "homeServer-serverGenesis"  # Set correct bucket name
             updates["bucket"] = "homeServer-serverGenesis"  # Backblaze provider uses 'bucket' field
-        elif provider_name == "google_drive":
-            # Google Drive uses OAuth2, not username/password
-            # These fields are kept for compatibility but not used for auth
-            updates["username"] = username
-            updates["password"] = password
-            print("NOTE: Google Drive uses OAuth2 authentication via credentials.json file")
-            print("Make sure you have downloaded credentials.json from Google Cloud Console")
         elif provider_name == "google_cloud_storage":
             # Google Cloud Storage uses service account key, not username/password
             # These fields are kept for compatibility but not used for auth
@@ -578,7 +571,7 @@ def main():
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     
     # Add note about future developments
-    parser.epilog = "Note: Google Drive, Google Cloud Storage, and Dropbox providers are future developments and currently disabled. Only Local and Backblaze providers are fully functional."
+    parser.epilog = "Note: Google Cloud Storage and AWS S3 providers are future developments and currently disabled. Only Local and Backblaze providers are fully functional."
     
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
     
@@ -709,7 +702,7 @@ def main():
             print("Available providers:")
             for provider_name in PROVIDERS.keys():
                 status = "enabled" if provider_name in cli.providers else "disabled"
-                if provider_name in ['google_drive', 'google_cloud_storage', 'dropbox']:
+                if provider_name in ['google_cloud_storage']:
                     print(f"  {provider_name} ({status}) - Future development (currently disabled)")
                 else:
                     print(f"  {provider_name} ({status})")

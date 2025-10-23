@@ -113,8 +113,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 <div className="provider-name">{key}</div>
                 <div className="provider-description">
                   {provider.container_type === 'local' ? 'Local NAS Storage' : 
-                   provider.container_type === 'aws' ? 'AWS S3' :
-                   provider.container_type === 'google' ? 'Google Drive' : 
+                   provider.container_type === 'aws_s3' ? 'AWS S3' :
+                   provider.container_type === 'google_cloud_storage' ? 'Google Cloud Storage' : 
+                   provider.container_type === 'backblaze' ? 'Backblaze B2' :
                    provider.container_type || 'Cloud Storage'}
                 </div>
                 <div className={`provider-status ${provider.enabled ? 'enabled' : 'disabled'}`}>

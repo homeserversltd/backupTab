@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useBackupControls, useHeaderStats } from './hooks/useBackupControls';
-import { showToast } from '../../components/Popup/PopupManager'; //donot touch this
+import { showToast } from '../../../../src/components/Popup/PopupManager'; //donot touch this
 import { 
   BackupStatus, 
   CloudProvider,
@@ -168,6 +168,7 @@ const BackupTablet: React.FC = () => {
         {activeTab === 'config' && (
           <ConfigTab 
             config={config}
+            status={status}
             updateConfig={updateConfig}
             onConfigUpdate={setConfig}
             activeBackupType={scheduleInfo?.schedule_config?.backupType || scheduleInfo?.schedule_config?.activeBackupType as 'full' | 'incremental' | 'differential' | undefined}

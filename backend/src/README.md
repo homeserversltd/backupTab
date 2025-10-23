@@ -19,13 +19,13 @@ The HOMESERVER Backup System is a comprehensive, enterprise-grade backup solutio
 
 - **BaseProvider** - Abstract base class defining provider interface
 - **LocalProvider** - Filesystem storage with full CRUD operations
-- **Cloud Providers** - AWS S3, Google Drive, Dropbox, Backblaze B2
+- **Cloud Providers** - AWS S3, Google Cloud Storage, Backblaze B2
 - **Provider Registry** - Dynamic loading and graceful degradation
 
 ## Features
 
 ### Core Functionality
-- **Multiple Storage Providers** - Local filesystem + 4 cloud providers
+- **Multiple Storage Providers** - Local filesystem + 3 cloud providers
 - **FAK Encryption** - Factory Access Key encryption using `/root/key/skeleton.key`
 - **Configurable Compression** - Adjustable compression levels (1-9)
 - **Timestamp-based Naming** - Automatic backup naming with timestamps
@@ -175,16 +175,11 @@ python3 src/service/backup_service.py --cleanup
       "access_key": "",
       "secret_key": ""
     },
-    "google_drive": {
+    "google_cloud_storage": {
       "enabled": false,
       "credentials_file": "",
-      "token_file": "token.json",
-      "folder_id": ""
-    },
-    "dropbox": {
-      "enabled": false,
-      "access_token": "",
-      "folder_path": "/HOMESERVER Backups"
+      "project_id": "",
+      "bucket_name": "homeserver-backups"
     },
     "backblaze": {
       "enabled": false,
@@ -312,7 +307,7 @@ python3 src/service/backup_service.py --cleanup
 - `google-auth` - Google Drive support
 - `google-auth-oauthlib` - Google OAuth
 - `google-api-python-client` - Google API client
-- `dropbox` - Dropbox support
+- `google-cloud-storage` - Google Cloud Storage support
 - `b2sdk` - Backblaze B2 support
 
 ## File Structure
@@ -326,8 +321,7 @@ src/
 │   ├── base.py                  # BaseProvider abstract class
 │   ├── local.py                 # Local filesystem provider
 │   ├── aws_s3.py                # AWS S3 provider
-│   ├── google_drive.py          # Google Drive provider
-│   ├── dropbox.py               # Dropbox provider
+│   ├── google_cloud_storage.py      # Google Cloud Storage provider
 │   └── backblaze.py             # Backblaze B2 provider
 ├── service/                     # Service integration
 │   ├── __init__.py

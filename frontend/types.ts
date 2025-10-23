@@ -11,6 +11,7 @@ export interface BackupStatus {
   last_backup: string | null;
   repositories_count: number;
   cloud_providers: string[];
+  key_exists: boolean;
 }
 
 export interface Repository {

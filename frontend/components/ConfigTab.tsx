@@ -16,6 +16,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { 
   BackupConfig, 
+  BackupStatus,
   BackupTypeConfig, 
   DEFAULT_BACKUP_TYPES,
   getBackupTypeInfo, 
@@ -35,6 +36,7 @@ import { showToast } from '../../../../src/components/Popup/PopupManager'; //don
 
 interface ConfigTabProps {
   config: BackupConfig | null;
+  status: BackupStatus | null;
   updateConfig: (config: Partial<BackupConfig>) => Promise<boolean>;
   onConfigUpdate?: (config: BackupConfig) => void;
   activeBackupType?: 'full' | 'incremental' | 'differential' | null; // From schedule tab
@@ -50,6 +52,7 @@ interface GenericBackupConfigState {
 
 export const ConfigTab: React.FC<ConfigTabProps> = ({
   config,
+  status,
   updateConfig,
   onConfigUpdate,
   activeBackupType = null,
@@ -539,7 +542,7 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                     type="password"
                     value={encryptionKey}
                     onChange={(e) => setEncryptionKey(e.target.value)}
-                    placeholder="Enter password"
+                    placeholder={status?.key_exists ? "Enter new password" : "Enter password"}
                     className="password-input"
                   />
                   <button 
@@ -548,11 +551,14 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                     disabled={!encryptionKey || encryptionKey.length < 8}
                     className="password-submit"
                   >
-                    {encryptionKey ? 'Update' : 'Set'}
+                    {encryptionKey ? (status?.key_exists ? 'Update' : 'Set') : (status?.key_exists ? 'Update' : 'Set')}
                   </button>
                 </div>
                 <small className="field-help">
                   Password must be at least 8 characters long
+                  {status?.key_exists && (
+                    <span className="password-status"> • Password is currently set</span>
+                  )}
                 </small>
               </div>
             )}

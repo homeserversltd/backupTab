@@ -96,25 +96,11 @@ def _is_provider_configured(provider_name: str, provider_config: dict) -> bool:
                 provider_config.get('application_key', '').strip()
             )
     
-    elif provider_name == 'google_drive':
-        # Google Drive needs credentials_file and token_file
-        return bool(
-            provider_config.get('credentials_file', '').strip() and
-            provider_config.get('token_file', '').strip()
-        )
-    
     elif provider_name == 'google_cloud_storage':
         # Google Cloud Storage needs credentials_file and project_id
         return bool(
             provider_config.get('credentials_file', '').strip() and
             provider_config.get('project_id', '').strip()
-        )
-    
-    elif provider_name == 'dropbox':
-        # Dropbox needs username and password (or access token)
-        return bool(
-            provider_config.get('username', '').strip() and
-            provider_config.get('password', '').strip()
         )
     
     elif provider_name == 'aws_s3':
@@ -901,6 +887,34 @@ def toggle_debug():
         })
     except Exception as e:
         get_logger().error(f"Error toggling debug mode: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/key', methods=['POST'])
+def set_backup_key():
+    """Set backup encryption key using keyman integration"""
+    try:
+        data = request.get_json()
+        if not data or 'password' not in data:
+            return create_response(False, error='Password is required', status_code=400)
+        
+        password = data['password']
+        if len(password) < 8:
+            return create_response(False, error='Password must be at least 8 characters long', status_code=400)
+        
+        # Create backup key using keyman integration (same as backupTab2)
+        success = backup_manager.keyman.create_service_credentials(
+            'backup',
+            'backup',
+            password
+        )
+        
+        if success:
+            return create_response(True, {'message': 'Backup encryption key set successfully'})
+        else:
+            return create_response(False, error='Failed to set backup encryption key', status_code=500)
+            
+    except Exception as e:
+        get_logger().error(f"Error setting backup key: {e}")
         return create_response(False, error=str(e), status_code=500)
 
 @bp.route('/header-stats', methods=['GET'])

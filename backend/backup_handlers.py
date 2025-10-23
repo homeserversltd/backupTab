@@ -41,7 +41,8 @@ class BackupHandler:
                 'service_status': 'unknown',
                 'last_backup': None,
                 'repositories_count': 0,
-                'cloud_providers': []
+                'cloud_providers': [],
+                'key_exists': False
             }
             
             # Check if config file exists
@@ -67,6 +68,22 @@ class BackupHandler:
             
             # Check systemd service status
             status['service_status'] = get_systemd_service_status('homeserver-backup.timer')
+            
+            # Check if backup key exists using sudo (same approach as backupTab2)
+            key_path = "/vault/.keys/backup.key"
+            try:
+                # Use sudo to check file existence (same as backupTab2)
+                result = subprocess.run(
+                    ['/usr/bin/sudo', '/usr/bin/test', '-f', key_path],
+                    capture_output=True,
+                    text=True,
+                    check=False
+                )
+                status['key_exists'] = result.returncode == 0
+                self.logger.info(f"Backup key existence check: {status['key_exists']} (return code: {result.returncode})")
+            except Exception as e:
+                self.logger.warning(f"Failed to check backup key existence: {e}")
+                status['key_exists'] = False
             
             # Determine overall system status
             if status['config_exists'] and status['state_exists']:

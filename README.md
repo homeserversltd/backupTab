@@ -25,8 +25,7 @@ The HOMESERVER Backup Tab provides a professional 3-2-1 backup solution for your
 3. Set up cloud provider credentials using the keyman suite:
    ```bash
    /vault/keyman/newkey.sh aws_s3 <username> <password>
-   /vault/keyman/newkey.sh google_drive <username> <password>
-   /vault/keyman/newkey.sh dropbox <username> <password>
+   /vault/keyman/newkey.sh google_cloud_storage <username> <password>
    /vault/keyman/newkey.sh backblaze <username> <password>
    ```
 
@@ -56,8 +55,7 @@ Configure what gets backed up by editing the `backup_items` list in `backup_conf
 
 Supported providers:
 - **AWS S3**: `aws_s3` credentials key
-- **Google Drive**: `google_drive` credentials key  
-- **Dropbox**: `dropbox` credentials key
+- **Google Cloud Storage**: `google_cloud_storage` credentials key  
 - **Backblaze B2**: `backblaze` credentials key
 
 Enable providers in `backup_config.json`:
