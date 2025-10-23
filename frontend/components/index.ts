@@ -14,9 +14,7 @@ export { default as TimePicker } from './TimePicker';
 export { default as Calendar } from './Calendar';
 export { BackupCard } from './BackupCard';
 export { RepositoryCard } from './RepositoryCard';
-export { default as GoogleDriveSetupModal } from './GoogleDriveSetupModal';
 export { default as GoogleCloudStorageSetupModal } from './GoogleCloudStorageSetupModal';
-export { default as GoogleSetupModal } from './GoogleSetupModal';
 
 // Provider components
 export { default as ProviderSelector } from './providers/ProviderSelector';

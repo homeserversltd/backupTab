@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { showModal, closeModal } from '../../../../src/components/Popup/PopupManager';
+import { showModal, closeModal } from '../../../components/Popup/PopupManager';
 
 interface CalendarProps {
   frequency: 'weekly' | 'monthly';

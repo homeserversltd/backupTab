@@ -5,7 +5,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { CloudProvider } from '../../types';
-import { showToast } from '../../../../../components/Popup/PopupManager';
+// CRITICAL: This import path is specifically calculated for the React build system
+// The build runs from /var/www/homeserver/src/ and treats src/ as the root directory
+// From providers/ directory: ../../../../ goes up 4 levels to reach src/, then down to components/Popup/PopupManager
+// Changing this path will cause "Module not found" errors during npm run build
+import { showToast } from '../../../../components/Popup/PopupManager';
 
 interface LocalProviderProps {
   config: CloudProvider | null;

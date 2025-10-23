@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { showToast } from '../../../../src/components/Popup/PopupManager';
+import { showToast } from '../../../components/Popup/PopupManager';
 
 interface InstallationManagerProps {
   installationStatus: any;

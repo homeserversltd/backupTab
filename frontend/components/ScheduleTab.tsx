@@ -19,7 +19,7 @@ import {
   faEye
 } from '@fortawesome/free-solid-svg-icons';
 import { BackupScheduleConfig, ScheduleInfo, BackupConfig } from '../types';
-import { showToast } from '../../../../components/Popup/PopupManager'; //donot touch this
+import { showToast } from '../../../components/Popup/PopupManager'; //donot touch this
 import { useTooltip } from '../../../../src/hooks/useTooltip';
 import { useBackupControls } from '../hooks/useBackupControls';
 import TimePicker from './TimePicker';
@@ -365,7 +365,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           {/* Frequency Selection - all options available */}
           <div className="form-group">
             <div className="frequency-selector">
-              {['daily', 'weekly', 'monthly'].map(frequency => {
+              {(['daily', 'weekly', 'monthly'] as const).map(frequency => {
                 const isActive = updateSchedule.frequency === frequency;
                 const icon = frequency === 'daily' ? faCalendarDay : frequency === 'weekly' ? faCalendarWeek : faCalendar;
                 

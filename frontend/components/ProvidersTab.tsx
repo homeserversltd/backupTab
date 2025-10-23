@@ -10,7 +10,7 @@ import { BackblazeProvider } from './providers/BackblazeProvider';
 import { LocalProvider } from './providers/LocalProvider';
 import { AWSS3Provider } from './providers/AWSS3Provider';
 import { GoogleCloudStorageProvider } from './providers/GoogleCloudStorageProvider';
-import { showToast } from '../../../../components/Popup/PopupManager';
+import { showToast } from '../../../components/Popup/PopupManager';
 import { useBackupControls } from '../hooks/useBackupControls';
 
 interface ProvidersTabProps {
