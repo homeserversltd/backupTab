@@ -1089,18 +1089,26 @@ def uninstall_backup_system():
         # Import the CLI installer
         from .src.installer.setupEnvironment import BackupEnvironmentSetup
         
+        get_logger().info("BackupEnvironmentSetup imported successfully")
         setup = BackupEnvironmentSetup()
+        get_logger().info("BackupEnvironmentSetup instance created")
+        
         success = setup.uninstall()
+        get_logger().info(f"Uninstall method completed with result: {success}")
         
         if success:
+            get_logger().info("Uninstall successful, returning success response")
             return create_response(True, {
                 'message': 'Backup system uninstalled successfully',
                 'installed': False
             })
         else:
+            get_logger().error("Uninstall failed, returning error response")
             return create_response(False, error='Uninstallation failed', status_code=500)
             
     except Exception as e:
-        get_logger().error(f"Uninstallation failed: {e}")
+        get_logger().error(f"Uninstallation failed with exception: {e}")
+        import traceback
+        get_logger().error(f"Traceback: {traceback.format_exc()}")
         return create_response(False, error=str(e), status_code=500)
 
