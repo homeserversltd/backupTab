@@ -160,10 +160,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
       )}
 
-      {/* Version at bottom */}
-      <div className="version-footer">
-        <span>v1.0.0</span>
-      </div>
     </div>
   );
 };

@@ -99,72 +99,47 @@ export const InstallationManager: React.FC<InstallationManagerProps> = ({
   }
 
   return (
-    <div className="installation-manager">
-      <div className={`installation-status ${installationStatus.installed ? 'installed' : 'not-installed'}`}>
-        <h3>backupTab Installation</h3>
+    <div className="installation-manager-compact">
+      <div className={`installation-row ${installationStatus.installed ? 'installed' : 'not-installed'}`}>
+        <div className="installation-info">
+          <div className="status-indicator-compact">
+            <span className="icon">
+              {installationStatus.installed ? '✓' : '⚠'}
+            </span>
+            <span className="text">
+              {installationStatus.installed ? 'Installed' : 'Not Installed'}
+            </span>
+          </div>
+          
+          <div className="version-tile">
+            <span className="version-label">Version:</span>
+            <span className="version-value">{installationStatus.version || 'N/A'}</span>
+          </div>
+        </div>
         
-        {installationStatus.installed ? (
-          <div className="installed-state">
-            <div className="status-indicator success">
-              <span className="icon">✓</span>
-              <span className="text">Installed</span>
-            </div>
-            
-            <div className="installation-details">
-              <p><strong>Version:</strong> {installationStatus.version}</p>
-              {installationStatus.installation_timestamp && (
-                <p><strong>Installed:</strong> {new Date(installationStatus.installation_timestamp).toLocaleString()}</p>
-              )}
-              <p><strong>Method:</strong> {installationStatus.installation_method || 'Unknown'}</p>
-            </div>
-            
-            {installationStatus.can_uninstall && (
+        <div className="installation-actions">
+          {installationStatus.installed ? (
+            installationStatus.can_uninstall && (
               <button 
                 onClick={handleUninstall}
                 disabled={isUninstalling}
-                className="uninstall-button danger"
+                className="action-button danger"
               >
-                {isUninstalling ? 'Disabling...' : 'Disable backup services'}
+                {isUninstalling ? 'Disabling...' : 'Disable'}
               </button>
-            )}
-          </div>
-        ) : (
-          <div className="not-installed-state">
-            <div className="status-indicator error">
-              <span className="icon">⚠</span>
-              <span className="text">Not Installed</span>
-            </div>
-            
-            <div className="installation-prompt">
-              <p>backupTab is not installed. Click the button below to install it automatically.</p>
-              
-              {installationStatus.missing_components.length > 0 && (
-                <div className="missing-components">
-                  <p><strong>Missing components:</strong></p>
-                  <ul>
-                    {installationStatus.missing_components.map((component: string, index: number) => (
-                      <li key={index}>{component}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {installationStatus.can_install ? (
-                <button 
-                  onClick={handleInstall}
-                  disabled={isInstalling}
-                  className="install-button primary"
-                >
-                  {isInstalling ? 'Installing...' : 'Install backupTab'}
-                </button>
-              ) : (
-                <div className="install-error">
-                  <p>Installation not available. Premium installer not found.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+            )
+          ) : (
+            installationStatus.can_install && (
+              <button 
+                onClick={handleInstall}
+                disabled={isInstalling}
+                className="action-button primary"
+              >
+                {isInstalling ? 'Installing...' : 'Enable'}
+              </button>
+            )
+          )}
+        </div>
       </div>
     </div>
   );

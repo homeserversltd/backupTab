@@ -197,7 +197,7 @@ def get_providers_status():
                 fallback_providers.append({
                     'name': provider_name,
                     'enabled': provider_config.get('enabled', False),
-                    'available': True,  # Assume available for UI purposes
+                    'available': _is_provider_available(provider_name),  # Use proper availability check
                     'configured': False,  # Mark as not configured if we can't check
                     'display_name': provider_name.replace('_', ' ').title(),
                     'description': _get_provider_description(provider_name),
@@ -950,46 +950,23 @@ def get_header_stats():
         last_backup = status.get('last_backup')
         last_backup_display = last_backup or "Never"
         
-        # Calculate next backup time based on schedule
+        # Get next backup time from schedule handler (uses actual cron schedule)
         next_backup_display = "Not scheduled"
-        schedule = config.get('schedule')
-        if schedule:
-            try:
-                now = datetime.now()
-                frequency = schedule.get('frequency', 'daily')
-                time_str = schedule.get('time', '02:00')
-                
-                if frequency == 'daily':
-                    # Next backup is tomorrow at the specified time
-                    next_backup_time = now.replace(hour=int(time_str.split(':')[0]), 
-                                                minute=int(time_str.split(':')[1]), 
-                                                second=0, microsecond=0)
-                    if next_backup_time <= now:
-                        next_backup_time += timedelta(days=1)
-                    next_backup_display = next_backup_time.strftime('%Y-%m-%d %H:%M')
-                elif frequency == 'weekly':
-                    # Next backup is next week on the same day
-                    day_of_week = schedule.get('dayOfWeek', 0)
-                    days_ahead = day_of_week - now.weekday()
-                    if days_ahead <= 0:  # Target day already happened this week
-                        days_ahead += 7
-                    next_backup_time = now + timedelta(days=days_ahead)
-                    next_backup_time = next_backup_time.replace(hour=int(time_str.split(':')[0]), 
-                                                            minute=int(time_str.split(':')[1]), 
-                                                            second=0, microsecond=0)
-                    next_backup_display = next_backup_time.strftime('%Y-%m-%d %H:%M')
-                elif frequency == 'monthly':
-                    # Next backup is next month on the same day
-                    day_of_month = schedule.get('dayOfMonth', 1)
-                    next_month = now.replace(day=1) + timedelta(days=32)
-                    next_month = next_month.replace(day=day_of_month)
-                    next_backup_time = next_month.replace(hour=int(time_str.split(':')[0]), 
-                                                        minute=int(time_str.split(':')[1]), 
-                                                        second=0, microsecond=0)
-                    next_backup_display = next_backup_time.strftime('%Y-%m-%d %H:%M')
-            except Exception as e:
-                get_logger().warning(f"Error calculating next backup time: {e}")
-                next_backup_display = "Not scheduled"
+        try:
+            schedule_status = schedule_handler.get_schedule_status()
+            if schedule_status and schedule_status.get('next_run'):
+                next_run = schedule_status['next_run']
+                if next_run and next_run != 'Not scheduled':
+                    # Format the ISO timestamp to a readable format
+                    try:
+                        next_run_dt = datetime.fromisoformat(next_run.replace('Z', '+00:00'))
+                        next_backup_display = next_run_dt.strftime('%Y-%m-%d %H:%M')
+                    except Exception as e:
+                        get_logger().warning(f"Error formatting next run time: {e}")
+                        next_backup_display = next_run
+        except Exception as e:
+            get_logger().warning(f"Error getting schedule status: {e}")
+            next_backup_display = "Not scheduled"
         
         # Get backup size information
         backup_size_bytes = None

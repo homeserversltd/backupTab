@@ -12,6 +12,168 @@
   margin: 1.5rem 0;
 }
 
+/* Compact Installation Manager */
+.installation-manager-compact {
+  background: var(--background);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin: 1rem 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.installation-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  position: relative;
+  min-height: 48px;
+}
+
+.installation-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 8px 8px 0 0;
+}
+
+.installation-row.installed::before {
+  background: var(--success);
+}
+
+.installation-row.not-installed::before {
+  background: var(--warning);
+}
+
+.installation-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.status-indicator-compact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border: 1px solid;
+}
+
+.installation-row.installed .status-indicator-compact {
+  background: color-mix(in srgb, var(--success) 15%, var(--background));
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.installation-row.not-installed .status-indicator-compact {
+  background: color-mix(in srgb, var(--warning) 15%, var(--background));
+  color: var(--warning);
+  border-color: var(--warning);
+}
+
+.status-indicator-compact .icon {
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.status-indicator-compact .text {
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-size: 0.8rem;
+}
+
+.version-tile {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--primary);
+  color: var(--text);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+}
+
+.version-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.version-value {
+  color: var(--text);
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.installation-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 70px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.action-button.primary {
+  background: var(--accent);
+  color: var(--background);
+  border: 1px solid var(--accent);
+}
+
+.action-button.primary:hover {
+  background: var(--primaryHover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.action-button.danger {
+  background: var(--error);
+  color: var(--background);
+  border: 1px solid var(--error);
+}
+
+.action-button.danger:hover {
+  background: color-mix(in srgb, var(--error) 85%, var(--background) 15%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.action-button:disabled::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border: 1px solid transparent;
+  border-top: 1px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-left: 6px;
+  display: inline-block;
+}
+
 .installation-status {
   padding: 24px;
   position: relative;
@@ -297,6 +459,31 @@
     margin: 1rem 0;
   }
   
+  .installation-manager-compact {
+    margin: 0.75rem 0;
+  }
+  
+  .installation-row {
+    padding: 10px 12px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .installation-info {
+    justify-content: space-between;
+    gap: 12px;
+  }
+  
+  .installation-actions {
+    justify-content: center;
+  }
+  
+  .action-button {
+    flex: 1;
+    min-width: auto;
+  }
+  
   .installation-status {
     padding: 20px;
   }
@@ -318,6 +505,25 @@
 }
 
 @media (max-width: 480px) {
+  .installation-row {
+    padding: 8px 10px;
+  }
+  
+  .installation-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  
+  .version-tile {
+    font-size: 0.8rem;
+  }
+  
+  .action-button {
+    font-size: 0.75rem;
+    padding: 5px 10px;
+  }
+  
   .installation-status {
     padding: 16px;
   }
@@ -354,6 +560,10 @@
 /* Animation for status changes */
 .installation-status {
   animation: fadeInUp 0.5s ease-out;
+}
+
+.installation-manager-compact {
+  animation: fadeInUp 0.3s ease-out;
 }
 
 @keyframes fadeInUp {

@@ -39,14 +39,30 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
         const statuses = await getProvidersStatus();
         console.log('Provider statuses response:', statuses);
         console.log('Provider statuses length:', statuses?.length);
-        setProviderStatuses(statuses || []);
+        
+        // Force disable AWS S3 and Google Cloud regardless of backend response
+        const correctedStatuses = (statuses || []).map(provider => {
+          if (provider.name === 'aws_s3' || provider.name === 'google_cloud_storage') {
+            return {
+              ...provider,
+              available: false,
+              enabled: false
+            };
+          }
+          return provider;
+        });
+        
+        setProviderStatuses(correctedStatuses);
         
         // Set default selected provider to first available provider
-        if (statuses && statuses.length > 0 && !selectedProvider) {
-          const firstAvailable = statuses.find(p => p.available);
+        if (correctedStatuses && correctedStatuses.length > 0) {
+          const firstAvailable = correctedStatuses.find(p => p.available);
           if (firstAvailable) {
-            console.log('Setting default provider to:', firstAvailable.name);
-            setSelectedProvider(firstAvailable.name);
+            // If no provider is selected, or if current provider is unavailable, switch to first available
+            if (!selectedProvider || !correctedStatuses.find(p => p.name === selectedProvider)?.available) {
+              console.log('Setting provider to:', firstAvailable.name);
+              setSelectedProvider(firstAvailable.name);
+            }
           }
         }
       } catch (err) {
@@ -59,7 +75,7 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
           const fallbackStatuses = Object.keys(config.providers).map(providerName => ({
             name: providerName,
             enabled: config.providers[providerName]?.enabled || false,
-            available: true, // Assume available for UI purposes
+            available: providerName === 'local' || providerName === 'backblaze', // Only local and backblaze are available
             configured: false, // Mark as not configured if we can't check
             display_name: providerName.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
             description: `Configure ${providerName} provider`,
@@ -71,6 +87,16 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
             }
           }));
           setProviderStatuses(fallbackStatuses);
+          
+          // Set default selected provider to first available provider in fallback
+          const firstAvailable = fallbackStatuses.find(p => p.available);
+          if (firstAvailable) {
+            // If no provider is selected, or if current provider is unavailable, switch to first available
+            if (!selectedProvider || !fallbackStatuses.find(p => p.name === selectedProvider)?.available) {
+              console.log('Setting fallback provider to:', firstAvailable.name);
+              setSelectedProvider(firstAvailable.name);
+            }
+          }
         }
       }
     };

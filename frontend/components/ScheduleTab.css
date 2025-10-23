@@ -970,48 +970,12 @@
   width: 100%;
 }
 
-.calendar-nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.calendar-nav-btn {
-  background: none;
-  border: none;
-  font-size: 18px;
-  color: var(--primary);
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background 0.2s ease;
-}
-
-.calendar-nav-btn:hover {
-  background: var(--primaryHover);
-}
-
 .calendar-month {
   font-size: 16px;
   font-weight: 600;
   color: var(--text);
-}
-
-.grid-header {
   text-align: center;
-  margin: 12px 0 8px 0;
-  padding: 8px 0;
-}
-
-.grid-header span {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--secondary);
-  background: var(--background);
-  padding: 6px 12px;
-  border-radius: 4px;
-  border: 1px solid var(--border);
+  margin-bottom: 16px;
 }
 
 /* Simple Date Grid Styles */

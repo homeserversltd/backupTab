@@ -69,6 +69,7 @@
       "repositories_css": "frontend/styles/repositories.css",
       "config_css": "frontend/styles/config.css",
       "responsive_css": "frontend/styles/responsive.css",
+      "installation_css": "frontend/styles/installation.css",
       "useBackupControls": "frontend/hooks/useBackupControls.ts",
       "default": "frontend/images/default.png",
       "components_index": "frontend/components/index.ts",

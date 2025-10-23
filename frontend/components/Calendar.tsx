@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { showModal, closeModal } from '../../../components/Popup/PopupManager';
+import { showModal, closeModal } from '../../../../src/components/Popup/PopupManager';
 
 interface CalendarProps {
   frequency: 'weekly' | 'monthly';
@@ -9,7 +9,6 @@ interface CalendarProps {
 }
 
 const Calendar: React.FC<CalendarProps> = ({ frequency, value, onChange, disabled = false }) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<string>('');
 
@@ -23,22 +22,15 @@ const Calendar: React.FC<CalendarProps> = ({ frequency, value, onChange, disable
       const date = new Date(value);
       if (!isNaN(date.getTime())) {
         setSelectedDate(date);
-        setCurrentMonth(new Date(date.getFullYear(), date.getMonth(), 1));
       }
     }
   }, [frequency, value]);
 
   const handleDateSelect = (dayNumber: number) => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
+    const currentYear = new Date().getFullYear();
+    const month = 0; // January (any month with 30 days)
     
-    // Get the last day of the current month
-    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
-    
-    // If the selected day is greater than the last day of the month, use the last day
-    const actualDay = Math.min(dayNumber, lastDayOfMonth);
-    
-    const date = new Date(year, month, actualDay);
+    const date = new Date(currentYear, month, dayNumber);
     setSelectedDate(date);
     const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD format
     onChange(dateStr);
@@ -59,25 +51,9 @@ const Calendar: React.FC<CalendarProps> = ({ frequency, value, onChange, disable
     }
   };
 
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    const newMonth = new Date(currentMonth);
-    if (direction === 'prev') {
-      newMonth.setMonth(newMonth.getMonth() - 1);
-    } else {
-      newMonth.setMonth(newMonth.getMonth() + 1);
-    }
-    setCurrentMonth(newMonth);
-  };
-
   const isSelected = (dayNumber: number) => {
     if (!selectedDate) return false;
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
-    const actualDay = Math.min(dayNumber, lastDayOfMonth);
-    return selectedDate.getDate() === actualDay && 
-           selectedDate.getMonth() === month && 
-           selectedDate.getFullYear() === year;
+    return selectedDate.getDate() === dayNumber;
   };
 
   const openCalendarModal = () => {
@@ -100,26 +76,8 @@ const Calendar: React.FC<CalendarProps> = ({ frequency, value, onChange, disable
             </div>
           ) : (
             <div className="monthly-calendar">
-              <div className="calendar-nav">
-                <button 
-                  className="calendar-nav-btn"
-                  onClick={() => navigateMonth('prev')}
-                >
-                  ‹
-                </button>
-                <span className="calendar-month">
-                  {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </span>
-                <button 
-                  className="calendar-nav-btn"
-                  onClick={() => navigateMonth('next')}
-                >
-                  ›
-                </button>
-              </div>
-              
-              <div className="grid-header">
-                <span>Select backup day (1-30)</span>
+              <div className="calendar-month">
+                January {new Date().getFullYear()}
               </div>
               
               <div className="simple-date-grid">

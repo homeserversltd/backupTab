@@ -9,7 +9,6 @@ import { CloudProvider } from '../../types';
 // The build runs from /var/www/homeserver/src/ and treats src/ as the root directory
 // From providers/ directory: ../../../../ goes up 4 levels to reach src/, then down to components/Popup/PopupManager
 // Changing this path will cause "Module not found" errors during npm run build
-// The TypeScript error we're seeing is unrelated to this import - it's a separate type issue in ScheduleTab
 import { showToast } from '../../../../components/Popup/PopupManager'; //do not touch this
 
 interface BackblazeProviderProps {

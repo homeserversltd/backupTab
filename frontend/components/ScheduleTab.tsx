@@ -411,10 +411,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             
             {updateSchedule.frequency === 'monthly' && (
               <div className="form-group">
-                <label>
-                  <FontAwesomeIcon icon={faCalendarAlt} className="icon" />
-                  Day of Month
-                </label>
                 <Calendar
                   frequency="monthly"
                   value={updateSchedule.dayOfMonth?.toString() || '1'}
