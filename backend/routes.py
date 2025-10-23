@@ -957,10 +957,10 @@ def get_header_stats():
             if schedule_status and schedule_status.get('next_run'):
                 next_run = schedule_status['next_run']
                 if next_run and next_run != 'Not scheduled':
-                    # Format the ISO timestamp to a readable format
+                    # Format the ISO timestamp to American date format
                     try:
                         next_run_dt = datetime.fromisoformat(next_run.replace('Z', '+00:00'))
-                        next_backup_display = next_run_dt.strftime('%Y-%m-%d %H:%M')
+                        next_backup_display = next_run_dt.strftime('%B %d, %Y %H:%M')
                     except Exception as e:
                         get_logger().warning(f"Error formatting next run time: {e}")
                         next_backup_display = next_run

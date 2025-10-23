@@ -341,6 +341,7 @@ input:checked + .toggle-label {
   font-size: 1rem;
   font-weight: 600;
   color: var(--text);
+  border-bottom: none;
 }
 
 .collapse-icon {
