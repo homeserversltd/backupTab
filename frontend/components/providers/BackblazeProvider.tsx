@@ -65,11 +65,8 @@ export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
       </div>
 
       <div className="config-form">
-        {/* Authentication Section */}
+        {/* Main Configuration Section */}
         <div className="config-section">
-          <h5>Authentication</h5>
-          
-
           <div className="form-group">
             <label htmlFor="application_key_id">
               Application Key ID <span className="required">*</span>
@@ -124,119 +121,21 @@ export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
           </div>
         </div>
 
-        {/* Connection Settings */}
-        <div className="config-section">
-          <h5>Connection Settings</h5>
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="region">Region</label>
-              <select
-                id="region"
-                value={localConfig.region || 'us-west-000'}
-                onChange={(e) => handleFieldChange('region', e.target.value)}
-                className="form-select"
-              >
-                <option value="us-west-000">US West (Oregon)</option>
-                <option value="us-west-001">US West (California)</option>
-                <option value="us-west-002">US West (Nevada)</option>
-                <option value="us-east-000">US East (Virginia)</option>
-                <option value="us-east-001">US East (Ohio)</option>
-                <option value="eu-central-000">EU Central (Frankfurt)</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="max_retries">Max Retries</label>
-              <input
-                id="max_retries"
-                type="number"
-                min="1"
-                max="10"
-                value={localConfig.max_retries || 3}
-                onChange={(e) => handleFieldChange('max_retries', parseInt(e.target.value))}
-                className="form-input"
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="retry_delay">Retry Delay (seconds)</label>
-              <input
-                id="retry_delay"
-                type="number"
-                min="0.1"
-                max="60.0"
-                step="0.1"
-                value={localConfig.retry_delay || 1.0}
-                onChange={(e) => handleFieldChange('retry_delay', parseFloat(e.target.value))}
-                className="form-input"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="timeout">Timeout (seconds)</label>
-              <input
-                id="timeout"
-                type="number"
-                min="30"
-                max="3600"
-                value={localConfig.timeout || 300}
-                onChange={(e) => handleFieldChange('timeout', parseInt(e.target.value))}
-                className="form-input"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Performance Settings */}
-        <div className="config-section">
-          <h5>Performance Settings</h5>
           <div className="form-group">
-            <label htmlFor="max_bandwidth">Max Bandwidth (bytes/sec)</label>
-            <input
-              id="max_bandwidth"
-              type="number"
-              min="1024"
-              value={localConfig.max_bandwidth || ''}
-              onChange={(e) => handleFieldChange('max_bandwidth', e.target.value ? parseInt(e.target.value) : null)}
-              placeholder="Leave empty for unlimited"
-              className="form-input"
-            />
-            <small className="field-help">
-              Bandwidth limit in bytes per second (leave empty for unlimited)
-            </small>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="upload_chunk_size">Upload Chunk Size (bytes)</label>
-              <input
-                id="upload_chunk_size"
-                type="number"
-                min="1048576"
-                max="1073741824"
-                value={localConfig.upload_chunk_size || 104857600}
-                onChange={(e) => handleFieldChange('upload_chunk_size', parseInt(e.target.value))}
-                className="form-input"
-              />
-              <small className="field-help">
-                Chunk size for large file uploads (1MB - 1GB)
-              </small>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="connection_pool_size">Connection Pool Size</label>
-              <input
-                id="connection_pool_size"
-                type="number"
-                min="1"
-                max="20"
-                value={localConfig.connection_pool_size || 5}
-                onChange={(e) => handleFieldChange('connection_pool_size', parseInt(e.target.value))}
-                className="form-input"
-              />
-            </div>
+            <label htmlFor="region">Region</label>
+            <select
+              id="region"
+              value={localConfig.region || 'us-west-000'}
+              onChange={(e) => handleFieldChange('region', e.target.value)}
+              className="form-select"
+            >
+              <option value="us-west-000">US West (Oregon)</option>
+              <option value="us-west-001">US West (California)</option>
+              <option value="us-west-002">US West (Nevada)</option>
+              <option value="us-east-000">US East (Virginia)</option>
+              <option value="us-east-001">US East (Ohio)</option>
+              <option value="eu-central-000">EU Central (Frankfurt)</option>
+            </select>
           </div>
         </div>
 

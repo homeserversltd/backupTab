@@ -168,6 +168,41 @@
       "type": "copy",
       "identifier": null,
       "description": "Config subtab component"
+    },
+    {
+      "source": "frontend/components/RestoreTab.tsx",
+      "target": "/var/www/homeserver/src/tablets/backupTab/components/RestoreTab.tsx",
+      "type": "copy",
+      "identifier": null,
+      "description": "Restore subtab component"
+    },
+    {
+      "source": "frontend/components/StatusHeaderBar.tsx",
+      "target": "/var/www/homeserver/src/tablets/backupTab/components/StatusHeaderBar.tsx",
+      "type": "copy",
+      "identifier": null,
+      "description": "Status header bar component"
+    },
+    {
+      "source": "frontend/components/InstallationManager.tsx",
+      "target": "/var/www/homeserver/src/tablets/backupTab/components/InstallationManager.tsx",
+      "type": "copy",
+      "identifier": null,
+      "description": "Installation manager component"
+    },
+    {
+      "source": "frontend/components/TimePicker.tsx",
+      "target": "/var/www/homeserver/src/tablets/backupTab/components/TimePicker.tsx",
+      "type": "copy",
+      "identifier": null,
+      "description": "Time picker component"
+    },
+    {
+      "source": "frontend/components/Calendar.tsx",
+      "target": "/var/www/homeserver/src/tablets/backupTab/components/Calendar.tsx",
+      "type": "copy",
+      "identifier": null,
+      "description": "Calendar component"
     }
   ]
 }

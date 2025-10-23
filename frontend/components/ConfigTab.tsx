@@ -57,8 +57,7 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
 }) => {
   const [newFilePath, setNewFilePath] = useState('');
   const [encryptionEnabled, setEncryptionEnabled] = useState(config?.encryption_enabled || false);
-  const [encryptionKey, setEncryptionKey] = useState(config?.encryption_key || '');
-  const [encryptionSalt, setEncryptionSalt] = useState(config?.encryption_salt || '');
+  const [encryptionKey, setEncryptionKey] = useState('');
   const [version, setVersion] = useState<string>('1.0.0');
   const [recommendedPaths, setRecommendedPaths] = useState<string[]>([]);
   const [genericBackupConfig, setGenericBackupConfig] = useState<GenericBackupConfigState>({
@@ -267,6 +266,48 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
     }
   };
 
+  const handleSaveEncryption = async () => {
+    if (!encryptionKey || encryptionKey.length < 8) {
+      showToast({
+        message: 'Password must be at least 8 characters long',
+        variant: 'error',
+        duration: 3000
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/backup/key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: encryptionKey })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        showToast({
+          message: 'Encryption password set successfully',
+          variant: 'success',
+          duration: 3000
+        });
+        setEncryptionKey('');
+      } else {
+        showToast({
+          message: `Failed to set password: ${result.error}`,
+          variant: 'error',
+          duration: 5000
+        });
+      }
+    } catch (error) {
+      showToast({
+        message: `Error setting password: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'error',
+        duration: 5000
+      });
+    }
+  };
+
   const handleSaveConfig = async () => {
     if (!config) return;
     
@@ -337,8 +378,6 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
       const updatedConfig = {
         ...config,
         encryption_enabled: encryptionEnabled,
-        encryption_key: encryptionKey || null,
-        encryption_salt: encryptionSalt || null,
         backupTypes: legacyBackupTypes
       };
       
@@ -370,7 +409,6 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
   const handleResetToDefaults = () => {
     setEncryptionEnabled(false);
     setEncryptionKey('');
-    setEncryptionSalt('');
     setGenericBackupConfig({
       full: getDefaultGenericConfig('full'),
       incremental: getDefaultGenericConfig('incremental'),
@@ -473,54 +511,50 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
         {/* Encryption Settings */}
         <div className="config-section">
           <h4>Encryption Settings</h4>
-          <div className="settings-grid">
-            <div className="setting-item">
-              <div className="checkbox-container">
-                {tooltip.show(
-                  'Encrypts data for cloud providers only - local NAS backups are never encrypted to avoid unnecessary overhead',
-                  <>
-                    <input
-                      id="encryption-enabled"
-                      type="checkbox"
-                      checked={encryptionEnabled}
-                      onChange={(e) => setEncryptionEnabled(e.target.checked)}
-                    />
-                    <label htmlFor="encryption-enabled">Enable Encryption (Cloud Providers Only)</label>
-                  </>
-                )}
+          <div className="encryption-settings">
+            <div className="encryption-toggle">
+              <div className="toggle-switch">
+                <input
+                  id="encryption-enabled"
+                  type="checkbox"
+                  checked={encryptionEnabled}
+                  onChange={(e) => setEncryptionEnabled(e.target.checked)}
+                />
+                <label htmlFor="encryption-enabled" className="toggle-label">
+                  <span className="toggle-slider"></span>
+                </label>
+              </div>
+              <div className="toggle-text">
+                <label htmlFor="encryption-enabled">Enable Encryption</label>
+                <small>Encrypts data for cloud providers only</small>
               </div>
             </div>
+            
             {encryptionEnabled && (
-              <>
-                <div className="setting-item">
-                  <label htmlFor="encryption-key">Encryption Key</label>
+              <div className="password-field">
+                <label htmlFor="encryption-password">Password:</label>
+                <div className="password-input-group">
                   <input
-                    id="encryption-key"
+                    id="encryption-password"
                     type="password"
                     value={encryptionKey}
                     onChange={(e) => setEncryptionKey(e.target.value)}
-                    placeholder="Leave empty to auto-generate"
-                    className="form-input"
+                    placeholder="Enter password"
+                    className="password-input"
                   />
-                  <small className="field-help">
-                    Leave empty to auto-generate a secure key
-                  </small>
+                  <button 
+                    type="button"
+                    onClick={handleSaveEncryption}
+                    disabled={!encryptionKey || encryptionKey.length < 8}
+                    className="password-submit"
+                  >
+                    {encryptionKey ? 'Update' : 'Set'}
+                  </button>
                 </div>
-                <div className="setting-item">
-                  <label htmlFor="encryption-salt">Encryption Salt</label>
-                  <input
-                    id="encryption-salt"
-                    type="password"
-                    value={encryptionSalt}
-                    onChange={(e) => setEncryptionSalt(e.target.value)}
-                    placeholder="Leave empty to auto-generate"
-                    className="form-input"
-                  />
-                  <small className="field-help">
-                    Leave empty to auto-generate a secure salt
-                  </small>
-                </div>
-              </>
+                <small className="field-help">
+                  Password must be at least 8 characters long
+                </small>
+              </div>
             )}
           </div>
         </div>

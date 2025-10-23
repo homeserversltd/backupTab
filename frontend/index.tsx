@@ -17,7 +17,8 @@ import {
   OverviewTab,
   ProvidersTab,
   ScheduleTab,
-  ConfigTab
+  ConfigTab,
+  RestoreTab
 } from './components';
 import './backupTab.css';
 
@@ -30,7 +31,7 @@ const BackupTablet: React.FC = () => {
     isLoading
   } = useBackupControls();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'providers' | 'schedule' | 'config'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'providers' | 'schedule' | 'config' | 'restore'>('overview');
   const [status, setStatus] = useState<BackupStatus | null>(null);
   const [config, setConfig] = useState<BackupConfig | null>(null);
   const [scheduleInfo, setScheduleInfo] = useState<ScheduleInfo | null>(null);
@@ -116,6 +117,12 @@ const BackupTablet: React.FC = () => {
         >
           Config
         </button>
+        <button 
+          className={`nav-button ${activeTab === 'restore' ? 'active' : ''}`}
+          onClick={() => setActiveTab('restore')}
+        >
+          Restore
+        </button>
       </div>
 
       <div className="backup-tablet-content">
@@ -130,6 +137,9 @@ const BackupTablet: React.FC = () => {
             config={config}
             scheduleInfo={scheduleInfo}
             onConfigChange={updateConfig}
+            headerStats={status}
+            installationStatus={status?.installation_status}
+            onStatusChange={loadInitialData}
           />
         )}
 
@@ -157,6 +167,10 @@ const BackupTablet: React.FC = () => {
             activeBackupType={scheduleInfo?.schedule_config?.backupType || scheduleInfo?.schedule_config?.activeBackupType as 'full' | 'incremental' | 'differential' | undefined}
             hasActiveSchedule={Boolean(scheduleInfo?.schedule_config?.enabled)}
           />
+        )}
+
+        {activeTab === 'restore' && (
+          <RestoreTab />
         )}
       </div>
     </div>

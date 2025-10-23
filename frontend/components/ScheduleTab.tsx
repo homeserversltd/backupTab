@@ -8,24 +8,18 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faCalendarAlt, 
   faClock, 
-  faPlus, 
-  faEdit, 
-  faTrash, 
   faPlay, 
   faPause,
   faCheckCircle,
-  faExclamationTriangle,
-  faCalendarDay,
-  faCalendarWeek,
-  faCalendar,
-  faEye,
   faSave,
   faSpinner
 } from '@fortawesome/free-solid-svg-icons';
-import { BackupScheduleConfig, ScheduleInfo, BackupConfig, GenericBackupConfig, getGenericBackupTypeInfo } from '../types';
+import { BackupScheduleConfig, ScheduleInfo, BackupConfig } from '../types';
 import { showToast } from '../../../../src/components/Popup/PopupManager'; //donot touch this
 import { useTooltip } from '../../../../src/hooks/useTooltip';
 import { useBackupControls } from '../hooks/useBackupControls';
+import TimePicker from './TimePicker';
+import Calendar from './Calendar';
 import './ScheduleTab.css';
 
 interface ScheduleTabProps {
@@ -41,12 +35,8 @@ interface UpdateSchedule {
   time: string; // HH:MM format
   dayOfWeek?: number; // 0-6 for weekly
   dayOfMonth?: number; // 1-31 for monthly
-  activeBackupType: 'full' | 'incremental' | 'differential';
 }
 
-
-// Get generic backup type information
-const GENERIC_BACKUP_TYPE_INFO = getGenericBackupTypeInfo();
 
 export const ScheduleTab: React.FC<ScheduleTabProps> = ({ 
   schedules = [], 
@@ -70,7 +60,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     frequency: 'weekly',
     time: '02:00',
     dayOfWeek: 0,
-    activeBackupType: 'incremental'
+    dayOfMonth: 1
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -81,17 +71,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   useEffect(() => {
     loadScheduleConfig();
   }, []);
-
-  // Reset frequency when backup type changes to ensure it's valid for the new type
-  useEffect(() => {
-    const typeInfo = GENERIC_BACKUP_TYPE_INFO.find(type => type.value === updateSchedule.activeBackupType);
-    if (typeInfo && !typeInfo.constraints.allowedFrequencies.includes(updateSchedule.frequency)) {
-      setUpdateSchedule(prev => ({
-        ...prev,
-        frequency: typeInfo.constraints.allowedFrequencies[0]
-      }));
-    }
-  }, [updateSchedule.activeBackupType]);
 
   // TODO: Add real-time status updates for backup progress
   // TODO: Implement backup history/logs integration
@@ -114,9 +93,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           timeString = `${config.hour.toString().padStart(2, '0')}:${config.minute.toString().padStart(2, '0')}`;
         }
         
-        // Determine backup type - check both activeBackupType and backupType fields
-        const backupType = config.activeBackupType || config.backupType || 'incremental';
-        
         // Determine frequency - use existing or default to weekly
         const frequency = (config.frequency as 'daily' | 'weekly' | 'monthly') || 'weekly';
         
@@ -125,8 +101,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           frequency: frequency,
           time: timeString || '02:00',
           dayOfWeek: typeof config.dayOfWeek === 'number' ? config.dayOfWeek : 0,
-          dayOfMonth: typeof config.dayOfMonth === 'number' ? config.dayOfMonth : 1,
-          activeBackupType: backupType as 'full' | 'incremental' | 'differential'
+          dayOfMonth: typeof config.dayOfMonth === 'number' ? config.dayOfMonth : 1
         });
       } else {
         // No existing config - use defaults
@@ -135,8 +110,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           frequency: 'weekly',
           time: '02:00',
           dayOfWeek: 0,
-          dayOfMonth: 1,
-          activeBackupType: 'incremental'
+          dayOfMonth: 1
         });
       }
     } catch (error) {
@@ -161,30 +135,19 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       hour12: true
     });
     
-    const typeInfo = GENERIC_BACKUP_TYPE_INFO.find(type => type.value === updateSchedule.activeBackupType);
-    
-    // For types that auto-schedule, show the intelligent schedule
-    if (typeInfo?.constraints.autoSchedulesFull) {
-      return `System will run daily differentials at ${timeFormatted} + weekly full backups (automatic scheduling)`;
-    }
-    
-    if (typeInfo?.constraints.requiresFullRefresh) {
-      return `System will run daily incrementals at ${timeFormatted} + periodic full refreshes (configure interval in Config tab)`;
-    }
-    
-    // For full backups, show the user-selected frequency
+    // Show the user-selected frequency
     switch (updateSchedule.frequency) {
       case 'daily':
-        return `Full backups will run daily at ${timeFormatted}`;
+        return `Backups will run daily at ${timeFormatted}`;
       case 'weekly': {
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayName = days[updateSchedule.dayOfWeek || 0];
-        return `Full backups will run every ${dayName} at ${timeFormatted}`;
+        return `Backups will run every ${dayName} at ${timeFormatted}`;
       }
       case 'monthly': {
         const dayOfMonth = updateSchedule.dayOfMonth || 1;
         const suffix = dayOfMonth === 1 ? 'st' : dayOfMonth === 2 ? 'nd' : dayOfMonth === 3 ? 'rd' : 'th';
-        return `Full backups will run on the ${dayOfMonth}${suffix} of each month at ${timeFormatted}`;
+        return `Backups will run on the ${dayOfMonth}${suffix} of each month at ${timeFormatted}`;
       }
       default:
         return '';
@@ -203,46 +166,33 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       timeString = `${config.hour.toString().padStart(2, '0')}:${config.minute.toString().padStart(2, '0')}`;
     }
     
-    // If we have the frontend configuration format, use it directly
-    if (config.frequency && timeString) {
-      const timeFormatted = new Date(`2000-01-01T${timeString}`).toLocaleTimeString([], {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      });
-      
-      // Get backup type for context
-      const backupType = config.activeBackupType || config.backupType || 'incremental';
-      const typeInfo = GENERIC_BACKUP_TYPE_INFO.find(type => type.value === backupType);
-      
-      // For types that auto-schedule, show the intelligent schedule
-      if (typeInfo?.constraints.autoSchedulesFull) {
-        return `System will run daily differentials at ${timeFormatted} + weekly full backups (automatic scheduling)`;
-      }
-      
-      if (typeInfo?.constraints.requiresFullRefresh) {
-        return `System will run daily incrementals at ${timeFormatted} + periodic full refreshes (configure interval in Config tab)`;
-      }
-      
-      // For full backups, show the user-selected frequency
-      switch (config.frequency) {
-        case 'daily':
-          return `Full backups will run daily at ${timeFormatted}`;
-        case 'weekly': {
-          const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-          const dayIndex = typeof config.dayOfWeek === 'number' ? config.dayOfWeek : parseInt(String(config.dayOfWeek)) || 0;
-          const dayName = days[dayIndex];
-          return `Full backups will run every ${dayName} at ${timeFormatted}`;
+      // If we have the frontend configuration format, use it directly
+      if (config.frequency && timeString) {
+        const timeFormatted = new Date(`2000-01-01T${timeString}`).toLocaleTimeString([], {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+        
+        // Show the user-selected frequency
+        switch (config.frequency) {
+          case 'daily':
+            return `Backups run daily at ${timeFormatted}`;
+          case 'weekly': {
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const dayIndex = typeof config.dayOfWeek === 'number' ? config.dayOfWeek : parseInt(String(config.dayOfWeek)) || 0;
+            const dayName = days[dayIndex];
+            return `Backups run every ${dayName} at ${timeFormatted}`;
+          }
+          case 'monthly': {
+            const dayOfMonth = typeof config.dayOfMonth === 'number' ? config.dayOfMonth : parseInt(String(config.dayOfMonth)) || 1;
+            const suffix = dayOfMonth === 1 ? 'st' : dayOfMonth === 2 ? 'nd' : dayOfMonth === 3 ? 'rd' : 'th';
+            return `Backups run on the ${dayOfMonth}${suffix} of each month at ${timeFormatted}`;
+          }
+          default:
+            return 'Schedule configured';
         }
-        case 'monthly': {
-          const dayOfMonth = typeof config.dayOfMonth === 'number' ? config.dayOfMonth : parseInt(String(config.dayOfMonth)) || 1;
-          const suffix = dayOfMonth === 1 ? 'st' : dayOfMonth === 2 ? 'nd' : dayOfMonth === 3 ? 'rd' : 'th';
-          return `Full backups will run on the ${dayOfMonth}${suffix} of each month at ${timeFormatted}`;
-        }
-        default:
-          return 'Schedule configured';
       }
-    }
     
     // Fallback: parse cron schedule if available
     if (config.schedule) {
@@ -291,11 +241,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         minute: minute || 0,
         dayOfWeek: updateSchedule.frequency === 'weekly' ? updateSchedule.dayOfWeek : undefined,
         dayOfMonth: updateSchedule.frequency === 'monthly' ? updateSchedule.dayOfMonth : undefined,
-        activeBackupType: updateSchedule.activeBackupType,
         repositories: [],
-        time: updateSchedule.time,
-        // Add backup type info for ConfigTab
-        backupType: updateSchedule.activeBackupType
+        time: updateSchedule.time
       };
       
       // Save to backend
@@ -430,30 +377,20 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                   );
                 })}
             </div>
-            {/* Show constraint info for backup types that auto-schedule */}
-            {GENERIC_BACKUP_TYPE_INFO
-              .find(type => type.value === updateSchedule.activeBackupType)
-              ?.constraints.autoSchedulesFull && (
-              <div className="frequency-constraint-info">
-                <small>
-                  <FontAwesomeIcon icon={faExclamationTriangle} />
-                  System automatically schedules daily differentials + weekly full backups
-                </small>
-              </div>
-            )}
           </div>
           
           {/* Time and Day Selection */}
           <div className="form-row">
             <div className="form-group">
-              <div className="time-input-group">
-                <input
-                  type="time"
-                  className="form-control"
-                  value={updateSchedule.time}
-                  onChange={(e) => setUpdateSchedule(prev => ({ ...prev, time: e.target.value }))}
-                />
-              </div>
+              <label>
+                <FontAwesomeIcon icon={faClock} className="icon" />
+                Time
+              </label>
+              <TimePicker
+                value={updateSchedule.time}
+                onChange={(time) => setUpdateSchedule(prev => ({ ...prev, time }))}
+                disabled={!updateSchedule.enabled}
+              />
             </div>
             
             {updateSchedule.frequency === 'weekly' && (
@@ -475,62 +412,20 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             {updateSchedule.frequency === 'monthly' && (
               <div className="form-group">
                 <label>
-                  <FontAwesomeIcon icon={faCalendar} className="icon" />
+                  <FontAwesomeIcon icon={faCalendarAlt} className="icon" />
                   Day of Month
                 </label>
-                <input
-                  type="number"
-                  className="form-control"
-                  min="1"
-                  max="31"
-                  value={updateSchedule.dayOfMonth || 1}
-                  onChange={(e) => setUpdateSchedule(prev => ({ 
+                <Calendar
+                  frequency="monthly"
+                  value={updateSchedule.dayOfMonth?.toString() || '1'}
+                  onChange={(value) => setUpdateSchedule(prev => ({ 
                     ...prev, 
-                    dayOfMonth: parseInt(e.target.value) 
+                    dayOfMonth: parseInt(value.split('-')[2]) 
                   }))}
+                  disabled={!updateSchedule.enabled}
                 />
               </div>
             )}
-          </div>
-
-          {/* Backup Type Selection */}
-          <div className="form-group">
-            <label>Backup Type</label>
-            <div className="backup-type-selector">
-              {GENERIC_BACKUP_TYPE_INFO.map(type => 
-                tooltip.show(type.tooltip, (
-                  <div
-                    key={type.value}
-                    className={`backup-type-option ${updateSchedule.activeBackupType === type.value ? 'active' : ''}`}
-                    onClick={() => {
-                      const newSchedule = { 
-                        ...updateSchedule, 
-                        activeBackupType: type.value as 'full' | 'incremental' | 'differential',
-                        // Reset frequency to first allowed frequency for this type
-                        frequency: type.constraints.allowedFrequencies[0]
-                      };
-                      setUpdateSchedule(newSchedule);
-                    }}
-                  >
-                    <div className="backup-type-header">
-                      <span className="backup-type-label">{type.label}</span>
-                    </div>
-                    <div className="backup-type-description">{type.description}</div>
-                    <div className="backup-type-constraints">
-                      <small>
-                        {type.constraints.allowedFrequencies.length === 1 
-                          ? `Schedule: ${type.constraints.allowedFrequencies[0]} only`
-                          : `Schedule: ${type.constraints.allowedFrequencies.join(', ')}`
-                        }
-                      </small>
-                    </div>
-                    <div className="backup-type-note">
-                      Configure retention settings in the Config tab
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
           </div>
 
           

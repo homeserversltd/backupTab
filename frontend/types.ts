@@ -252,6 +252,32 @@ export interface CloudTestResult {
   tested_at: string;
 }
 
+export interface InstallationStatus {
+  installed: boolean;
+  installation_timestamp: string | null;
+  installation_method: string | null;
+  version: string;
+  installation_path: string | null;
+  missing_components: string[];
+  can_install: boolean;
+  can_uninstall: boolean;
+}
+
+export interface HeaderStats {
+  last_backup: string;
+  last_backup_timestamp: string | null;
+  next_backup: string;
+  enabled_providers_count: number;
+  backup_items_count: number;
+  last_backup_size: string;
+  last_backup_size_bytes: number | null;
+  backup_in_progress: boolean;
+  backup_status: string;
+  key_exists: boolean;
+  providers_status: Record<string, any>;
+  installation_status: InstallationStatus;
+}
+
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;

@@ -4,18 +4,26 @@
  */
 
 import React, { useState } from 'react';
-import { BackupConfig, ScheduleInfo } from '../types';
+import { BackupConfig, ScheduleInfo, HeaderStats } from '../types';
+import { StatusHeaderBar } from './StatusHeaderBar';
+import { InstallationManager } from './InstallationManager';
 
 interface OverviewTabProps {
   config: BackupConfig | null;
   scheduleInfo: ScheduleInfo | null;
   onConfigChange: (config: Partial<BackupConfig>) => Promise<boolean>;
+  headerStats?: HeaderStats | null;
+  installationStatus?: any;
+  onStatusChange?: () => void;
 }
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({
   config,
   scheduleInfo,
-  onConfigChange
+  onConfigChange,
+  headerStats,
+  installationStatus,
+  onStatusChange
 }) => {
   const [clickedProvider, setClickedProvider] = useState<string | null>(null);
 
@@ -70,36 +78,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   return (
     <div className="overview-layout overview-container">
-      {/* Stats Banner */}
-      <div className="stats-banner">
-        <h4>Backup Statistics</h4>
-        <div className="stats-grid">
-          <div className="stat-item">
-            <p className="backup-count">{config?.backup_count || 0}</p>
-            <p className="stat-label">Total Backups Completed</p>
-          </div>
-          <div className="stat-item">
-            <p className="next-backup">{formatNextBackup(scheduleInfo?.next_run || null)}</p>
-            <p className="stat-label">Next Scheduled Backup</p>
-          </div>
-          <div className="stat-item">
-            <p className="backup-type">{getBackupTypeInfo().label}</p>
-            <p className="stat-label">Backup Type</p>
-          </div>
-          <div className="stat-item">
-            <p className="data-stored">2.4 GB</p>
-            <p className="stat-label">Total Data Stored</p>
-          </div>
-          <div className="stat-item">
-            <p className="files-count">1,247 files</p>
-            <p className="stat-label">Files Backed Up</p>
-          </div>
-          <div className="stat-item">
-            <p className="dirs-count">23 directories</p>
-            <p className="stat-label">Directories Backed Up</p>
-          </div>
-        </div>
-      </div>
+      {/* Status Header Bar */}
+      <StatusHeaderBar headerStats={headerStats} />
+
+      {/* Installation Manager */}
+      {installationStatus && onStatusChange && (
+        <InstallationManager 
+          installationStatus={installationStatus} 
+          onStatusChange={onStatusChange} 
+        />
+      )}
 
       {/* Main Content Area */}
       <div className="overview-content">
