@@ -95,6 +95,13 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
     loadGenericBackupConfigFromConfig();
   }, [config]);
 
+  // Update encryption state when status changes
+  useEffect(() => {
+    if (status?.key_exists !== undefined) {
+      setEncryptionEnabled(status.key_exists);
+    }
+  }, [status?.key_exists]);
+
   // Initialize recommended paths by filtering out already added ones
   const initializeRecommendedPaths = () => {
     if (!config?.backup_items) {

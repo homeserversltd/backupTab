@@ -80,6 +80,11 @@ def _is_provider_available(provider_name: str) -> bool:
 
 def _is_provider_configured(provider_name: str, provider_config: dict) -> bool:
     """Check if provider has required credentials configured"""
+    # Only allow the providers we want
+    allowed_providers = ['local', 'backblaze', 'aws_s3', 'google_cloud_storage']
+    if provider_name not in allowed_providers:
+        return False
+    
     if provider_name == 'local':
         # Local provider is always configured - it doesn't need credentials
         return True

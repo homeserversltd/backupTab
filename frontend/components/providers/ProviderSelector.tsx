@@ -104,7 +104,9 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
                       onChange={(e) => handleToggleProvider(providerStatus.name, e.target.checked)}
                       disabled={isLoading}
                     />
-                    <span className="toggle-slider"></span>
+                    <span className="toggle-label">
+                      <span className="toggle-slider"></span>
+                    </span>
                   </label>
                 </div>
               )}

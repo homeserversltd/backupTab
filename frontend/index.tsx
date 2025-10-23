@@ -144,7 +144,7 @@ const BackupTablet: React.FC = () => {
             scheduleInfo={scheduleInfo}
             onConfigChange={updateConfig}
             headerStats={headerStats}
-            installationStatus={null}
+            installationStatus={headerStats?.installation_status || null}
             onStatusChange={loadInitialData}
           />
         )}

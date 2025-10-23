@@ -81,14 +81,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       {/* Status Header Bar */}
       <StatusHeaderBar headerStats={headerStats || null} />
 
-      {/* Installation Manager */}
-      {installationStatus && onStatusChange && (
-        <InstallationManager 
-          installationStatus={installationStatus} 
-          onStatusChange={onStatusChange} 
-        />
-      )}
-
       {/* Main Content Area */}
       <div className="overview-content">
         {/* Left Column - Providers */}
@@ -101,7 +93,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
         
         <div className="provider-list">
-          {config?.providers ? Object.entries(config.providers).map(([key, provider]) => (
+          {config?.providers ? Object.entries(config.providers)
+            .filter(([key]) => ['local', 'backblaze', 'aws_s3', 'google_cloud_storage'].includes(key))
+            .map(([key, provider]) => (
             <div 
               key={key} 
               className={`provider-item ${provider.enabled ? 'enabled' : 'disabled'} ${clickedProvider === key ? 'clicked' : ''}`}
@@ -157,6 +151,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
         </div>
       </div>
+
+      {/* Installation Manager Section */}
+      {installationStatus && onStatusChange && (
+        <div className="installation-section">
+          <InstallationManager 
+            installationStatus={installationStatus} 
+            onStatusChange={onStatusChange} 
+          />
+        </div>
+      )}
 
       {/* Version at bottom */}
       <div className="version-footer">

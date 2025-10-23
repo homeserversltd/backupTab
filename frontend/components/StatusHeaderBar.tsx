@@ -49,13 +49,6 @@ export const StatusHeaderBar: React.FC<StatusHeaderBarProps> = ({ headerStats, l
         </div>
 
         <div className="metric-item">
-          <div className="metric-label">Providers</div>
-          <div className="metric-value">
-            {stats.enabled_providers_count}
-          </div>
-        </div>
-
-        <div className="metric-item">
           <div className="metric-label">Items</div>
           <div className="metric-value">
             {stats.backup_items_count}

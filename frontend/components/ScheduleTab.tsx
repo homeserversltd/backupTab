@@ -386,10 +386,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           {/* Time and Day Selection */}
           <div className="form-row">
             <div className="form-group">
-              <label>
-                <FontAwesomeIcon icon={faClock} className="icon" />
-                Time
-              </label>
               <TimePicker
                 value={updateSchedule.time}
                 onChange={(time) => setUpdateSchedule(prev => ({ ...prev, time }))}
