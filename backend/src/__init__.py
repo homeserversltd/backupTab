@@ -14,7 +14,6 @@ __copyright__ = "Copyright (C) 2024 HOMESERVER LLC"
 
 # Core imports
 from .service.backup_service import BackupService
-from .installer.install_backup_service import install_backup_service, uninstall_backup_service
 
 # Provider system imports
 try:
@@ -54,8 +53,6 @@ __all__ = [
     # Functions
     'get_provider',
     'get_cli',
-    'install_backup_service',
-    'uninstall_backup_service',
     
     # Constants
     'PROVIDERS',

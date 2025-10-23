@@ -27,8 +27,6 @@
       "setup_env": "backend/src/installer/setupEnvironment.py",
       "update_settings": "backend/src/installer/updateSettings.py",
       "updating_settings_md": "backend/src/installer/updatingSettings.md",
-      "install_backup_service": "backend/src/installer/install_backup_service.py",
-      "self_contained_installer": "backend/src/installer/self_contained_installer.py",
       "backblaze": "backend/src/providers/backblaze.py",
       "backblaze_readme": "backend/src/providers/BackblazeREADME.md",
       "base_provider": "backend/src/providers/base.py",
@@ -36,7 +34,6 @@
       "google_cloud_storage": "backend/src/providers/google_cloud_storage.py",
       "google_drive": "backend/src/providers/google_drive.py",
       "local": "backend/src/providers/local.py",
-      "aws_s3": "backend/src/providers/aws_s3.py",
       "setting_up_providers": "backend/src/providers/settingUpNewProviders.md",
       "src_readme": "backend/src/README.md",
       "backup_service": "backend/src/service/backup_service.py",
@@ -56,9 +53,6 @@
       "provider_handlers": "backend/provider_handlers.py",
       "backup_handlers": "backend/backup_handlers.py",
       "schedule_handlers": "backend/schedule_handlers.py",
-      "refactoring_summary": "backend/REFACTORING_SUMMARY.md",
-      "routes_old": "backend/routes_old.py",
-      "routes_new": "backend/routes_new.py",
       "backup_manager": "backend/src/backup_manager.py",
       "provider_factory": "backend/src/providers/provider_factory.py",
       "keyman_integration": "backend/src/utils/keyman_integration.py"
@@ -104,10 +98,7 @@
       "flask_backup": "permissions/flask-backup"
     },
     "system": {
-      "dependencies": "system/dependencies.json",
-      "backup_service": "system/homeserver-backup.service",
-      "backup_timer": "system/homeserver-backup.timer",
-      "install_script": "system/install-backup-service.sh"
+      "dependencies": "system/dependencies.json"
     }
   }
 }
