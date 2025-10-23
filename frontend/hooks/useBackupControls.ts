@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { showToast } from '../../../../src/components/Popup/PopupManager';
+import { showToast } from '../../../../components/Popup/PopupManager';
 import { 
   BackupStatus, 
   Repository, 

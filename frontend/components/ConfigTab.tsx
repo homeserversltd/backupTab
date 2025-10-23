@@ -32,7 +32,7 @@ import {
   convertLegacyToGeneric
 } from '../types';
 import { useTooltip } from '../../../../src/hooks/useTooltip'; //donot touch this
-import { showToast } from '../../../../src/components/Popup/PopupManager'; //donot touch this
+import { showToast } from '../../../../components/Popup/PopupManager'; //donot touch this
 
 interface ConfigTabProps {
   config: BackupConfig | null;

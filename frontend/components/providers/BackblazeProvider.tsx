@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { CloudProvider } from '../../types';
-import { showToast } from '../../../../src/components/Popup/PopupManager'; //do not touch this
+import { showToast } from '../../../../../components/Popup/PopupManager'; //do not touch this
 
 interface BackblazeProviderProps {
   config: CloudProvider | null;
