@@ -22,6 +22,7 @@ www-data ALL=(root) NOPASSWD: /bin/cp /etc/backupTab/settings.json /etc/backupTa
 www-data ALL=(root) NOPASSWD: /bin/cp /etc/backupTab/settings.json* /tmp/
 www-data ALL=(root) NOPASSWD: /bin/cp /tmp/settings.json* /etc/backupTab/
 www-data ALL=(root) NOPASSWD: /bin/cp /tmp/tmp*.json /etc/backupTab/settings.json
+www-data ALL=(root) NOPASSWD: /bin/cp /var/www/homeserver/premium/backupTab/backend/src/config/settings.json /etc/backupTab/settings.json
 
 # Allow cron file management
 www-data ALL=(root) NOPASSWD: /bin/cp /tmp/*.cron /etc/cron.d/homeserver-backup
@@ -42,6 +43,12 @@ www-data ALL=(root) NOPASSWD: /usr/bin/chown -R www-data\:www-data /opt/homeserv
 www-data ALL=(root) NOPASSWD: /usr/bin/chown -R www-data\:www-data /tmp/homeserver-backups
 www-data ALL=(root) NOPASSWD: /usr/bin/chown -R www-data\:www-data /var/log/homeserver-backup
 
-# Allow system link removal for uninstall
+# Allow system link creation and removal
+www-data ALL=(root) NOPASSWD: /bin/ln -sf /var/www/homeserver/premium/backup/backup-venv /usr/local/bin/homeserver-backup
+www-data ALL=(root) NOPASSWD: /bin/ln -sf /var/www/homeserver/premium/backup/src/installer/updateSettings.py /usr/local/bin/homeserver-backup-update-settings
 www-data ALL=(root) NOPASSWD: /bin/rm /usr/local/bin/homeserver-backup
 www-data ALL=(root) NOPASSWD: /bin/rm /usr/local/bin/homeserver-backup-update-settings
+
+# Allow settings.json file removal for clean uninstall
+www-data ALL=(root) NOPASSWD: /bin/rm /etc/backupTab/settings.json
+www-data ALL=(root) NOPASSWD: /bin/cp /etc/backupTab/settings.json /etc/backupTab/settings.backup.*

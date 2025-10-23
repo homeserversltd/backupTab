@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import tempfile
 import urllib.request
+from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
@@ -22,7 +23,17 @@ class BackupEnvironmentSetup:
     def __init__(self):
         self.install_dir = Path("/var/www/homeserver/premium/backup")
         self.venv_dir = self.install_dir / "venv"
-        self.source_dir = Path(__file__).parent.parent.parent  # Go up to backend directory
+        
+        # Hardcode the correct source directory path
+        # The backupTab backend directory should be at /var/www/homeserver/premium/backupTab/backend
+        self.source_dir = Path("/var/www/homeserver/premium/backupTab/backend")
+        
+        # Debug logging to help troubleshoot path issues
+        import logging
+        logger = logging.getLogger('backend.backupTab.utils')
+        logger.info(f"Source directory set to: {self.source_dir}")
+        logger.info(f"Source directory exists: {self.source_dir.exists()}")
+        
         self.log_dir = Path("/var/log/homeserver")
         self.cron_file = Path("/etc/cron.d/homeserver-backup")
         
@@ -349,7 +360,10 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
     
     def create_system_config(self) -> bool:
         """Create system-wide configuration file from template."""
-        self.log("Creating system configuration file...")
+        import logging
+        logger = logging.getLogger('backend.backupTab.utils')
+        
+        logger.info("Creating system configuration file...")
         
         try:
             # Create /etc/backupTab directory
@@ -360,30 +374,73 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
             template_config = self.source_dir / "src" / "config" / "settings.json"
             system_config = etc_backup_dir / "settings.json"
             
+            logger.info(f"Source directory: {self.source_dir}")
+            logger.info(f"Template config path: {template_config}")
+            logger.info(f"System config path: {system_config}")
+            logger.info(f"Template config exists: {template_config.exists()}")
+            logger.info(f"System config exists: {system_config.exists()}")
+            
             if not template_config.exists():
-                self.log(f"Template config not found: {template_config}", "ERROR")
+                logger.error(f"Template config not found: {template_config}")
                 return False
             
             # Copy template to system location if it doesn't exist
             if not system_config.exists():
-                shutil.copy2(template_config, system_config)
-                self.log(f"System config created: {system_config}")
+                # Use sudo to copy the file since /etc/backupTab requires root permissions
+                subprocess.run(['/usr/bin/sudo', '/bin/cp', str(template_config), str(system_config)], check=True)
+                logger.info(f"System config created: {system_config}")
             else:
-                self.log(f"System config already exists: {system_config}")
+                logger.info(f"System config already exists: {system_config}")
             
-            # Set proper permissions
-            if self.has_root:
-                try:
-                    shutil.chown(system_config, user="www-data", group="www-data")
-                    os.chmod(system_config, 0o644)
-                    self.log("Set system config permissions")
-                except Exception as e:
-                    self.log(f"Warning: Could not set config permissions: {e}", "WARNING")
+            # Set proper permissions using sudo
+            try:
+                subprocess.run(['/usr/bin/sudo', '/bin/chown', 'www-data:www-data', str(system_config)], check=True)
+                subprocess.run(['/usr/bin/sudo', '/bin/chmod', '644', str(system_config)], check=True)
+                logger.info("Set system config permissions")
+            except subprocess.CalledProcessError as e:
+                logger.warning(f"Could not set config permissions: {e}")
             
             return True
             
         except Exception as e:
-            self.log(f"Failed to create system config: {e}", "ERROR")
+            logger.error(f"Failed to create system config: {e}")
+            return False
+    
+    def clear_system_config(self) -> bool:
+        """
+        Clear system configuration file to remove sensitive fields.
+        This ensures that when the tab is reinstalled, it gets a clean template.
+        """
+        self.log("Clearing system configuration...")
+        
+        try:
+            # Path to system config
+            system_config = Path("/etc/backupTab/settings.json")
+            
+            if not system_config.exists():
+                self.log("System config file not found, nothing to clear")
+                return True
+            
+            # Create backup of current config
+            backup_path = system_config.with_suffix(f".backup.{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+            try:
+                subprocess.run(['/usr/bin/sudo', '/bin/cp', str(system_config), str(backup_path)], check=True)
+                self.log(f"Created backup: {backup_path}")
+            except subprocess.CalledProcessError as e:
+                self.log(f"Warning: Could not create backup: {e}", "WARNING")
+            
+            # Remove the system config file entirely using sudo
+            # This forces a fresh template deployment on next install
+            try:
+                subprocess.run(['/usr/bin/sudo', '/bin/rm', str(system_config)], check=True)
+                self.log("Cleared system configuration file")
+                return True
+            except subprocess.CalledProcessError as e:
+                self.log(f"Failed to clear system config: {e}", "ERROR")
+                return False
+            
+        except Exception as e:
+            self.log(f"Failed to clear system config: {e}", "ERROR")
             return False
     
     def install_cron_job(self) -> bool:
@@ -415,10 +472,6 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
     
     def create_system_links(self) -> bool:
         """Create system-wide links for easy access."""
-        if not self.has_root:
-            self.log("Skipping system links creation (requires root)", "WARNING")
-            return True
-        
         self.log("Creating system links...")
         
         try:
@@ -426,24 +479,31 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
             system_link = Path("/usr/local/bin/homeserver-backup")
             wrapper_script = self.install_dir / "backup-venv"
             
+            # Remove existing link if it exists
             if system_link.exists():
-                system_link.unlink()
+                subprocess.run(['/usr/bin/sudo', '/bin/rm', str(system_link)], check=True)
             
-            system_link.symlink_to(wrapper_script)
+            # Create new symlink using sudo
+            subprocess.run(['/usr/bin/sudo', '/bin/ln', '-sf', str(wrapper_script), str(system_link)], check=True)
             self.log(f"System link created: {system_link}")
             
             # Create symlink for settings updater
             updater_link = Path("/usr/local/bin/homeserver-backup-update-settings")
             updater_script = self.install_dir / "src" / "installer" / "updateSettings.py"
             
+            # Remove existing link if it exists
             if updater_link.exists():
-                updater_link.unlink()
+                subprocess.run(['/usr/bin/sudo', '/bin/rm', str(updater_link)], check=True)
             
-            updater_link.symlink_to(updater_script)
+            # Create new symlink using sudo
+            subprocess.run(['/usr/bin/sudo', '/bin/ln', '-sf', str(updater_script), str(updater_link)], check=True)
             self.log(f"Settings updater link created: {updater_link}")
             
             return True
             
+        except subprocess.CalledProcessError as e:
+            self.log(f"Failed to create system links: {e}", "WARNING")
+            return True  # Non-critical failure
         except Exception as e:
             self.log(f"Failed to create system links: {e}", "WARNING")
             return True  # Non-critical failure
@@ -477,65 +537,89 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
     
     def install(self) -> bool:
         """Run complete installation process."""
-        self.log("Starting HOMESERVER Backup System installation...")
+        import logging
+        logger = logging.getLogger('backend.backupTab.utils')
+        
+        logger.info("Starting HOMESERVER Backup System installation...")
         
         # Check system requirements
+        logger.info("Checking system requirements...")
         if not self.check_system_requirements():
+            logger.error("System requirements check failed")
             return False
+        logger.info("System requirements check passed")
         
         # Create virtual environment
+        logger.info("Creating virtual environment...")
         if not self.create_virtual_environment():
+            logger.error("Virtual environment creation failed")
             return False
+        logger.info("Virtual environment created successfully")
         
         # Install dependencies
+        logger.info("Installing dependencies...")
         if not self.install_all_dependencies():
+            logger.error("Dependency installation failed")
             return False
+        logger.info("Dependencies installed successfully")
         
         # Copy source files
+        logger.info("Copying source files...")
         if not self.copy_source_files():
+            logger.error("Source file copy failed")
             return False
+        logger.info("Source files copied successfully")
         
         # Create wrapper script
+        logger.info("Creating wrapper script...")
         if not self.create_wrapper_script():
+            logger.error("Wrapper script creation failed")
             return False
+        logger.info("Wrapper script created successfully")
         
         # Set permissions
+        logger.info("Setting permissions...")
         if not self.set_permissions():
+            logger.error("Permission setting failed")
             return False
+        logger.info("Permissions set successfully")
         
         # Create log directory
+        logger.info("Creating log directory...")
         if not self.create_log_directory():
+            logger.error("Log directory creation failed")
             return False
+        logger.info("Log directory created successfully")
         
         # Create system configuration
+        logger.info("Creating system configuration...")
         if not self.create_system_config():
+            logger.error("System configuration creation failed")
             return False
+        logger.info("System configuration created successfully")
         
         # Install cron job
+        logger.info("Installing cron job...")
         if not self.install_cron_job():
+            logger.error("Cron job installation failed")
             return False
+        logger.info("Cron job installed successfully")
         
         # Create system links
+        logger.info("Creating system links...")
         if not self.create_system_links():
+            logger.error("System links creation failed")
             return False
+        logger.info("System links created successfully")
         
         # Test installation
+        logger.info("Testing installation...")
         if not self.test_installation():
+            logger.error("Installation test failed")
             return False
+        logger.info("Installation test passed")
         
-        self.log("Installation completed successfully!")
-        self.log("")
-        self.log("Usage:")
-        self.log(f"  Direct: {self.install_dir}/backup-venv <command>")
-        if self.has_root:
-            self.log("  System: homeserver-backup <command>")
-        self.log("")
-        self.log("Examples:")
-        self.log("  homeserver-backup create")
-        self.log("  homeserver-backup list")
-        self.log("  homeserver-backup test-providers")
-        self.log("  homeserver-backup-update-settings --dry-run")
-        
+        logger.info("Installation completed successfully!")
         return True
     
     def uninstall(self) -> bool:
@@ -546,7 +630,7 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
             # Remove cron job using sudo (www-data has permission for this)
             if self.cron_file.exists():
                 try:
-                    subprocess.run(['sudo', 'rm', str(self.cron_file)], check=True)
+                    subprocess.run(['/usr/bin/sudo', '/bin/rm', str(self.cron_file)], check=True)
                     self.log("Removed cron job")
                 except subprocess.CalledProcessError as e:
                     self.log(f"Failed to remove cron job: {e}", "WARNING")
@@ -555,7 +639,7 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
             system_link = Path("/usr/local/bin/homeserver-backup")
             if system_link.exists():
                 try:
-                    subprocess.run(['sudo', 'rm', str(system_link)], check=True)
+                    subprocess.run(['/usr/bin/sudo', '/bin/rm', str(system_link)], check=True)
                     self.log("Removed system link")
                 except subprocess.CalledProcessError as e:
                     self.log(f"Failed to remove system link: {e}", "WARNING")
@@ -563,7 +647,7 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
             updater_link = Path("/usr/local/bin/homeserver-backup-update-settings")
             if updater_link.exists():
                 try:
-                    subprocess.run(['sudo', 'rm', str(updater_link)], check=True)
+                    subprocess.run(['/usr/bin/sudo', '/bin/rm', str(updater_link)], check=True)
                     self.log("Removed settings updater link")
                 except subprocess.CalledProcessError as e:
                     self.log(f"Failed to remove updater link: {e}", "WARNING")
@@ -575,6 +659,10 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
                     self.log("Removed installation directory")
                 except Exception as e:
                     self.log(f"Failed to remove installation directory: {e}", "WARNING")
+            
+            # Clear system configuration to remove sensitive credential fields
+            if not self.clear_system_config():
+                self.log("Failed to clear system configuration", "WARNING")
             
             self.log("Uninstallation completed successfully!")
             return True

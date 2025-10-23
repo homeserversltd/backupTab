@@ -94,7 +94,15 @@ def _is_provider_configured(provider_name: str, provider_config: dict) -> bool:
         # Check if keyman integration is enabled
         if provider_config.get('keyman_integrated', False):
             keyman_service_name = provider_config.get('keyman_service_name', provider_name)
-            return backup_manager.keyman.service_configured(keyman_service_name)
+            try:
+                return backup_manager.keyman.service_configured(keyman_service_name)
+            except (FileNotFoundError, PermissionError) as e:
+                # Key files don't exist or permission denied - treat as not configured
+                get_logger().info(f"Keyman keys not accessible for {provider_name} (normal for new setup): {e}")
+                return False
+            except Exception as e:
+                get_logger().warning(f"Keyman check failed for {provider_name}: {e}")
+                return False
         else:
             # Fallback to traditional config-based credentials
             return bool(
@@ -1063,10 +1071,17 @@ def install_backup_system():
         get_logger().info("Backup system installation requested")
         
         # Import the CLI installer
+        get_logger().info("Attempting to import BackupEnvironmentSetup")
         from .src.installer.setupEnvironment import BackupEnvironmentSetup
+        get_logger().info("BackupEnvironmentSetup imported successfully")
         
+        get_logger().info("Creating BackupEnvironmentSetup instance")
         setup = BackupEnvironmentSetup()
+        get_logger().info("BackupEnvironmentSetup instance created successfully")
+        
+        get_logger().info("Starting installation process")
         success = setup.install()
+        get_logger().info(f"Installation process completed with result: {success}")
         
         if success:
             return create_response(True, {
@@ -1077,7 +1092,9 @@ def install_backup_system():
             return create_response(False, error='Installation failed', status_code=500)
             
     except Exception as e:
-        get_logger().error(f"Installation failed: {e}")
+        get_logger().error(f"Installation failed with exception: {e}")
+        import traceback
+        get_logger().error(f"Installation traceback: {traceback.format_exc()}")
         return create_response(False, error=str(e), status_code=500)
 
 @bp.route('/uninstall', methods=['POST'])

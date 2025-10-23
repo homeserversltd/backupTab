@@ -34,7 +34,12 @@ class BackblazeProvider(BaseProvider):
         # Check if keyman credentials are available
         self.keyman_configured = self.keyman.service_configured('backblaze')
         
-        if self.keyman_configured:
+        if not self.keyman_configured:
+            self.logger.error("Backblaze provider requires keyman credentials. Use CLI to set credentials:")
+            self.logger.error("  ./backup set-credentials backblaze --username <application_key_id> --password <application_key>")
+            self.application_key_id = None
+            self.application_key = None
+        else:
             # Load credentials from keyman
             credentials = self.keyman.get_service_credentials('backblaze')
             if credentials:
@@ -45,11 +50,6 @@ class BackblazeProvider(BaseProvider):
                 self.logger.error("Failed to load credentials from keyman system")
                 self.application_key_id = None
                 self.application_key = None
-        else:
-            # Fallback to config-based credentials
-            self.application_key_id = config.get('application_key_id')
-            self.application_key = config.get('application_key')
-            self.logger.info("Using config-based credentials (keyman not configured)")
         
         self.bucket_name = config.get('bucket', 'homeserver-backups')
         self.region = config.get('region', 'us-west-000')  # Default B2 region

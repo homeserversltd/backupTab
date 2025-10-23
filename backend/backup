@@ -333,32 +333,47 @@ class EnhancedBackupCLI:
         return True
     
     def set_provider_credentials(self, provider_name: str, username: str, password: str) -> bool:
-        """Set credentials for a specific provider."""
-        updates = {"username": username, "password": password}
+        """Set credentials for a specific provider using keyman integration."""
+        from src.utils.keyman_integration import KeymanIntegration
         
-        # Handle provider-specific credential mapping
+        # Initialize keyman integration
+        keyman = KeymanIntegration()
+        
+        # Store credentials in keyman vault
+        success = keyman.create_service_credentials(provider_name, username, password)
+        
+        if not success:
+            print(f"ERROR: Failed to store credentials in keyman vault for {provider_name}")
+            return False
+        
+        # Update non-sensitive provider configuration
+        updates = {}
+        
+        # Handle provider-specific non-sensitive config
         if provider_name == "backblaze":
-            updates["application_key_id"] = username
-            updates["application_key"] = password
             updates["container"] = "homeServer-serverGenesis"  # Set correct bucket name
             updates["bucket"] = "homeServer-serverGenesis"  # Backblaze provider uses 'bucket' field
+            updates["keyman_integrated"] = True
+            updates["keyman_service_name"] = provider_name
+        elif provider_name == "aws_s3":
+            updates["keyman_integrated"] = True
+            updates["keyman_service_name"] = provider_name
         elif provider_name == "google_cloud_storage":
             # Google Cloud Storage uses service account key, not username/password
-            # These fields are kept for compatibility but not used for auth
-            updates["username"] = username
-            updates["password"] = password
             print("NOTE: Google Cloud Storage uses service account key authentication")
             print("Make sure you have downloaded service account key from Google Cloud Console")
+            updates["keyman_integrated"] = True
+            updates["keyman_service_name"] = provider_name
         
-        success = self.config_manager.update_provider_config(provider_name, updates)
+        # Update provider config with non-sensitive settings
+        if updates:
+            config_success = self.config_manager.update_provider_config(provider_name, updates)
+            if not config_success:
+                print(f"WARNING: Failed to update provider config for {provider_name}")
         
-        if success:
-            self.logger.log_credential_operation(provider_name, "set", True)
-            print(f"Credentials updated for {provider_name}")
-        else:
-            print(f"ERROR: Provider '{provider_name}' not found")
-        
-        return success
+        self.logger.log_credential_operation(provider_name, "set", True)
+        print(f"Credentials stored in keyman vault for {provider_name}")
+        return True
     
     def set_provider_credentials_json(self, provider_name: str, credentials_json: str) -> bool:
         """Set credentials JSON content for a specific provider."""
@@ -395,17 +410,25 @@ class EnhancedBackupCLI:
             return False
     
     def get_provider_credentials(self, provider_name: str) -> Optional[Dict[str, str]]:
-        """Get credentials for a specific provider."""
-        provider_config = self.config_manager.get_provider_config(provider_name)
+        """Get credentials for a specific provider from keyman vault."""
+        from src.utils.keyman_integration import KeymanIntegration
         
-        if not provider_config:
-            print(f"ERROR: Provider '{provider_name}' not found")
+        # Initialize keyman integration
+        keyman = KeymanIntegration()
+        
+        # Check if provider is configured in keyman
+        if not keyman.service_configured(provider_name):
+            print(f"ERROR: Provider '{provider_name}' not configured in keyman vault")
             return None
         
-        return {
-            "username": provider_config.get("username", ""),
-            "password": provider_config.get("password", "")
-        }
+        # Get credentials from keyman
+        credentials = keyman.get_service_credentials(provider_name)
+        
+        if not credentials:
+            print(f"ERROR: Failed to retrieve credentials from keyman vault for {provider_name}")
+            return None
+        
+        return credentials
     
     def enable_provider(self, provider_name: str) -> bool:
         """Enable a specific provider."""
@@ -563,6 +586,66 @@ class EnhancedBackupCLI:
         except Exception as e:
             print(f"ERROR: Failed to get cron status: {e}")
             return {"error": str(e)}
+    
+    def list_keyman_services(self) -> List[str]:
+        """List all configured keyman services."""
+        from src.utils.keyman_integration import KeymanIntegration
+        
+        keyman = KeymanIntegration()
+        services = keyman.get_configured_services()
+        
+        if services:
+            print("Configured keyman services:")
+            for service in services:
+                print(f"  {service}")
+        else:
+            print("No keyman services configured")
+        
+        return services
+    
+    def remove_provider_credentials(self, provider_name: str) -> bool:
+        """Remove credentials for a provider from keyman vault."""
+        from src.utils.keyman_integration import KeymanIntegration
+        
+        keyman = KeymanIntegration()
+        
+        # Check if provider is configured
+        if not keyman.service_configured(provider_name):
+            print(f"ERROR: Provider '{provider_name}' not configured in keyman vault")
+            return False
+        
+        # Remove credentials
+        success = keyman.delete_service_credentials(provider_name)
+        
+        if success:
+            print(f"Credentials removed from keyman vault for {provider_name}")
+        else:
+            print(f"ERROR: Failed to remove credentials for {provider_name}")
+        
+        return success
+    
+    def test_keyman_credentials(self, provider_name: str) -> bool:
+        """Test keyman credentials for a provider."""
+        from src.utils.keyman_integration import KeymanIntegration
+        
+        keyman = KeymanIntegration()
+        
+        # Check if provider is configured
+        if not keyman.service_configured(provider_name):
+            print(f"ERROR: Provider '{provider_name}' not configured in keyman vault")
+            return False
+        
+        # Test credential retrieval
+        credentials = keyman.get_service_credentials(provider_name)
+        
+        if credentials:
+            print(f"✓ Keyman credentials accessible for {provider_name}")
+            print(f"  Username: {credentials.get('username', 'N/A')}")
+            print(f"  Password: {'*' * len(credentials.get('password', '')) if credentials.get('password') else 'N/A'}")
+            return True
+        else:
+            print(f"✗ Failed to retrieve keyman credentials for {provider_name}")
+            return False
 
 def main():
     """Main CLI entry point."""
@@ -613,6 +696,15 @@ def main():
     # Get provider credentials command
     get_creds_parser = subparsers.add_parser("get-credentials", help="Get credentials for a provider")
     get_creds_parser.add_argument("provider", help="Provider name")
+    
+    # Keyman-specific commands
+    subparsers.add_parser("list-keyman-services", help="List all configured keyman services")
+    
+    remove_creds_parser = subparsers.add_parser("remove-credentials", help="Remove credentials from keyman vault")
+    remove_creds_parser.add_argument("provider", help="Provider name")
+    
+    test_keyman_parser = subparsers.add_parser("test-keyman", help="Test keyman credentials for a provider")
+    test_keyman_parser.add_argument("provider", help="Provider name")
     
     # Enable provider command
     enable_parser = subparsers.add_parser("enable-provider", help="Enable a provider")
@@ -721,6 +813,16 @@ def main():
                 print(f"Username: {creds['username']}")
                 print(f"Password: {'*' * len(creds['password']) if creds['password'] else '(empty)'}")
             else:
+                sys.exit(1)
+        elif args.command == "list-keyman-services":
+            cli.list_keyman_services()
+        elif args.command == "remove-credentials":
+            success = cli.remove_provider_credentials(args.provider)
+            if not success:
+                sys.exit(1)
+        elif args.command == "test-keyman":
+            success = cli.test_keyman_credentials(args.provider)
+            if not success:
                 sys.exit(1)
         elif args.command == "enable-provider":
             success = cli.enable_provider(args.provider)

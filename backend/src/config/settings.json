@@ -39,8 +39,8 @@
         "container_type": "bucket",
         "bucket_name": "homeserver-backups",
         "region": "us-west-2",
-        "access_key_id": "",
-        "secret_access_key": "",
+        "keyman_integrated": true,
+        "keyman_service_name": "aws_s3",
         "max_retries": 3,
         "retry_delay": 1.0,
         "timeout": 300
@@ -61,11 +61,7 @@
         "encryption_enabled": false,
         "encryption_key": null,
         "encryption_salt": null,
-        "connection_pool_size": 5,
-        "fallback_credentials": {
-          "application_key_id": "",
-          "application_key": ""
-        }
+        "connection_pool_size": 5
       }
     },
     "retention_days": 30,
