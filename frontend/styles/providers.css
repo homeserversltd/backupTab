@@ -86,6 +86,13 @@
   cursor: not-allowed;
 }
 
+.provider-item.disabled:hover {
+  background: var(--primary);
+  border-color: transparent;
+  transform: none;
+  box-shadow: 0 2px 4px var(--border);
+}
+
 .provider-icon {
   font-size: 1.5rem;
   margin-right: 1rem;

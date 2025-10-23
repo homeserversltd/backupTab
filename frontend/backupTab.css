@@ -12,5 +12,6 @@
 @import './styles/overview.css';
 @import './styles/repositories.css';
 @import './styles/config.css';
+@import './styles/installation.css';
 @import './styles/responsive.css';
 @import './components/ScheduleTab.css';

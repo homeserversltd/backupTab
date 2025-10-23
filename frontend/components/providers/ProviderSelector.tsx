@@ -28,9 +28,11 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
   
   const handleProviderClick = (provider: string) => {
     const providerStatus = providerStatuses.find(p => p.name === provider);
-    if (providerStatus?.available) {
-      onProviderSelect(provider);
+    // Prevent clicks on unavailable providers
+    if (!providerStatus?.available) {
+      return;
     }
+    onProviderSelect(provider);
   };
 
   const handleToggleProvider = async (provider: string, enabled: boolean) => {

@@ -289,6 +289,16 @@
   opacity: 0.6;
 }
 
+/* Installation Section Integration */
+.installation-section {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 /* Override parent container interference */
 .backup-tablet-content .overview-container {
   padding: 0 !important;

@@ -28,6 +28,12 @@ www-data ALL=(root) NOPASSWD: /bin/cp /tmp/*.cron /etc/cron.d/homeserver-backup
 www-data ALL=(root) NOPASSWD: /bin/rm /etc/cron.d/homeserver-backup
 www-data ALL=(root) NOPASSWD: /bin/cat /etc/cron.d/homeserver-backup
 
+# Allow backup key file access
+www-data ALL=(root) NOPASSWD: /usr/bin/test -f /vault/.keys/backup.key
+www-data ALL=(root) NOPASSWD: /usr/bin/test -f /vault/.keys/backblaze.key
+www-data ALL=(root) NOPASSWD: /usr/bin/test -f /vault/.keys/google_cloud_storage.key
+www-data ALL=(root) NOPASSWD: /usr/bin/test -f /vault/.keys/aws_s3.key
+
 # Allow directory creation and management
 www-data ALL=(root) NOPASSWD: /usr/bin/mkdir -p /opt/homeserver-backup
 www-data ALL=(root) NOPASSWD: /usr/bin/mkdir -p /tmp/homeserver-backups

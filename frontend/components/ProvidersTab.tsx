@@ -54,14 +54,9 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
         // Don't show error toast - providers should still be visible from config
         console.log('Using fallback provider list from config');
         
-        // Create fallback provider statuses from config (only allowed providers)
+        // Create fallback provider statuses from config
         if (config?.providers) {
-          const allowedProviders = ['local', 'backblaze', 'aws_s3', 'google_cloud_storage'];
-          const filteredProviders = Object.keys(config.providers).filter(providerName => 
-            allowedProviders.includes(providerName)
-          );
-          
-          const fallbackStatuses = filteredProviders.map(providerName => ({
+          const fallbackStatuses = Object.keys(config.providers).map(providerName => ({
             name: providerName,
             enabled: config.providers[providerName]?.enabled || false,
             available: true, // Assume available for UI purposes

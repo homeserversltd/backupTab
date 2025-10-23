@@ -93,9 +93,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
         
         <div className="provider-list">
-          {config?.providers ? Object.entries(config.providers)
-            .filter(([key]) => ['local', 'backblaze', 'aws_s3', 'google_cloud_storage'].includes(key))
-            .map(([key, provider]) => (
+          {config?.providers ? Object.entries(config.providers).map(([key, provider]) => (
             <div 
               key={key} 
               className={`provider-item ${provider.enabled ? 'enabled' : 'disabled'} ${clickedProvider === key ? 'clicked' : ''}`}
