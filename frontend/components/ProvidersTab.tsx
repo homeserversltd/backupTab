@@ -8,6 +8,8 @@ import { BackupConfig, CloudProvider, ProviderStatus } from '../types';
 import { ProviderSelector } from './providers/ProviderSelector';
 import { BackblazeProvider } from './providers/BackblazeProvider';
 import { LocalProvider } from './providers/LocalProvider';
+import { AWSS3Provider } from './providers/AWSS3Provider';
+import { GoogleCloudStorageProvider } from './providers/GoogleCloudStorageProvider';
 import { showToast } from '../../../../src/components/Popup/PopupManager';
 import { useBackupControls } from '../hooks/useBackupControls';
 
@@ -210,6 +212,19 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
       );
     }
 
+    // Check if the selected provider is available
+    const providerStatus = providerStatuses.find(p => p.name === selectedProvider);
+    if (!providerStatus?.available) {
+      return (
+        <div className="provider-config-panel">
+          <div className="provider-not-available">
+            <h4>Provider Coming Soon</h4>
+            <p>This provider is not yet available for configuration. Check back later for updates.</p>
+          </div>
+        </div>
+      );
+    }
+
     switch (selectedProvider) {
       case 'backblaze':
         return (
@@ -227,6 +242,30 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
         return (
           <div className="provider-config-panel">
             <LocalProvider
+              config={providerConfig}
+              onConfigChange={handleProviderConfigChange}
+              onSave={handleSaveProviderConfig}
+              isLoading={isLoading}
+            />
+          </div>
+        );
+      
+      case 'aws_s3':
+        return (
+          <div className="provider-config-panel">
+            <AWSS3Provider
+              config={providerConfig}
+              onConfigChange={handleProviderConfigChange}
+              onSave={handleSaveProviderConfig}
+              isLoading={isLoading}
+            />
+          </div>
+        );
+      
+      case 'google_cloud_storage':
+        return (
+          <div className="provider-config-panel">
+            <GoogleCloudStorageProvider
               config={providerConfig}
               onConfigChange={handleProviderConfigChange}
               onSave={handleSaveProviderConfig}

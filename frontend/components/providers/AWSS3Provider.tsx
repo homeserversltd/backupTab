@@ -1,13 +1,13 @@
 /**
- * HOMESERVER Backup Backblaze Provider Component
- * Backblaze B2 cloud storage configuration with keyman integration
+ * HOMESERVER Backup AWS S3 Provider Component
+ * AWS S3 cloud storage configuration with keyman integration
  */
 
 import React, { useState, useEffect } from 'react';
 import { CloudProvider } from '../../types';
 import { showToast } from '../../../../components/Popup/PopupManager'; //do not touch this
 
-interface BackblazeProviderProps {
+interface AWSS3ProviderProps {
   config: CloudProvider | null;
   onConfigChange: (config: Partial<CloudProvider>) => void;
   onSave: () => Promise<void>;
@@ -16,7 +16,7 @@ interface BackblazeProviderProps {
   onKeymanCredentialsChange?: (credentials: { username: string; password: string }) => void;
 }
 
-export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
+export const AWSS3Provider: React.FC<AWSS3ProviderProps> = ({
   config,
   onConfigChange,
   onSave,
@@ -46,7 +46,7 @@ export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
     try {
       await onSave();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save Backblaze configuration';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save AWS S3 configuration';
       showToast({
         message: errorMessage,
         variant: 'error',
@@ -56,11 +56,11 @@ export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
   };
 
   return (
-    <div className="backblaze-provider">
+    <div className="aws-s3-provider">
       <div className="provider-header">
-        <h4>Backblaze B2 Configuration</h4>
+        <h4>AWS S3 Configuration</h4>
         <p className="provider-description">
-          Configure Backblaze B2 cloud storage for your backups
+          Configure AWS S3 cloud storage for your backups
         </p>
       </div>
 
@@ -68,38 +68,38 @@ export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
         {/* Main Configuration Section */}
         <div className="config-section">
           <div className="form-group">
-            <label htmlFor="application_key_id">
-              Application Key ID <span className="required">*</span>
+            <label htmlFor="access_key">
+              Access Key ID <span className="required">*</span>
             </label>
             <input
-              id="application_key_id"
+              id="access_key"
               type="text"
-              value={isKeymanConfigured ? '********************' : (localConfig.application_key_id || '')}
-              onChange={(e) => handleFieldChange('application_key_id', e.target.value)}
-              placeholder="K12345678901234567890"
+              value={isKeymanConfigured ? '********************' : (localConfig.access_key || '')}
+              onChange={(e) => handleFieldChange('access_key', e.target.value)}
+              placeholder="AKIAIOSFODNN7EXAMPLE"
               className="form-input"
               disabled={isKeymanConfigured}
             />
             <small className="field-help">
-              Your Backblaze B2 Application Key ID (starts with K, 20 characters)
+              Your AWS Access Key ID (starts with AKIA, 20 characters)
             </small>
           </div>
 
           <div className="form-group">
-            <label htmlFor="application_key">
-              Application Key <span className="required">*</span>
+            <label htmlFor="secret_key">
+              Secret Access Key <span className="required">*</span>
             </label>
             <input
-              id="application_key"
+              id="secret_key"
               type="password"
-              value={isKeymanConfigured ? '********************************' : (localConfig.application_key || '')}
-              onChange={(e) => handleFieldChange('application_key', e.target.value)}
-              placeholder="K123456789012345678901234567890"
+              value={isKeymanConfigured ? '********************************' : (localConfig.secret_key || '')}
+              onChange={(e) => handleFieldChange('secret_key', e.target.value)}
+              placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
               className="form-input"
               disabled={isKeymanConfigured}
             />
             <small className="field-help">
-              Your Backblaze B2 Application Key (starts with K, 32 characters)
+              Your AWS Secret Access Key (40 characters)
             </small>
           </div>
 
@@ -116,7 +116,7 @@ export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
               className="form-input"
             />
             <small className="field-help">
-              B2 bucket name (3-63 characters, alphanumeric and hyphens only)
+              S3 bucket name (3-63 characters, lowercase letters, numbers, hyphens, and periods)
             </small>
           </div>
         </div>
@@ -126,20 +126,23 @@ export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
             <label htmlFor="region">Region</label>
             <select
               id="region"
-              value={localConfig.region || 'us-west-000'}
+              value={localConfig.region || 'us-east-1'}
               onChange={(e) => handleFieldChange('region', e.target.value)}
               className="form-select"
             >
-              <option value="us-west-000">US West (Oregon)</option>
-              <option value="us-west-001">US West (California)</option>
-              <option value="us-west-002">US West (Nevada)</option>
-              <option value="us-east-000">US East (Virginia)</option>
-              <option value="us-east-001">US East (Ohio)</option>
-              <option value="eu-central-000">EU Central (Frankfurt)</option>
+              <option value="us-east-1">US East (N. Virginia)</option>
+              <option value="us-east-2">US East (Ohio)</option>
+              <option value="us-west-1">US West (N. California)</option>
+              <option value="us-west-2">US West (Oregon)</option>
+              <option value="eu-west-1">Europe (Ireland)</option>
+              <option value="eu-west-2">Europe (London)</option>
+              <option value="eu-central-1">Europe (Frankfurt)</option>
+              <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+              <option value="ap-southeast-2">Asia Pacific (Sydney)</option>
+              <option value="ap-northeast-1">Asia Pacific (Tokyo)</option>
             </select>
           </div>
         </div>
-
 
         {/* Action Buttons */}
         <div className="form-actions">
@@ -157,4 +160,4 @@ export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
   );
 };
 
-export default BackblazeProvider;
+export default AWSS3Provider;

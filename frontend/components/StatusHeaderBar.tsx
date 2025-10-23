@@ -31,7 +31,6 @@ export const StatusHeaderBar: React.FC<StatusHeaderBarProps> = ({ headerStats, l
     );
   }
 
-
   return (
     <div className="status-header-bar">
       <div className="status-metrics">

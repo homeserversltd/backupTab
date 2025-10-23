@@ -14,20 +14,6 @@ from .local import LocalProvider
 # Import cloud providers with individual error handling
 
 try:
-    from .google_drive import GoogleDriveProvider
-except ImportError as e:
-    print(f"WARNING: Failed to import Google Drive provider: {e}")
-    class GoogleDriveProvider(BaseProvider):
-        def __init__(self, config):
-            super().__init__(config)
-            self.name = "google_drive_stub"
-        def test_connection(self): return False
-        def upload(self, *args, **kwargs): return False
-        def download(self, *args, **kwargs): return False
-        def list_files(self): return []
-        def delete(self, *args, **kwargs): return False
-
-try:
     from .google_cloud_storage import GoogleCloudStorageProvider
 except ImportError as e:
     print(f"WARNING: Failed to import Google Cloud Storage provider: {e}")
@@ -35,20 +21,6 @@ except ImportError as e:
         def __init__(self, config):
             super().__init__(config)
             self.name = "google_cloud_storage_stub"
-        def test_connection(self): return False
-        def upload(self, *args, **kwargs): return False
-        def download(self, *args, **kwargs): return False
-        def list_files(self): return []
-        def delete(self, *args, **kwargs): return False
-
-try:
-    from .dropbox import DropboxProvider
-except ImportError as e:
-    print(f"WARNING: Failed to import Dropbox provider: {e}")
-    class DropboxProvider(BaseProvider):
-        def __init__(self, config):
-            super().__init__(config)
-            self.name = "dropbox_stub"
         def test_connection(self): return False
         def upload(self, *args, **kwargs): return False
         def download(self, *args, **kwargs): return False
@@ -69,22 +41,34 @@ except ImportError as e:
         def list_files(self): return []
         def delete(self, *args, **kwargs): return False
 
+try:
+    from .aws_s3 import AWSS3Provider
+except ImportError as e:
+    print(f"WARNING: Failed to import AWS S3 provider: {e}")
+    class AWSS3Provider(BaseProvider):
+        def __init__(self, config):
+            super().__init__(config)
+            self.name = "aws_s3_stub"
+        def test_connection(self): return False
+        def upload(self, *args, **kwargs): return False
+        def download(self, *args, **kwargs): return False
+        def list_files(self): return []
+        def delete(self, *args, **kwargs): return False
+
 __all__ = [
     'BaseProvider',
     'LocalProvider', 
-    'GoogleDriveProvider',
     'GoogleCloudStorageProvider',
-    'DropboxProvider',
-    'BackblazeProvider'
+    'BackblazeProvider',
+    'AWSS3Provider'
 ]
 
 # Provider registry
 PROVIDERS = {
     'local': LocalProvider,
-    'google_drive': GoogleDriveProvider,
     'google_cloud_storage': GoogleCloudStorageProvider,
-    'dropbox': DropboxProvider,
-    'backblaze': BackblazeProvider
+    'backblaze': BackblazeProvider,
+    'aws_s3': AWSS3Provider
 }
 
 def get_provider(provider_name: str, config: dict) -> BaseProvider:

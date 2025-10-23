@@ -4,13 +4,14 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useBackupControls } from './hooks/useBackupControls';
+import { useBackupControls, useHeaderStats } from './hooks/useBackupControls';
 import { showToast } from '../../components/Popup/PopupManager'; //donot touch this
 import { 
   BackupStatus, 
   CloudProvider,
   BackupConfig,
-  ScheduleInfo 
+  ScheduleInfo,
+  HeaderStats
 } from './types';
 import { 
   getStatusColor,
@@ -30,6 +31,8 @@ const BackupTablet: React.FC = () => {
     getSchedule,
     isLoading
   } = useBackupControls();
+
+  const { stats: headerStats, loading: headerStatsLoading, loadStats: loadHeaderStats } = useHeaderStats();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'providers' | 'schedule' | 'config' | 'restore'>('overview');
   const [status, setStatus] = useState<BackupStatus | null>(null);
@@ -52,6 +55,9 @@ const BackupTablet: React.FC = () => {
       setStatus(statusData);
       setConfig(configData);
       setScheduleInfo(scheduleData);
+      
+      // Load header stats
+      await loadHeaderStats();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load initial data';
       showToast({
@@ -137,8 +143,8 @@ const BackupTablet: React.FC = () => {
             config={config}
             scheduleInfo={scheduleInfo}
             onConfigChange={updateConfig}
-            headerStats={status}
-            installationStatus={status?.installation_status}
+            headerStats={headerStats}
+            installationStatus={null}
             onStatusChange={loadInitialData}
           />
         )}

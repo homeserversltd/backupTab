@@ -14,6 +14,8 @@ import {
   BackupHistory, 
   ScheduleInfo,
   ProviderStatus,
+  HeaderStats,
+  ApiResponse,
   UseBackupControlsReturn 
 } from '../types';
 
@@ -196,3 +198,42 @@ export function useBackupControls(): UseBackupControlsReturn {
     clearError,
   };
 }
+
+// Hook for header statistics
+export const useHeaderStats = () => {
+  const [stats, setStats] = useState<HeaderStats | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadStats = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/backup/header-stats');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data: ApiResponse<HeaderStats> = await response.json();
+      
+      if (data.success && data.data) {
+        setStats(data.data);
+      } else {
+        throw new Error(data.error || 'Failed to load header statistics');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load header statistics');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return {
+    stats,
+    loading,
+    error,
+    loadStats
+  };
+};

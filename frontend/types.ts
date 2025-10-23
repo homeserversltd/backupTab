@@ -30,6 +30,10 @@ export interface CloudProvider {
   password?: string;
   application_key_id?: string;
   application_key?: string;
+  access_key?: string;
+  secret_key?: string;
+  service_account_key?: string;
+  project_id?: string;
   region?: string;
   max_retries?: number;
   retry_delay?: number;

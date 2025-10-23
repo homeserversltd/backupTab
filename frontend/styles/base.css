@@ -49,3 +49,212 @@
   padding: 1.5rem;
   min-height: 400px;
 }
+
+/* ===== FULL-WIDTH STATUS HEADER BAR ===== */
+.backup-tablet .status-header-bar {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
+  border-radius: 0;
+  margin-bottom: 0;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primaryHover) 100%);
+  border-bottom: 1px solid var(--border);
+  padding: var(--spacing-md, 1rem) var(--spacing-xl, 2rem);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.status-header-bar .status-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-lg, 1.5rem);
+  align-items: center;
+  justify-content: space-around;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.status-header-bar .metric-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+  padding: var(--spacing-sm, 0.5rem);
+  border-radius: 12px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 3D depth effect using pseudo-element - matching portal cards */
+.status-header-bar .metric-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom right,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(0, 0, 0, 0.05) 100%
+  );
+  border-radius: inherit;
+  z-index: -1;
+  transition: all 0.3s ease;
+}
+
+.status-header-bar .metric-item:hover {
+  background: color-mix(in srgb, var(--primaryHover) 5%, transparent);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  transition-delay: 0.1s;
+}
+
+.status-header-bar .metric-item:hover::before {
+  transform: translateZ(4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.status-header-bar .metric-item.loading {
+  background: color-mix(in srgb, var(--warning) 20%, var(--background));
+  border-color: var(--warning);
+  animation: pulse 2s infinite;
+}
+
+.status-header-bar .metric-item.error {
+  background: color-mix(in srgb, var(--error) 20%, var(--background));
+  border-color: var(--error);
+}
+
+.status-header-bar .metric-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted, color-mix(in srgb, var(--text) 70%, var(--background)));
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--spacing-xs, 0.25rem);
+}
+
+.status-header-bar .metric-value {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs, 0.25rem);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.status-header-bar .metric-icon {
+  font-size: 1rem;
+  opacity: 0.8;
+}
+
+.status-header-bar .status-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs, 0.25rem);
+  padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+  border-radius: var(--radius-sm, 4px);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.status-header-bar .status-indicator.success {
+  background: color-mix(in srgb, var(--success) 20%, transparent);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+
+.status-header-bar .status-indicator.warning {
+  background: color-mix(in srgb, var(--warning) 20%, transparent);
+  color: var(--warning);
+  border: 1px solid var(--warning);
+}
+
+.status-header-bar .status-indicator.error {
+  background: color-mix(in srgb, var(--error) 20%, transparent);
+  color: var(--error);
+  border: 1px solid var(--error);
+}
+
+.status-header-bar .status-indicator.info {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.status-header-bar .status-icon {
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.status-header-bar .status-text {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Responsive header adjustments */
+@media (max-width: 1024px) {
+  .status-header-bar .status-metrics {
+    gap: var(--spacing-md, 1rem);
+  }
+  
+  .status-header-bar .metric-item {
+    min-width: 70px;
+  }
+}
+
+@media (max-width: 768px) {
+  .status-header-bar {
+    padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+  }
+  
+  .status-header-bar .status-metrics {
+    gap: var(--spacing-sm, 0.5rem);
+    justify-content: center;
+  }
+  
+  .status-header-bar .metric-item {
+    min-width: 60px;
+    padding: var(--spacing-xs, 0.25rem);
+    border-radius: 8px; /* Slightly smaller radius on mobile */
+  }
+  
+  .status-header-bar .metric-label {
+    font-size: 0.7rem;
+  }
+  
+  .status-header-bar .metric-value {
+    font-size: 0.8rem;
+  }
+  
+  /* Maintain portal card hover effects on mobile */
+  .status-header-bar .metric-item:hover {
+    transform: translateY(-1px); /* Reduced transform for mobile */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  }
+}
+
+@media (max-width: 480px) {
+  .status-header-bar .status-metrics {
+    flex-wrap: wrap;
+    gap: var(--spacing-xs, 0.25rem);
+  }
+  
+  .status-header-bar .metric-item {
+    flex: 1;
+    min-width: 50px;
+    border-radius: 6px; /* Even smaller radius for very small screens */
+  }
+  
+  /* Ensure hover effects work on touch devices */
+  .status-header-bar .metric-item:active {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+  }
+}

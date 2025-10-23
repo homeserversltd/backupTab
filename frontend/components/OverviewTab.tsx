@@ -79,7 +79,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   return (
     <div className="overview-layout overview-container">
       {/* Status Header Bar */}
-      <StatusHeaderBar headerStats={headerStats} />
+      <StatusHeaderBar headerStats={headerStats || null} />
 
       {/* Installation Manager */}
       {installationStatus && onStatusChange && (

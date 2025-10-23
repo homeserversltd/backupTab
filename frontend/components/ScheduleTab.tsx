@@ -12,9 +12,13 @@ import {
   faPause,
   faCheckCircle,
   faSave,
-  faSpinner
+  faSpinner,
+  faCalendarDay,
+  faCalendarWeek,
+  faCalendar,
+  faEye
 } from '@fortawesome/free-solid-svg-icons';
-import { BackupScheduleConfig, ScheduleInfo, BackupConfig } from '../types';
+import { BackupScheduleConfig, ScheduleInfo, BackupConfig, getGenericBackupTypeInfo } from '../types';
 import { showToast } from '../../../../src/components/Popup/PopupManager'; //donot touch this
 import { useTooltip } from '../../../../src/hooks/useTooltip';
 import { useBackupControls } from '../hooks/useBackupControls';
@@ -35,6 +39,7 @@ interface UpdateSchedule {
   time: string; // HH:MM format
   dayOfWeek?: number; // 0-6 for weekly
   dayOfMonth?: number; // 1-31 for monthly
+  activeBackupType?: string; // Current backup type
 }
 
 
@@ -55,12 +60,16 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
   const tooltip = useTooltip();
 
+  // Get generic backup type information from utility module
+  const GENERIC_BACKUP_TYPE_INFO = getGenericBackupTypeInfo();
+
   const [updateSchedule, setUpdateSchedule] = useState<UpdateSchedule>({
     enabled: false,
     frequency: 'weekly',
     time: '02:00',
     dayOfWeek: 0,
-    dayOfMonth: 1
+    dayOfMonth: 1,
+    activeBackupType: 'full'
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(false);

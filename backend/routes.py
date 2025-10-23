@@ -46,10 +46,8 @@ def _get_provider_description(provider_name: str) -> str:
     descriptions = {
         'local': 'Store backups on local disk',
         'backblaze': 'Cloud storage with competitive pricing',
-        'google_drive': 'Google Drive cloud storage',
-        'google_cloud_storage': 'Google Cloud Storage buckets',
-        'dropbox': 'Dropbox cloud storage',
-        'aws_s3': 'Amazon S3 cloud storage'
+        'google_cloud_storage': 'Google Cloud Storage buckets (Coming Soon)',
+        'aws_s3': 'Amazon S3 cloud storage (Coming Soon)'
     }
     return descriptions.get(provider_name, f'{provider_name.replace("_", " ").title()} storage')
 
@@ -58,9 +56,7 @@ def _get_provider_icon(provider_name: str) -> str:
     icons = {
         'local': '💾',
         'backblaze': '☁️',
-        'google_drive': '📁',
         'google_cloud_storage': '🗄️',
-        'dropbox': '📦',
         'aws_s3': '☁️'
     }
     return icons.get(provider_name, '💿')
@@ -74,6 +70,10 @@ def _is_provider_available(provider_name: str) -> bool:
     # Backblaze is hardcoded as available
     if provider_name == 'backblaze':
         return True
+    
+    # AWS S3 and Google Cloud Storage are temporarily disabled
+    if provider_name in ['aws_s3', 'google_cloud_storage']:
+        return False
     
     # Other providers are not yet implemented
     return False
@@ -838,4 +838,196 @@ def disable_provider(provider_name):
             return create_response(False, error=f'Failed to disable provider {provider_name}', status_code=500)
     except Exception as e:
         get_logger().error(f"Error disabling provider {provider_name}: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+# Debug Routes
+@bp.route('/debug/status', methods=['GET'])
+def get_debug_status():
+    """Get debug mode status from /tmp file"""
+    try:
+        debug_file = '/tmp/backupTab_debug.txt'
+        debug_enabled = os.path.exists(debug_file)
+        
+        message = ""
+        if debug_enabled:
+            try:
+                with open(debug_file, 'r') as f:
+                    message = f.read().strip()
+            except Exception as e:
+                message = f"Debug enabled (file read error: {str(e)})"
+        else:
+            message = "Debug mode is OFF"
+        
+        return create_response(True, {
+            'enabled': debug_enabled,
+            'message': message
+        })
+    except Exception as e:
+        get_logger().error(f"Error getting debug status: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/debug/toggle', methods=['POST'])
+def toggle_debug():
+    """Toggle debug mode by creating/removing /tmp file"""
+    try:
+        debug_file = '/tmp/backupTab_debug.txt'
+        data = request.get_json()
+        if not data or 'enabled' not in data:
+            return create_response(False, error='Missing enabled field', status_code=400)
+        
+        enabled = bool(data['enabled'])
+        
+        if enabled:
+            # Create debug file with timestamp
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            debug_content = f"BackupTab Debug Mode Enabled\nTimestamp: {timestamp}\nStatus: ACTIVE"
+            
+            with open(debug_file, 'w') as f:
+                f.write(debug_content)
+            
+            message = f"Debug mode ENABLED at {timestamp}"
+            get_logger().info(f"DEBUG MODE ENABLED - {message}")
+        else:
+            # Remove debug file
+            if os.path.exists(debug_file):
+                os.remove(debug_file)
+            
+            message = "Debug mode DISABLED"
+            get_logger().info(f"DEBUG MODE DISABLED - {message}")
+        
+        return create_response(True, {
+            'enabled': enabled,
+            'message': message
+        })
+    except Exception as e:
+        get_logger().error(f"Error toggling debug mode: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/header-stats', methods=['GET'])
+def get_header_stats():
+    """Get comprehensive header statistics for backup tab"""
+    try:
+        get_logger().info("Header stats endpoint called")
+        
+        # Import datetime for calculations
+        from datetime import datetime, timedelta
+        
+        # Load config to get provider and item counts
+        config = config_manager.get_safe_config()
+        
+        # Get backup status from status manager
+        status = backup_handler.get_system_status()
+        
+        # Count enabled providers
+        enabled_providers = 0
+        if config.get('providers'):
+            enabled_providers = sum(1 for provider in config['providers'].values() 
+                                  if provider.get('enabled', False))
+        
+        # Count backup items
+        backup_items_count = len(config.get('backup_items', []))
+        
+        # Get last backup time
+        last_backup = status.get('last_backup')
+        last_backup_display = last_backup or "Never"
+        
+        # Calculate next backup time based on schedule
+        next_backup_display = "Not scheduled"
+        schedule = config.get('schedule')
+        if schedule:
+            try:
+                now = datetime.now()
+                frequency = schedule.get('frequency', 'daily')
+                time_str = schedule.get('time', '02:00')
+                
+                if frequency == 'daily':
+                    # Next backup is tomorrow at the specified time
+                    next_backup_time = now.replace(hour=int(time_str.split(':')[0]), 
+                                                minute=int(time_str.split(':')[1]), 
+                                                second=0, microsecond=0)
+                    if next_backup_time <= now:
+                        next_backup_time += timedelta(days=1)
+                    next_backup_display = next_backup_time.strftime('%Y-%m-%d %H:%M')
+                elif frequency == 'weekly':
+                    # Next backup is next week on the same day
+                    day_of_week = schedule.get('dayOfWeek', 0)
+                    days_ahead = day_of_week - now.weekday()
+                    if days_ahead <= 0:  # Target day already happened this week
+                        days_ahead += 7
+                    next_backup_time = now + timedelta(days=days_ahead)
+                    next_backup_time = next_backup_time.replace(hour=int(time_str.split(':')[0]), 
+                                                            minute=int(time_str.split(':')[1]), 
+                                                            second=0, microsecond=0)
+                    next_backup_display = next_backup_time.strftime('%Y-%m-%d %H:%M')
+                elif frequency == 'monthly':
+                    # Next backup is next month on the same day
+                    day_of_month = schedule.get('dayOfMonth', 1)
+                    next_month = now.replace(day=1) + timedelta(days=32)
+                    next_month = next_month.replace(day=day_of_month)
+                    next_backup_time = next_month.replace(hour=int(time_str.split(':')[0]), 
+                                                        minute=int(time_str.split(':')[1]), 
+                                                        second=0, microsecond=0)
+                    next_backup_display = next_backup_time.strftime('%Y-%m-%d %H:%M')
+            except Exception as e:
+                get_logger().warning(f"Error calculating next backup time: {e}")
+                next_backup_display = "Not scheduled"
+        
+        # Get backup size information
+        backup_size_bytes = None
+        if last_backup:
+            # Try to get backup size from state or config
+            try:
+                # This would need to be implemented based on your backup system
+                # For now, we'll set it to None
+                backup_size_bytes = None
+            except Exception as e:
+                get_logger().warning(f"Error getting backup size: {e}")
+        
+        backup_size_display = "Unknown"
+        if backup_size_bytes and isinstance(backup_size_bytes, (int, float)) and backup_size_bytes > 0:
+            # Format size in human readable format
+            units = ['B', 'KB', 'MB', 'GB', 'TB']
+            unit_index = 0
+            size_value = float(backup_size_bytes)
+            
+            while size_value >= 1024 and unit_index < len(units) - 1:
+                size_value /= 1024
+                unit_index += 1
+            
+            backup_size_display = f"{size_value:.1f} {units[unit_index]}"
+        
+        # Check installation status
+        installation_status = {
+            "installed": status.get('config_exists', False),
+            "installation_timestamp": None,
+            "installation_method": "manual",
+            "version": "1.0.0",
+            "installation_path": "/var/www/homeserver/premium/backupTab",
+            "missing_components": [],
+            "can_install": True,
+            "can_uninstall": True
+        }
+        
+        # Prepare comprehensive header stats with safe defaults
+        header_stats = {
+            "last_backup": last_backup_display,
+            "last_backup_timestamp": last_backup,
+            "next_backup": next_backup_display,
+            "enabled_providers_count": enabled_providers,
+            "backup_items_count": backup_items_count,
+            "last_backup_size": backup_size_display,
+            "last_backup_size_bytes": backup_size_bytes if isinstance(backup_size_bytes, (int, float)) else None,
+            "backup_in_progress": False,  # Would need to be implemented
+            "backup_status": status.get('service_status', 'unknown'),
+            "key_exists": status.get('config_exists', False),
+            "providers_status": {},  # Would need to be implemented
+            "installation_status": installation_status
+        }
+        
+        get_logger().info(f"Header stats prepared: {header_stats}")
+        
+        return create_response(True, header_stats)
+        
+    except Exception as e:
+        get_logger().error(f"Error getting header stats: {e}")
         return create_response(False, error=str(e), status_code=500)

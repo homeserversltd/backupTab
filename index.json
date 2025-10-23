@@ -92,7 +92,14 @@
       "ProviderSelector": "frontend/components/providers/ProviderSelector.tsx",
       "BackblazeProvider": "frontend/components/providers/BackblazeProvider.tsx",
       "LocalProvider": "frontend/components/providers/LocalProvider.tsx",
-      "ScheduleTab_css": "frontend/components/ScheduleTab.css"
+      "GoogleCloudStorageProvider": "frontend/components/providers/GoogleCloudStorageProvider.tsx",
+      "AWSS3Provider": "frontend/components/providers/AWSS3Provider.tsx",
+      "ScheduleTab_css": "frontend/components/ScheduleTab.css",
+      "Calendar": "frontend/components/Calendar.tsx",
+      "InstallationManager": "frontend/components/InstallationManager.tsx",
+      "RestoreTab": "frontend/components/RestoreTab.tsx",
+      "StatusHeaderBar": "frontend/components/StatusHeaderBar.tsx",
+      "TimePicker": "frontend/components/TimePicker.tsx"
     },
     "permissions": {
       "flask_backup": "permissions/flask-backup"

@@ -12,6 +12,36 @@ from .local import LocalProvider
 from ..utils.keyman_integration import KeymanIntegration
 import logging
 
+# Import AWS S3 provider with error handling
+try:
+    from .aws_s3 import AWSS3Provider
+except ImportError as e:
+    print(f"WARNING: Failed to import AWS S3 provider: {e}")
+    class AWSS3Provider(BaseProvider):
+        def __init__(self, config):
+            super().__init__(config)
+            self.name = "aws_s3_stub"
+        def test_connection(self): return False
+        def upload(self, *args, **kwargs): return False
+        def download(self, *args, **kwargs): return False
+        def list_files(self): return []
+        def delete(self, *args, **kwargs): return False
+
+# Import Google Cloud Storage provider with error handling
+try:
+    from .google_cloud_storage import GoogleCloudStorageProvider
+except ImportError as e:
+    print(f"WARNING: Failed to import Google Cloud Storage provider: {e}")
+    class GoogleCloudStorageProvider(BaseProvider):
+        def __init__(self, config):
+            super().__init__(config)
+            self.name = "google_cloud_storage_stub"
+        def test_connection(self): return False
+        def upload(self, *args, **kwargs): return False
+        def download(self, *args, **kwargs): return False
+        def list_files(self): return []
+        def delete(self, *args, **kwargs): return False
+
 class ProviderFactory:
     """Factory for creating backup providers with keyman integration."""
     
@@ -23,6 +53,8 @@ class ProviderFactory:
         self.providers = {
             'backblaze': BackblazeProvider,
             'local': LocalProvider,
+            'aws_s3': AWSS3Provider,
+            'google_cloud_storage': GoogleCloudStorageProvider,
             # Add other providers as they're implemented
         }
     
@@ -87,6 +119,12 @@ class ProviderFactory:
         if service_name == 'backblaze':
             provider_config['application_key_id'] = credentials.get('username', '')
             provider_config['application_key'] = credentials.get('password', '')
+        elif service_name == 'aws_s3':
+            provider_config['access_key'] = credentials.get('username', '')
+            provider_config['secret_key'] = credentials.get('password', '')
+        elif service_name == 'google_cloud_storage':
+            provider_config['service_account_key'] = credentials.get('username', '')
+            provider_config['project_id'] = credentials.get('password', '')
         else:
             # For other providers, use standard username/password
             provider_config['username'] = credentials.get('username', '')
