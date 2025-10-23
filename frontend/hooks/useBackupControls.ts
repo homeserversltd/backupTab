@@ -177,6 +177,70 @@ export function useBackupControls(): UseBackupControlsReturn {
     return result.providers;
   }, [handleApiCall]);
 
+  const installBackupSystem = useCallback(async (): Promise<boolean> => {
+    try {
+      const result = await handleApiCall<{message: string, installed: boolean}>('/install', {
+        method: 'POST'
+      });
+      
+      if (result.installed) {
+        showToast({
+          message: result.message,
+          variant: 'success',
+          duration: 5000
+        });
+        return true;
+      } else {
+        showToast({
+          message: 'Installation failed',
+          variant: 'error',
+          duration: 5000
+        });
+        return false;
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Installation failed';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 5000
+      });
+      return false;
+    }
+  }, [handleApiCall]);
+
+  const uninstallBackupSystem = useCallback(async (): Promise<boolean> => {
+    try {
+      const result = await handleApiCall<{message: string, installed: boolean}>('/uninstall', {
+        method: 'POST'
+      });
+      
+      if (!result.installed) {
+        showToast({
+          message: result.message,
+          variant: 'success',
+          duration: 5000
+        });
+        return true;
+      } else {
+        showToast({
+          message: 'Uninstallation failed',
+          variant: 'error',
+          duration: 5000
+        });
+        return false;
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Uninstallation failed';
+      showToast({
+        message: errorMessage,
+        variant: 'error',
+        duration: 5000
+      });
+      return false;
+    }
+  }, [handleApiCall]);
+
   return {
     getStatus,
     getRepositories,
@@ -193,6 +257,8 @@ export function useBackupControls(): UseBackupControlsReturn {
     getScheduleTemplates,
     testSchedule,
     getProvidersStatus,
+    installBackupSystem,
+    uninstallBackupSystem,
     isLoading,
     error,
     clearError,

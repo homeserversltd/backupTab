@@ -543,26 +543,38 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
         self.log("Uninstalling HOMESERVER Backup System...")
         
         try:
-            # Remove cron job
+            # Remove cron job using sudo (www-data has permission for this)
             if self.cron_file.exists():
-                self.cron_file.unlink()
-                self.log("Removed cron job")
+                try:
+                    subprocess.run(['sudo', 'rm', str(self.cron_file)], check=True)
+                    self.log("Removed cron job")
+                except subprocess.CalledProcessError as e:
+                    self.log(f"Failed to remove cron job: {e}", "WARNING")
             
-            # Remove system links
+            # Remove system links using sudo
             system_link = Path("/usr/local/bin/homeserver-backup")
             if system_link.exists():
-                system_link.unlink()
-                self.log("Removed system link")
+                try:
+                    subprocess.run(['sudo', 'rm', str(system_link)], check=True)
+                    self.log("Removed system link")
+                except subprocess.CalledProcessError as e:
+                    self.log(f"Failed to remove system link: {e}", "WARNING")
             
             updater_link = Path("/usr/local/bin/homeserver-backup-update-settings")
             if updater_link.exists():
-                updater_link.unlink()
-                self.log("Removed settings updater link")
+                try:
+                    subprocess.run(['sudo', 'rm', str(updater_link)], check=True)
+                    self.log("Removed settings updater link")
+                except subprocess.CalledProcessError as e:
+                    self.log(f"Failed to remove updater link: {e}", "WARNING")
             
-            # Remove installation directory
+            # Remove installation directory (www-data should have access to this)
             if self.install_dir.exists():
-                shutil.rmtree(self.install_dir)
-                self.log("Removed installation directory")
+                try:
+                    shutil.rmtree(self.install_dir)
+                    self.log("Removed installation directory")
+                except Exception as e:
+                    self.log(f"Failed to remove installation directory: {e}", "WARNING")
             
             self.log("Uninstallation completed successfully!")
             return True

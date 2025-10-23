@@ -11,7 +11,6 @@ export const StatusHeaderBar: React.FC<StatusHeaderBarProps> = ({ headerStats, l
   const defaultStats = {
     last_backup: "Never",
     next_backup: "Not scheduled", 
-    enabled_providers_count: 0,
     backup_items_count: 0,
     last_backup_size: "Unknown"
   };

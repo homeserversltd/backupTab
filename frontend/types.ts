@@ -272,15 +272,13 @@ export interface HeaderStats {
   last_backup: string;
   last_backup_timestamp: string | null;
   next_backup: string;
-  enabled_providers_count: number;
   backup_items_count: number;
   last_backup_size: string;
   last_backup_size_bytes: number | null;
   backup_in_progress: boolean;
-  backup_status: string;
   key_exists: boolean;
-  providers_status: Record<string, any>;
-  installation_status: InstallationStatus;
+  is_configured: boolean;
+  installation_status: InstallationStatus | null;
 }
 
 export interface ApiResponse<T = any> {
@@ -306,6 +304,8 @@ export interface UseBackupControlsReturn {
   getScheduleTemplates: () => Promise<any>;
   testSchedule: () => Promise<any>;
   getProvidersStatus: () => Promise<ProviderStatus[]>;
+  installBackupSystem: () => Promise<boolean>;
+  uninstallBackupSystem: () => Promise<boolean>;
   isLoading: boolean;
   error: string | null;
   clearError: () => void;

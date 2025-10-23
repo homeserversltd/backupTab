@@ -41,3 +41,7 @@ www-data ALL=(root) NOPASSWD: /usr/bin/mkdir -p /var/log/homeserver-backup
 www-data ALL=(root) NOPASSWD: /usr/bin/chown -R www-data\:www-data /opt/homeserver-backup
 www-data ALL=(root) NOPASSWD: /usr/bin/chown -R www-data\:www-data /tmp/homeserver-backups
 www-data ALL=(root) NOPASSWD: /usr/bin/chown -R www-data\:www-data /var/log/homeserver-backup
+
+# Allow system link removal for uninstall
+www-data ALL=(root) NOPASSWD: /bin/rm /usr/local/bin/homeserver-backup
+www-data ALL=(root) NOPASSWD: /bin/rm /usr/local/bin/homeserver-backup-update-settings

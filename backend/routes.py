@@ -23,7 +23,8 @@ config_manager = BackupConfigManager()
 provider_handler = ProviderHandler()
 backup_handler = BackupHandler()
 schedule_handler = ScheduleHandler()
-backup_manager = BackupManager()
+# Use system config path to match BackupConfigManager behavior
+backup_manager = BackupManager("/etc/backupTab/settings.json")
 
 def create_response(success: bool, data: dict = None, error: str = None, status_code: int = 200):
     """Create standardized API response"""
@@ -992,16 +993,45 @@ def get_header_stats():
             
             backup_size_display = f"{size_value:.1f} {units[unit_index]}"
         
-        # Check installation status
+        # Check if backup system is properly installed
+        def check_backup_installation():
+            """Check if backup system is properly installed"""
+            # Check for system config file
+            config_exists = os.path.exists("/etc/backupTab/settings.json")
+            
+            # Check for backup CLI script
+            cli_exists = os.path.exists("/var/www/homeserver/premium/backup/backup")
+            
+            # Check for virtual environment
+            venv_exists = os.path.exists("/var/www/homeserver/premium/backup/venv")
+            
+            # Check for cron job
+            cron_exists = os.path.exists("/etc/cron.d/homeserver-backup")
+            
+            # System is considered installed if config exists AND CLI exists
+            is_installed = config_exists and cli_exists
+            
+            return {
+                "is_installed": is_installed,
+                "config_exists": config_exists,
+                "cli_exists": cli_exists,
+                "venv_exists": venv_exists,
+                "cron_exists": cron_exists
+            }
+        
+        installation_check = check_backup_installation()
+        is_configured = installation_check["is_installed"]
+        
+        # Create proper installation status for UI
         installation_status = {
-            "installed": status.get('config_exists', False),
-            "installation_timestamp": None,
-            "installation_method": "manual",
-            "version": "1.0.0",
-            "installation_path": "/var/www/homeserver/premium/backupTab",
-            "missing_components": [],
-            "can_install": True,
-            "can_uninstall": True
+            "installed": is_configured,
+            "installation_timestamp": None,  # Could be enhanced to read from actual installation log
+            "installation_method": "cli" if is_configured else None,
+            "version": "1.0.0",  # Could be enhanced to read from actual version
+            "installation_path": "/var/www/homeserver/premium/backup" if is_configured else None,
+            "missing_components": [] if is_configured else ["config", "cli", "venv", "cron"],
+            "can_install": not is_configured,
+            "can_uninstall": is_configured
         }
         
         # Prepare comprehensive header stats with safe defaults
@@ -1009,14 +1039,12 @@ def get_header_stats():
             "last_backup": last_backup_display,
             "last_backup_timestamp": last_backup,
             "next_backup": next_backup_display,
-            "enabled_providers_count": enabled_providers,
             "backup_items_count": backup_items_count,
             "last_backup_size": backup_size_display,
             "last_backup_size_bytes": backup_size_bytes if isinstance(backup_size_bytes, (int, float)) else None,
             "backup_in_progress": False,  # Would need to be implemented
-            "backup_status": status.get('service_status', 'unknown'),
             "key_exists": status.get('config_exists', False),
-            "providers_status": {},  # Would need to be implemented
+            "is_configured": is_configured,
             "installation_status": installation_status
         }
         
@@ -1027,3 +1055,52 @@ def get_header_stats():
     except Exception as e:
         get_logger().error(f"Error getting header stats: {e}")
         return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/install', methods=['POST'])
+def install_backup_system():
+    """Install backup system using CLI installer"""
+    try:
+        get_logger().info("Backup system installation requested")
+        
+        # Import the CLI installer
+        from .src.installer.setupEnvironment import BackupEnvironmentSetup
+        
+        setup = BackupEnvironmentSetup()
+        success = setup.install()
+        
+        if success:
+            return create_response(True, {
+                'message': 'Backup system installed successfully',
+                'installed': True
+            })
+        else:
+            return create_response(False, error='Installation failed', status_code=500)
+            
+    except Exception as e:
+        get_logger().error(f"Installation failed: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/uninstall', methods=['POST'])
+def uninstall_backup_system():
+    """Uninstall backup system using CLI uninstaller"""
+    try:
+        get_logger().info("Backup system uninstallation requested")
+        
+        # Import the CLI installer
+        from .src.installer.setupEnvironment import BackupEnvironmentSetup
+        
+        setup = BackupEnvironmentSetup()
+        success = setup.uninstall()
+        
+        if success:
+            return create_response(True, {
+                'message': 'Backup system uninstalled successfully',
+                'installed': False
+            })
+        else:
+            return create_response(False, error='Uninstallation failed', status_code=500)
+            
+    except Exception as e:
+        get_logger().error(f"Uninstallation failed: {e}")
+        return create_response(False, error=str(e), status_code=500)
+
