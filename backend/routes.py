@@ -81,21 +81,34 @@ def _is_provider_available(provider_name: str) -> bool:
 
 def _is_provider_configured(provider_name: str, provider_config: dict) -> bool:
     """Check if provider has required credentials configured"""
+    get_logger().info(f"Checking if provider '{provider_name}' is configured")
+    get_logger().info(f"Provider config: {provider_config}")
+    
     # Only allow the providers we want
     allowed_providers = ['local', 'backblaze', 'aws_s3', 'google_cloud_storage']
     if provider_name not in allowed_providers:
+        get_logger().warning(f"Provider '{provider_name}' not in allowed providers: {allowed_providers}")
         return False
     
     if provider_name == 'local':
         # Local provider is always configured - it doesn't need credentials
+        get_logger().info("Local provider is always configured")
         return True
     
     elif provider_name == 'backblaze':
+        get_logger().info("Checking Backblaze provider configuration")
         # Check if keyman integration is enabled
-        if provider_config.get('keyman_integrated', False):
+        keyman_integrated = provider_config.get('keyman_integrated', False)
+        get_logger().info(f"Keyman integrated: {keyman_integrated}")
+        
+        if keyman_integrated:
             keyman_service_name = provider_config.get('keyman_service_name', provider_name)
+            get_logger().info(f"Keyman service name: {keyman_service_name}")
+            
             try:
-                return backup_manager.keyman.service_configured(keyman_service_name)
+                result = backup_manager.keyman.service_configured(keyman_service_name)
+                get_logger().info(f"Keyman service configured result: {result}")
+                return result
             except (FileNotFoundError, PermissionError) as e:
                 # Key files don't exist or permission denied - treat as not configured
                 get_logger().info(f"Keyman keys not accessible for {provider_name} (normal for new setup): {e}")
@@ -105,10 +118,12 @@ def _is_provider_configured(provider_name: str, provider_config: dict) -> bool:
                 return False
         else:
             # Fallback to traditional config-based credentials
-            return bool(
-                provider_config.get('application_key_id', '').strip() and
-                provider_config.get('application_key', '').strip()
-            )
+            app_key_id = provider_config.get('application_key_id', '').strip()
+            app_key = provider_config.get('application_key', '').strip()
+            get_logger().info(f"Fallback check - app_key_id length: {len(app_key_id)}, app_key length: {len(app_key)}")
+            result = bool(app_key_id and app_key)
+            get_logger().info(f"Fallback configuration result: {result}")
+            return result
     
     elif provider_name == 'google_cloud_storage':
         # Google Cloud Storage needs credentials_file and project_id
@@ -716,9 +731,17 @@ def get_keyman_credentials(service_name):
 def create_keyman_credentials(service_name):
     """Create credentials for a keyman service"""
     try:
+        get_logger().info(f"Creating keyman credentials for service: {service_name}")
+        
         data = request.get_json()
         if not data or 'username' not in data or 'password' not in data:
+            get_logger().warning(f"Missing username or password for {service_name} credential creation")
             return create_response(False, error='Username and password are required', status_code=400)
+        
+        # Log credential creation attempt (without logging actual credentials)
+        username_length = len(data['username']) if data['username'] else 0
+        password_length = len(data['password']) if data['password'] else 0
+        get_logger().info(f"Attempting to create credentials for {service_name}: username length={username_length}, password length={password_length}")
         
         success = backup_manager.keyman.create_service_credentials(
             service_name,
@@ -727,8 +750,10 @@ def create_keyman_credentials(service_name):
         )
         
         if success:
+            get_logger().info(f"Successfully created keyman credentials for {service_name}")
             return create_response(True, {'message': f'Credentials created for {service_name}'})
         else:
+            get_logger().error(f"Failed to create keyman credentials for {service_name}")
             return create_response(False, error=f'Failed to create credentials for {service_name}', status_code=500)
             
     except Exception as e:

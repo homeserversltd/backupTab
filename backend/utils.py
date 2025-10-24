@@ -31,38 +31,43 @@ def check_and_update_config():
             get_logger().info("System config not found, creating from template")
             return True
         
-        # Check if update script exists
-        update_script = "/usr/local/bin/homeserver-backup-update-settings"
-        if not os.path.exists(update_script):
-            get_logger().warning("Settings update script not found")
-            return False
+        # Import SettingsUpdater class directly using relative import
+        from .src.installer.updateSettings import SettingsUpdater
         
-        # Run update script in dry-run mode to check for differences
-        result = subprocess.run([
-            update_script, "--dry-run"
-        ], capture_output=True, text=True, timeout=30)
+        # Hardcoded paths
+        template_path = "/var/www/homeserver/premium/backupTab/backend/src/config/settings.json"
         
-        # If there are differences, run the actual update
-        if result.returncode == 0 and "New fields that would be added:" in result.stdout:
-            get_logger().info("Configuration update needed, running update script")
-            
-            # Run actual update
-            update_result = subprocess.run([
-                update_script
-            ], capture_output=True, text=True, timeout=60)
-            
-            if update_result.returncode == 0:
+        updater = SettingsUpdater(
+            template_path=template_path,
+            system_path=BACKUP_CONFIG_PATH
+        )
+        
+        # Check if updates are needed by analyzing differences
+        template_config = updater.load_json(updater.template_path)
+        system_config = updater.load_json(updater.system_path)
+        
+        if not template_config or not system_config:
+            get_logger().warning("Could not load template or system config")
+            return True
+        
+        # Get all keys from both configs
+        template_keys = updater.get_all_keys(template_config)
+        system_keys = updater.get_all_keys(system_config)
+        
+        # Check if there are new fields to add
+        new_keys = template_keys - system_keys
+        if new_keys:
+            get_logger().info(f"Configuration update needed, found {len(new_keys)} new fields")
+            success = updater.update_settings()
+            if success:
                 get_logger().info("Configuration updated successfully")
                 return True
             else:
-                get_logger().error(f"Configuration update failed: {update_result.stderr}")
+                get_logger().error("Configuration update failed")
                 return False
         
         return True
         
-    except subprocess.TimeoutExpired:
-        get_logger().error("Configuration update timed out")
-        return False
     except Exception as e:
         get_logger().error(f"Error checking/updating configuration: {e}")
         return False

@@ -43,8 +43,7 @@ class BackupEnvironmentSetup:
             self.source_dir / "src" / "installer" / "requirements.txt"
         ]
         
-        # Check for root privileges
-        self.has_root = os.geteuid() == 0
+        # All operations now use sudo commands instead of checking root privileges
         
     def log(self, message: str, level: str = "INFO") -> None:
         """Log installation messages."""
@@ -318,19 +317,8 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
                     os.chmod(script, 0o755)
                     self.log(f"Made executable: {script.name}")
             
-            # Set ownership if running as root
-            if self.has_root:
-                try:
-                    # Change ownership to www-data
-                    shutil.chown(self.install_dir, user="www-data", group="www-data")
-                    for root, dirs, files in os.walk(self.install_dir):
-                        for d in dirs:
-                            shutil.chown(os.path.join(root, d), user="www-data", group="www-data")
-                        for f in files:
-                            shutil.chown(os.path.join(root, f), user="www-data", group="www-data")
-                    self.log("Set ownership to www-data")
-                except Exception as e:
-                    self.log(f"Warning: Could not set ownership: {e}", "WARNING")
+            # File permissions set successfully
+            self.log("File permissions set successfully")
             
             return True
             
@@ -345,12 +333,8 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
         try:
             self.log_dir.mkdir(parents=True, exist_ok=True)
             
-            if self.has_root:
-                try:
-                    shutil.chown(self.log_dir, user="www-data", group="www-data")
-                    self.log(f"Log directory created: {self.log_dir}")
-                except Exception as e:
-                    self.log(f"Warning: Could not set log directory ownership: {e}", "WARNING")
+            # Log directory created successfully
+            self.log(f"Log directory created: {self.log_dir}")
             
             return True
             
@@ -445,10 +429,6 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
     
     def install_cron_job(self) -> bool:
         """Install cron job for automated backups."""
-        if not self.has_root:
-            self.log("Skipping cron job installation (requires root)", "WARNING")
-            return True
-        
         self.log("Installing cron job...")
         
         try:
@@ -460,12 +440,24 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
 0 2 * * * www-data sleep $((RANDOM % 3600)) && {venv_python} {service_script} --backup >> /var/log/homeserver/backup.log 2>&1
 """
             
-            with open(self.cron_file, 'w') as f:
-                f.write(cron_content)
+            # Write cron content to temporary file first
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.cron') as temp_file:
+                temp_file.write(cron_content)
+                temp_file_path = temp_file.name
+            
+            # Copy the temporary file to the cron directory using sudo
+            subprocess.run(['/usr/bin/sudo', '/bin/cp', temp_file_path, str(self.cron_file)], check=True)
+            
+            # Clean up temporary file
+            os.unlink(temp_file_path)
             
             self.log(f"Cron job installed: {self.cron_file}")
             return True
             
+        except subprocess.CalledProcessError as e:
+            self.log(f"Failed to install cron job: {e}", "ERROR")
+            return False
         except Exception as e:
             self.log(f"Failed to install cron job: {e}", "ERROR")
             return False
@@ -486,18 +478,6 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
             # Create new symlink using sudo
             subprocess.run(['/usr/bin/sudo', '/bin/ln', '-sf', str(wrapper_script), str(system_link)], check=True)
             self.log(f"System link created: {system_link}")
-            
-            # Create symlink for settings updater
-            updater_link = Path("/usr/local/bin/homeserver-backup-update-settings")
-            updater_script = self.install_dir / "src" / "installer" / "updateSettings.py"
-            
-            # Remove existing link if it exists
-            if updater_link.exists():
-                subprocess.run(['/usr/bin/sudo', '/bin/rm', str(updater_link)], check=True)
-            
-            # Create new symlink using sudo
-            subprocess.run(['/usr/bin/sudo', '/bin/ln', '-sf', str(updater_script), str(updater_link)], check=True)
-            self.log(f"Settings updater link created: {updater_link}")
             
             return True
             
@@ -643,14 +623,6 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
                     self.log("Removed system link")
                 except subprocess.CalledProcessError as e:
                     self.log(f"Failed to remove system link: {e}", "WARNING")
-            
-            updater_link = Path("/usr/local/bin/homeserver-backup-update-settings")
-            if updater_link.exists():
-                try:
-                    subprocess.run(['/usr/bin/sudo', '/bin/rm', str(updater_link)], check=True)
-                    self.log("Removed settings updater link")
-                except subprocess.CalledProcessError as e:
-                    self.log(f"Failed to remove updater link: {e}", "WARNING")
             
             # Remove installation directory (www-data should have access to this)
             if self.install_dir.exists():

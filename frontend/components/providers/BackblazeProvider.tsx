@@ -63,9 +63,27 @@ export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
     <div className="backblaze-provider">
       <div className="provider-header">
         <h4>Backblaze B2 Configuration</h4>
-        <p className="provider-description">
-          Configure Backblaze B2 cloud storage for your backups
-        </p>
+        
+        {/* Configuration Status Indicator */}
+        {isKeymanConfigured && (
+          <div className="config-status-banner configured">
+            <div className="status-icon">✓</div>
+            <div className="status-content">
+              <strong>Configuration Complete</strong>
+              <p>Backblaze B2 is configured and ready for backups. Credentials are securely stored in the keyman vault.</p>
+            </div>
+          </div>
+        )}
+        
+        {!isKeymanConfigured && localConfig.application_key_id && localConfig.application_key && (
+          <div className="config-status-banner warning">
+            <div className="status-icon">⚠</div>
+            <div className="status-content">
+              <strong>Configuration Incomplete</strong>
+              <p>Credentials are entered but not saved to the secure vault. Click "Save Configuration" to complete setup.</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="config-form">
@@ -78,11 +96,10 @@ export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
             <input
               id="application_key_id"
               type="text"
-              value={isKeymanConfigured ? '********************' : (localConfig.application_key_id || '')}
+              value={localConfig.application_key_id || ''}
               onChange={(e) => handleFieldChange('application_key_id', e.target.value)}
               placeholder="K12345678901234567890"
               className="form-input"
-              disabled={isKeymanConfigured}
             />
             <small className="field-help">
               Your Backblaze B2 Application Key ID (starts with K, 20 characters)
@@ -96,11 +113,10 @@ export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
             <input
               id="application_key"
               type="password"
-              value={isKeymanConfigured ? '********************************' : (localConfig.application_key || '')}
+              value={localConfig.application_key || ''}
               onChange={(e) => handleFieldChange('application_key', e.target.value)}
               placeholder="K123456789012345678901234567890"
               className="form-input"
-              disabled={isKeymanConfigured}
             />
             <small className="field-help">
               Your Backblaze B2 Application Key (starts with K, 32 characters)

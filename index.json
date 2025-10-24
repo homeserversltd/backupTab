@@ -92,7 +92,8 @@
       "InstallationManager": "frontend/components/InstallationManager.tsx",
       "RestoreTab": "frontend/components/RestoreTab.tsx",
       "StatusHeaderBar": "frontend/components/StatusHeaderBar.tsx",
-      "TimePicker": "frontend/components/TimePicker.tsx"
+      "TimePicker": "frontend/components/TimePicker.tsx",
+      "fileIcons": "frontend/utils/fileIcons.ts"
     },
     "permissions": {
       "flask_backup": "permissions/flask-backup"

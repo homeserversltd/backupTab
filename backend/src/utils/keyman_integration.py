@@ -22,8 +22,55 @@ class KeymanIntegration:
     
     def service_configured(self, service_name: str) -> bool:
         """Check if a service is configured by looking for its key file."""
+        self.logger.info(f"Checking if service '{service_name}' is configured")
+        
         key_file = self.vault_dir / f"{service_name}.key"
-        return key_file.exists()
+        self.logger.info(f"Looking for key file at: {key_file}")
+        self.logger.info(f"Vault directory: {self.vault_dir}")
+        
+        try:
+            # Use sudo test -f to check file existence (required for permission-restricted files)
+            result = subprocess.run(
+                ['/usr/bin/sudo', 'test', '-f', str(key_file)],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            file_exists = result.returncode == 0
+            self.logger.info(f"Key file exists (sudo test): {file_exists}")
+            
+            if result.returncode != 0:
+                self.logger.info(f"Sudo test failed with return code: {result.returncode}")
+                if result.stderr:
+                    self.logger.info(f"Sudo test stderr: {result.stderr}")
+            
+            if file_exists:
+                # Get file info using sudo stat
+                try:
+                    stat_result = subprocess.run(
+                        ['/usr/bin/sudo', '/usr/bin/stat', str(key_file)],
+                        capture_output=True,
+                        text=True,
+                        timeout=10
+                    )
+                    
+                    if stat_result.returncode == 0:
+                        self.logger.info(f"File stat successful: {stat_result.stdout.strip()}")
+                    else:
+                        self.logger.warning(f"File stat failed: {stat_result.stderr}")
+                        
+                except Exception as e:
+                    self.logger.warning(f"Error getting file stat: {e}")
+            
+            return file_exists
+            
+        except subprocess.TimeoutExpired:
+            self.logger.error(f"Timeout while checking key file existence for {service_name}")
+            return False
+        except Exception as e:
+            self.logger.error(f"Error checking key file existence for {service_name}: {e}")
+            return False
     
     def get_service_credentials(self, service_name: str) -> Optional[Dict[str, str]]:
         """
@@ -47,10 +94,19 @@ class KeymanIntegration:
                 self.logger.error(f"Failed to export credentials for {service_name}: {result.stderr}")
                 return None
             
-            # Read credentials from temp directory
+            # Wait for ramdisk to be created and credentials file to exist
             cred_file = self.temp_dir / service_name
+            max_wait_time = 10  # seconds
+            wait_interval = 0.1  # seconds
+            waited = 0
+            
+            while not cred_file.exists() and waited < max_wait_time:
+                import time
+                time.sleep(wait_interval)
+                waited += wait_interval
+            
             if not cred_file.exists():
-                self.logger.error(f"Credentials file not found at {cred_file}")
+                self.logger.error(f"Credentials file not found at {cred_file} after waiting {max_wait_time}s")
                 return None
             
             # Parse credentials file (format: username="user" password="pass")

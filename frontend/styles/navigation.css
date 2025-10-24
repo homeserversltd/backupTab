@@ -33,3 +33,14 @@
   border-bottom-color: var(--accent);
   background: var(--primaryHover);
 }
+
+.nav-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: var(--textMuted);
+}
+
+.nav-button.disabled:hover {
+  background: none;
+  color: var(--textMuted);
+}

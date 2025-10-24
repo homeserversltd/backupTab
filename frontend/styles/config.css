@@ -278,6 +278,17 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.file-icon {
+  font-size: 1.2rem;
+  margin-right: 10px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
 .file-path {
   flex: 1;
   color: var(--text);
@@ -496,16 +507,7 @@
   position: relative;
 }
 
-/* Enhanced file item styling */
-.file-item::before {
-  content: '📁';
-  margin-right: 8px;
-  font-size: 1rem;
-}
-
-.file-item:hover::before {
-  content: '📂';
-}
+/* Enhanced file item styling - removed hardcoded folder icon to use dynamic file type icons */
 
 /* Settings item icons */
 .setting-item:nth-child(1)::before {

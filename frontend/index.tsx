@@ -39,10 +39,27 @@ const BackupTablet: React.FC = () => {
   const [config, setConfig] = useState<BackupConfig | null>(null);
   const [scheduleInfo, setScheduleInfo] = useState<ScheduleInfo | null>(null);
 
+  // Check if backup system is installed and enabled
+  const isBackupSystemReady = headerStats?.installation_status?.installed === true;
+
   // Load initial data
   useEffect(() => {
     loadInitialData();
   }, []);
+
+  // Refresh header stats when switching to overview tab
+  useEffect(() => {
+    if (activeTab === 'overview') {
+      loadHeaderStats();
+    }
+  }, [activeTab]);
+
+  // Auto-switch to overview tab if current tab becomes disabled
+  useEffect(() => {
+    if (!isBackupSystemReady && activeTab !== 'overview') {
+      setActiveTab('overview');
+    }
+  }, [isBackupSystemReady, activeTab]);
 
   const loadInitialData = async () => {
     try {
@@ -106,26 +123,30 @@ const BackupTablet: React.FC = () => {
           Overview
         </button>
         <button 
-          className={`nav-button ${activeTab === 'providers' ? 'active' : ''}`}
-          onClick={() => setActiveTab('providers')}
+          className={`nav-button ${activeTab === 'providers' ? 'active' : ''} ${!isBackupSystemReady ? 'disabled' : ''}`}
+          onClick={() => isBackupSystemReady && setActiveTab('providers')}
+          disabled={!isBackupSystemReady}
         >
           Providers
         </button>
         <button 
-          className={`nav-button ${activeTab === 'schedule' ? 'active' : ''}`}
-          onClick={() => setActiveTab('schedule')}
+          className={`nav-button ${activeTab === 'schedule' ? 'active' : ''} ${!isBackupSystemReady ? 'disabled' : ''}`}
+          onClick={() => isBackupSystemReady && setActiveTab('schedule')}
+          disabled={!isBackupSystemReady}
         >
           Schedule
         </button>
         <button 
-          className={`nav-button ${activeTab === 'config' ? 'active' : ''}`}
-          onClick={() => setActiveTab('config')}
+          className={`nav-button ${activeTab === 'config' ? 'active' : ''} ${!isBackupSystemReady ? 'disabled' : ''}`}
+          onClick={() => isBackupSystemReady && setActiveTab('config')}
+          disabled={!isBackupSystemReady}
         >
           Config
         </button>
         <button 
-          className={`nav-button ${activeTab === 'restore' ? 'active' : ''}`}
-          onClick={() => setActiveTab('restore')}
+          className={`nav-button ${activeTab === 'restore' ? 'active' : ''} ${!isBackupSystemReady ? 'disabled' : ''}`}
+          onClick={() => isBackupSystemReady && setActiveTab('restore')}
+          disabled={!isBackupSystemReady}
         >
           Restore
         </button>

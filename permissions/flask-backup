@@ -34,6 +34,10 @@ www-data ALL=(root) NOPASSWD: /usr/bin/test -f /vault/.keys/backup.key
 www-data ALL=(root) NOPASSWD: /usr/bin/test -f /vault/.keys/backblaze.key
 www-data ALL=(root) NOPASSWD: /usr/bin/test -f /vault/.keys/google_cloud_storage.key
 www-data ALL=(root) NOPASSWD: /usr/bin/test -f /vault/.keys/aws_s3.key
+www-data ALL=(root) NOPASSWD: /usr/bin/stat /vault/.keys/backup.key
+www-data ALL=(root) NOPASSWD: /usr/bin/stat /vault/.keys/backblaze.key
+www-data ALL=(root) NOPASSWD: /usr/bin/stat /vault/.keys/google_cloud_storage.key
+www-data ALL=(root) NOPASSWD: /usr/bin/stat /vault/.keys/aws_s3.key
 
 # Allow directory creation and management
 www-data ALL=(root) NOPASSWD: /usr/bin/mkdir -p /opt/homeserver-backup
@@ -45,9 +49,7 @@ www-data ALL=(root) NOPASSWD: /usr/bin/chown -R www-data\:www-data /var/log/home
 
 # Allow system link creation and removal
 www-data ALL=(root) NOPASSWD: /bin/ln -sf /var/www/homeserver/premium/backup/backup-venv /usr/local/bin/homeserver-backup
-www-data ALL=(root) NOPASSWD: /bin/ln -sf /var/www/homeserver/premium/backup/src/installer/updateSettings.py /usr/local/bin/homeserver-backup-update-settings
 www-data ALL=(root) NOPASSWD: /bin/rm /usr/local/bin/homeserver-backup
-www-data ALL=(root) NOPASSWD: /bin/rm /usr/local/bin/homeserver-backup-update-settings
 
 # Allow settings.json file removal for clean uninstall
 www-data ALL=(root) NOPASSWD: /bin/rm /etc/backupTab/settings.json

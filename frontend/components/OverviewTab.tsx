@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { BackupConfig, ScheduleInfo, HeaderStats } from '../types';
 import { StatusHeaderBar } from './StatusHeaderBar';
 import { InstallationManager } from './InstallationManager';
+import { getFileEmoji } from '../utils/fileIcons';
 
 interface OverviewTabProps {
   config: BackupConfig | null;
@@ -93,7 +94,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
         
         <div className="provider-list">
-          {config?.providers ? Object.entries(config.providers).map(([key, provider]) => (
+          {config?.providers ? Object.entries(config.providers)
+            .sort(([a], [b]) => {
+              // Apply stable sort order to prevent providers from jumping around
+              const sortOrder = ['local', 'backblaze', 'aws_s3', 'google_cloud_storage'];
+              const aIndex = sortOrder.indexOf(a);
+              const bIndex = sortOrder.indexOf(b);
+              
+              if (aIndex !== -1 && bIndex !== -1) {
+                return aIndex - bIndex;
+              }
+              
+              if (aIndex !== -1) return -1;
+              if (bIndex !== -1) return 1;
+              
+              return a.localeCompare(b);
+            })
+            .map(([key, provider]) => (
             <div 
               key={key} 
               className={`provider-item ${provider.enabled ? 'enabled' : 'disabled'} ${clickedProvider === key ? 'clicked' : ''}`}
@@ -137,6 +154,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             config.backup_items.map((file, index) => (
               <div key={index} className="file-item">
                 <div className="file-info">
+                  <span className="file-icon">{getFileEmoji(file)}</span>
                   <div className="file-path">{file}</div>
                 </div>
               </div>

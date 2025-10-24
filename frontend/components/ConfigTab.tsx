@@ -14,6 +14,7 @@ import {
   faCheckCircle,
   faCalendarAlt
 } from '@fortawesome/free-solid-svg-icons';
+import { getFileEmoji } from '../utils/fileIcons';
 import { 
   BackupConfig, 
   BackupStatus,
@@ -71,6 +72,7 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
   // Remove local activeBackupType state - it comes from schedule tab now
   const [showAdvancedConfig, setShowAdvancedConfig] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isAddingFile, setIsAddingFile] = useState<boolean>(false);
 
   const tooltip = useTooltip();
 
@@ -174,8 +176,9 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
 
 
   const handleAddFile = async () => {
-    if (!newFilePath.trim() || !config) return;
+    if (!newFilePath.trim() || !config || isAddingFile) return;
     
+    setIsAddingFile(true);
     try {
       const updatedConfig = {
         ...config,
@@ -203,12 +206,15 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
         variant: 'error',
         duration: 4000
       });
+    } finally {
+      setIsAddingFile(false);
     }
   };
 
   const handleAddRecommendedPath = async (path: string) => {
-    if (!config) return;
+    if (!config || isAddingFile) return;
     
+    setIsAddingFile(true);
     try {
       const updatedConfig = {
         ...config,
@@ -235,6 +241,8 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
         variant: 'error',
         duration: 4000
       });
+    } finally {
+      setIsAddingFile(false);
     }
   };
 
@@ -463,6 +471,7 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                     key={index}
                     className="recommended-pill"
                     onClick={() => handleAddRecommendedPath(path)}
+                    disabled={isAddingFile}
                     title={`Add ${path} to backup list`}
                   >
                     {path}
@@ -486,9 +495,16 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
               <button 
                 className="action-button secondary"
                 onClick={handleAddFile}
-                disabled={!newFilePath.trim()}
+                disabled={!newFilePath.trim() || isAddingFile}
               >
-                Add
+                {isAddingFile ? (
+                  <>
+                    <FontAwesomeIcon icon={faSpinner} spin />
+                    Adding...
+                  </>
+                ) : (
+                  'Add'
+                )}
               </button>
             </div>
             
@@ -499,6 +515,7 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
               </div>
               {config.backup_items?.map((item, index) => (
                 <div key={index} className="file-item">
+                  <span className="file-icon">{getFileEmoji(item)}</span>
                   <span className="file-path">{item}</span>
                   <button 
                     className="remove-button"

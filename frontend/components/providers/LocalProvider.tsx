@@ -61,9 +61,6 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
     <div className="local-provider">
       <div className="provider-header">
         <h4>Local Filesystem Configuration</h4>
-        <p className="provider-description">
-          Configure local filesystem storage for your backups
-        </p>
       </div>
 
       <div className="config-form">

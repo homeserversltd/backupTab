@@ -52,14 +52,34 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
           return provider;
         });
         
-        setProviderStatuses(correctedStatuses);
+        // Apply stable sort order to prevent providers from jumping around when toggled
+        const stableSortedStatuses = correctedStatuses.sort((a, b) => {
+          // Define a consistent sort order for providers
+          const sortOrder = ['local', 'backblaze', 'aws_s3', 'google_cloud_storage'];
+          const aIndex = sortOrder.indexOf(a.name);
+          const bIndex = sortOrder.indexOf(b.name);
+          
+          // If both providers are in the sort order, use that order
+          if (aIndex !== -1 && bIndex !== -1) {
+            return aIndex - bIndex;
+          }
+          
+          // If only one is in the sort order, prioritize it
+          if (aIndex !== -1) return -1;
+          if (bIndex !== -1) return 1;
+          
+          // If neither is in the sort order, sort alphabetically
+          return a.name.localeCompare(b.name);
+        });
+        
+        setProviderStatuses(stableSortedStatuses);
         
         // Set default selected provider to first available provider
-        if (correctedStatuses && correctedStatuses.length > 0) {
-          const firstAvailable = correctedStatuses.find(p => p.available);
+        if (stableSortedStatuses && stableSortedStatuses.length > 0) {
+          const firstAvailable = stableSortedStatuses.find(p => p.available);
           if (firstAvailable) {
             // If no provider is selected, or if current provider is unavailable, switch to first available
-            if (!selectedProvider || !correctedStatuses.find(p => p.name === selectedProvider)?.available) {
+            if (!selectedProvider || !stableSortedStatuses.find(p => p.name === selectedProvider)?.available) {
               console.log('Setting provider to:', firstAvailable.name);
               setSelectedProvider(firstAvailable.name);
             }
@@ -86,13 +106,30 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
               service_name: (config.providers[providerName] as any)?.keyman_service_name || providerName
             }
           }));
-          setProviderStatuses(fallbackStatuses);
+          
+          // Apply the same stable sort order to fallback statuses
+          const stableSortedFallback = fallbackStatuses.sort((a, b) => {
+            const sortOrder = ['local', 'backblaze', 'aws_s3', 'google_cloud_storage'];
+            const aIndex = sortOrder.indexOf(a.name);
+            const bIndex = sortOrder.indexOf(b.name);
+            
+            if (aIndex !== -1 && bIndex !== -1) {
+              return aIndex - bIndex;
+            }
+            
+            if (aIndex !== -1) return -1;
+            if (bIndex !== -1) return 1;
+            
+            return a.name.localeCompare(b.name);
+          });
+          
+          setProviderStatuses(stableSortedFallback);
           
           // Set default selected provider to first available provider in fallback
-          const firstAvailable = fallbackStatuses.find(p => p.available);
+          const firstAvailable = stableSortedFallback.find(p => p.available);
           if (firstAvailable) {
             // If no provider is selected, or if current provider is unavailable, switch to first available
-            if (!selectedProvider || !fallbackStatuses.find(p => p.name === selectedProvider)?.available) {
+            if (!selectedProvider || !stableSortedFallback.find(p => p.name === selectedProvider)?.available) {
               console.log('Setting fallback provider to:', firstAvailable.name);
               setSelectedProvider(firstAvailable.name);
             }
@@ -253,6 +290,7 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
 
     switch (selectedProvider) {
       case 'backblaze':
+        const backblazeStatus = providerStatuses.find(p => p.name === 'backblaze');
         return (
           <div className="provider-config-panel">
             <BackblazeProvider
@@ -260,6 +298,7 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
               onConfigChange={handleProviderConfigChange}
               onSave={handleSaveProviderConfig}
               isLoading={isLoading}
+              isKeymanConfigured={backblazeStatus?.configured || false}
             />
           </div>
         );
