@@ -183,6 +183,7 @@ const BackupTablet: React.FC = () => {
             config={config}
             onScheduleChange={refreshScheduleData}
             onConfigRefresh={refreshConfigData}
+            onHeaderStatsRefresh={loadHeaderStats}
           />
         )}
 

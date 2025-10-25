@@ -565,6 +565,29 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
             self.log(f"Failed to install cron job: {e}", "ERROR")
             return False
     
+    def create_backup_state_directory(self) -> bool:
+        """Create backup state directory with proper permissions."""
+        self.log("Creating backup state directory...")
+        
+        try:
+            state_dir = Path("/opt/homeserver-backup")
+            
+            # Create directory with sudo
+            subprocess.run(['/usr/bin/sudo', '/usr/bin/mkdir', '-p', str(state_dir)], check=True)
+            
+            # Set permissions to 755 so www-data can read/write
+            subprocess.run(['/usr/bin/sudo', '/bin/chmod', '755', str(state_dir)], check=True)
+            
+            self.log(f"Backup state directory created with 755 permissions: {state_dir}")
+            return True
+            
+        except subprocess.CalledProcessError as e:
+            self.log(f"Failed to create backup state directory: {e}", "ERROR")
+            return False
+        except Exception as e:
+            self.log(f"Failed to create backup state directory: {e}", "ERROR")
+            return False
+
     def create_system_links(self) -> bool:
         """Create system-wide links for easy access."""
         self.log("Creating system links...")
@@ -687,6 +710,13 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
             logger.error("System configuration creation failed")
             return False
         logger.info("System configuration created successfully")
+        
+        # Create backup state directory
+        logger.info("Creating backup state directory...")
+        if not self.create_backup_state_directory():
+            logger.error("Backup state directory creation failed")
+            return False
+        logger.info("Backup state directory created successfully")
         
         # Install cron job
         logger.info("Installing cron job...")

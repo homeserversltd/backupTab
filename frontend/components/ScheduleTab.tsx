@@ -30,6 +30,7 @@ interface ScheduleTabProps {
   schedules?: BackupScheduleConfig[];
   onScheduleChange?: () => void;
   onConfigRefresh?: () => void;
+  onHeaderStatsRefresh?: () => void;
   config?: BackupConfig | null;
 }
 
@@ -47,6 +48,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   schedules = [], 
   onScheduleChange,
   onConfigRefresh,
+  onHeaderStatsRefresh,
   config
 }) => {
   const {
@@ -303,6 +305,13 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       if (onConfigRefresh) {
         await onConfigRefresh();
         console.log('Main config reloaded successfully');
+      }
+      
+      console.log('Reloading header stats...');
+      // Reload header stats to get updated Last Backup and Size
+      if (onHeaderStatsRefresh) {
+        await onHeaderStatsRefresh();
+        console.log('Header stats reloaded successfully');
       }
     } catch (error) {
       console.error('=== FRONTEND SYNC NOW ERROR ===');

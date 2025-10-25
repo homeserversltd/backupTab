@@ -16,40 +16,52 @@ from .logger import get_logger
 
 
 class EncryptionManager:
-    """Manages backup encryption operations."""
+    """Manages backup encryption operations using SUK (Secure User Key)."""
     
-    def __init__(self, fak_path: str = "/root/key/skeleton.key"):
-        self.fak_path = Path(fak_path)
+    def __init__(self):
         self.logger = get_logger()
+        # Import keyman integration to get SUK
+        from .keyman_integration import KeymanIntegration
+        self.keyman = KeymanIntegration()
     
-    def get_fak_key(self) -> Optional[bytes]:
-        """Get Factory Access Key from skeleton.key."""
+    def get_suk_key(self) -> Optional[bytes]:
+        """Get Secure User Key from keyman backup service."""
         try:
-            with open(self.fak_path, "r") as f:
-                fak_text = f.read().strip()
+            # Get backup credentials from keyman
+            credentials = self.keyman.get_service_credentials('backup')
+            if not credentials:
+                self.logger.error("Failed to get backup credentials from keyman")
+                return None
             
-            # Convert FAK to encryption key using PBKDF2
+            # Use the password as the SUK
+            suk_password = credentials.get('password')
+            if not suk_password:
+                self.logger.error("No password found in backup credentials")
+                return None
+            
+            # Convert SUK to encryption key using PBKDF2
             kdf = PBKDF2HMAC(
                 algorithm=hashes.SHA256(),
                 length=32,
                 salt=b'homeserver_backup_salt',
                 iterations=100000,
             )
-            key = base64.urlsafe_b64encode(kdf.derive(fak_text.encode()))
+            key = base64.urlsafe_b64encode(kdf.derive(suk_password.encode()))
+            self.logger.info("Successfully derived encryption key from SUK")
             return key
         except Exception as e:
-            self.logger.error(f"Failed to get FAK key: {e}")
+            self.logger.error(f"Failed to get SUK key: {e}")
             return None
     
     def encrypt_file(self, file_path: Path, output_path: Optional[Path] = None) -> Optional[Path]:
-        """Encrypt a file using FAK key."""
-        fak_key = self.get_fak_key()
-        if not fak_key:
-            self.logger.error("Failed to get FAK key, cannot encrypt file")
+        """Encrypt a file using SUK key."""
+        suk_key = self.get_suk_key()
+        if not suk_key:
+            self.logger.error("Failed to get SUK key, cannot encrypt file")
             return None
         
         try:
-            fernet = Fernet(fak_key)
+            fernet = Fernet(suk_key)
             
             # Read and encrypt the file
             with open(file_path, "rb") as f:
@@ -71,14 +83,14 @@ class EncryptionManager:
             return None
     
     def decrypt_file(self, encrypted_path: Path, output_path: Optional[Path] = None) -> Optional[Path]:
-        """Decrypt a file using FAK key."""
-        fak_key = self.get_fak_key()
-        if not fak_key:
-            self.logger.error("Failed to get FAK key, cannot decrypt file")
+        """Decrypt a file using SUK key."""
+        suk_key = self.get_suk_key()
+        if not suk_key:
+            self.logger.error("Failed to get SUK key, cannot decrypt file")
             return None
         
         try:
-            fernet = Fernet(fak_key)
+            fernet = Fernet(suk_key)
             
             # Read and decrypt the file
             with open(encrypted_path, "rb") as f:
@@ -100,5 +112,5 @@ class EncryptionManager:
             return None
     
     def is_encryption_available(self) -> bool:
-        """Check if encryption is available (FAK key exists)."""
-        return self.fak_path.exists() and self.get_fak_key() is not None
+        """Check if encryption is available (SUK key exists)."""
+        return self.get_suk_key() is not None

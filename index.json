@@ -99,6 +99,9 @@
     "permissions": {
       "flask_backup": "permissions/flask-backup"
     },
+    "docs": {
+      "state_tracking": "BACKUP_STATE_TRACKING.md"
+    },
     "system": {
       "dependencies": "system/dependencies.json"
     }

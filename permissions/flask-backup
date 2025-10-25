@@ -67,3 +67,9 @@ www-data ALL=(root) NOPASSWD: /bin/rm /usr/local/bin/homeserver-backup
 # Allow settings.json file removal for clean uninstall
 www-data ALL=(root) NOPASSWD: /bin/rm /etc/backupTab/settings.json
 www-data ALL=(root) NOPASSWD: /bin/cp /etc/backupTab/settings.json /etc/backupTab/settings.backup.*
+
+# Allow backup state file management
+www-data ALL=(root) NOPASSWD: /bin/cp /tmp/tmp*.json /opt/homeserver-backup/backup_state.json
+www-data ALL=(root) NOPASSWD: /bin/touch /opt/homeserver-backup/backup_state.json
+www-data ALL=(root) NOPASSWD: /bin/chmod 755 /opt/homeserver-backup
+www-data ALL=(root) NOPASSWD: /bin/cat /opt/homeserver-backup/backup_state.json

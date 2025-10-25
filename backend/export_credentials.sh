@@ -39,9 +39,14 @@ while IFS= read -r line; do
     fi
 done <<< "$KEY_CONTENT"
 
+# For backup service, username might be missing - use service name as fallback
+if [ -z "$USERNAME" ] && [ "$SERVICE_NAME" = "backup" ]; then
+    USERNAME="$SERVICE_NAME"
+fi
+
 # Validate credential extraction
-if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
-    echo "ERROR: Failed to extract credentials from $SERVICE_NAME key file"
+if [ -z "$PASSWORD" ]; then
+    echo "ERROR: Failed to extract password from $SERVICE_NAME key file"
     exit 1
 fi
 

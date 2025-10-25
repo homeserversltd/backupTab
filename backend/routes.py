@@ -1094,29 +1094,34 @@ def get_header_stats():
             get_logger().warning(f"Error getting schedule status: {e}")
             next_backup_display = "Not scheduled"
         
-        # Get backup size information
+        # Get backup size information from state file
         backup_size_bytes = None
-        if last_backup:
-            # Try to get backup size from state or config
-            try:
-                # This would need to be implemented based on your backup system
-                # For now, we'll set it to None
-                backup_size_bytes = None
-            except Exception as e:
-                get_logger().warning(f"Error getting backup size: {e}")
-        
         backup_size_display = "Unknown"
-        if backup_size_bytes and isinstance(backup_size_bytes, (int, float)) and backup_size_bytes > 0:
-            # Format size in human readable format
-            units = ['B', 'KB', 'MB', 'GB', 'TB']
-            unit_index = 0
-            size_value = float(backup_size_bytes)
-            
-            while size_value >= 1024 and unit_index < len(units) - 1:
-                size_value /= 1024
-                unit_index += 1
-            
-            backup_size_display = f"{size_value:.1f} {units[unit_index]}"
+        
+        if last_backup:
+            # Try to get backup size from state file
+            state_file = "/opt/homeserver-backup/backup_state.json"
+            try:
+                if os.path.exists(state_file):
+                    with open(state_file, 'r') as f:
+                        import json
+                        state = json.load(f)
+                        backup_size_bytes = state.get('last_backup_size_bytes')
+                        backup_size_display = state.get('last_backup_size_display', 'Unknown')
+                        
+                        # If we got size bytes but no display, format it
+                        if backup_size_bytes and isinstance(backup_size_bytes, (int, float)) and backup_size_bytes > 0 and backup_size_display == "Unknown":
+                            units = ['B', 'KB', 'MB', 'GB', 'TB']
+                            unit_index = 0
+                            size_value = float(backup_size_bytes)
+                            
+                            while size_value >= 1024 and unit_index < len(units) - 1:
+                                size_value /= 1024
+                                unit_index += 1
+                            
+                            backup_size_display = f"{size_value:.1f} {units[unit_index]}"
+            except Exception as e:
+                get_logger().warning(f"Error getting backup size from state: {e}")
         
         # Check if backup system is properly installed
         def check_backup_installation():

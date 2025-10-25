@@ -52,6 +52,7 @@ class EnhancedBackupCLI:
             self.config_file = config_file
         self.temp_dir = Path("/tmp/homeserver-backup-cli-enhanced")
         self.backup_dir = Path(BACKUP_BASE_DIR)
+        self.state_file = Path("/opt/homeserver-backup/backup_state.json")
         
         # Initialize utilities
         self.logger = get_logger()
@@ -62,6 +63,9 @@ class EnhancedBackupCLI:
         # Ensure directories exist
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.backup_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Ensure state directory exists
+        self.state_file.parent.mkdir(parents=True, exist_ok=True)
         
         # Load configuration
         self.config = self.config_manager.load_config()
@@ -86,6 +90,76 @@ class EnhancedBackupCLI:
                 except Exception as e:
                     print(f"WARNING: Failed to initialize provider {provider_name}: {e}")
     
+    def _update_backup_state(self, backup_path: Optional[Path], backup_type: str = 'manual'):
+        """Update the backup state file with last backup timestamp and size."""
+        try:
+            # Get backup size
+            backup_size_bytes = 0
+            backup_size_display = "Unknown"
+            
+            if backup_path and backup_path.exists():
+                backup_size_bytes = backup_path.stat().st_size
+                
+                # Convert to human-readable format
+                units = ['B', 'KB', 'MB', 'GB', 'TB']
+                unit_index = 0
+                size_value = float(backup_size_bytes)
+                
+                while size_value >= 1024 and unit_index < len(units) - 1:
+                    size_value /= 1024
+                    unit_index += 1
+                
+                backup_size_display = f"{size_value:.1f} {units[unit_index]}"
+            
+            # Current timestamp
+            current_timestamp = datetime.now().isoformat()
+            
+            # Load existing state or create new
+            state = {}
+            if self.state_file.exists():
+                try:
+                    with open(self.state_file, 'r') as f:
+                        state = json.load(f)
+                except Exception as e:
+                    self.logger.warning(f"Failed to load existing state: {e}")
+                    state = {}
+            
+            # Initialize backup_history if it doesn't exist
+            if 'backup_history' not in state:
+                state['backup_history'] = []
+            
+            # Update last backup information
+            state['last_backup'] = current_timestamp
+            state['last_backup_size_bytes'] = backup_size_bytes
+            state['last_backup_size_display'] = backup_size_display
+            state['last_backup_type'] = backup_type
+            
+            # If this is a daily/scheduled backup, also update last_daily_backup
+            if backup_type == 'daily' or backup_type == 'scheduled':
+                state['last_daily_backup'] = current_timestamp
+            
+            # Add to backup history (keep last 100 entries)
+            backup_entry = {
+                'timestamp': current_timestamp,
+                'type': backup_type,
+                'size_bytes': backup_size_bytes,
+                'size_display': backup_size_display,
+                'success': True
+            }
+            state['backup_history'].append(backup_entry)
+            if len(state['backup_history']) > 100:
+                state['backup_history'] = state['backup_history'][-100:]
+            
+            # Write state file
+            with open(self.state_file, 'w') as f:
+                json.dump(state, f, indent=2)
+            
+            self.logger.info(f"Backup state updated: {backup_type} backup at {current_timestamp}, size: {backup_size_display}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to update backup state: {e}")
+            return False
     
     def _create_backup_metadata(self, backup_items: List[str], timestamp: str) -> Dict[str, Any]:
         """Create metadata for backup package."""
@@ -181,30 +255,49 @@ class EnhancedBackupCLI:
             self.logger.log_backup_failure("Failed to create backup package")
             return None
         
-        # Encrypt if enabled (skip encryption for local provider)
-        if self.config["encryption"]["enabled"] and "local" not in self.providers:
+        # Encrypt if enabled (for cloud providers only)
+        encrypted_path = None
+        if self.config["encryption"]["enabled"]:
             encrypted_path = self._encrypt_backup(package_path)
             if not encrypted_path:
                 self.logger.log_backup_failure("Failed to encrypt backup package")
                 return None
-            package_path = encrypted_path
-        elif "local" in self.providers:
-            self.logger.info("Skipping encryption for local provider - local backups are compressed only")
+            self.logger.info("Backup package encrypted for cloud providers")
+        else:
+            self.logger.info("Encryption disabled - all providers will receive unencrypted data")
         
         # Upload to all enabled providers
         upload_results = {}
         for provider_name, provider in self.providers.items():
             self.logger.info(f"Processing with {provider_name}...")
             
+            # Choose which version to upload based on provider type
             if provider_name == "local":
-                # Local provider handles tarball creation and encryption internally
+                # Local provider gets unencrypted version
+                upload_path = package_path
+                self.logger.info("Using unencrypted package for local provider")
+            else:
+                # Cloud providers get encrypted version (if encryption is enabled)
+                upload_path = encrypted_path if encrypted_path else package_path
+                if encrypted_path:
+                    self.logger.info(f"Using encrypted package for {provider_name} provider")
+                else:
+                    self.logger.info(f"Using unencrypted package for {provider_name} provider (encryption disabled)")
+            
+            # Upload to the provider
+            if provider_name == "local":
+                # Local provider handles tarball creation internally
                 backup_path = provider.create_backup(backup_items, timestamp)
                 success = backup_path is not None
                 if success:
                     self.logger.info(f"Local backup created: {backup_path}")
             else:
-                # Other providers use the pre-created package
-                success = provider.upload(package_path, package_path.name)
+                # Cloud providers upload the appropriate version (encrypted or unencrypted)
+                # Use consistent filename to overwrite previous backups (space-saving)
+                remote_name = "homeserver_backup_latest.tar.gz"
+                if encrypted_path and upload_path == encrypted_path:
+                    remote_name = "homeserver_backup_latest.tar.gz.enc"  # Mark encrypted files
+                success = provider.upload(upload_path, remote_name)
             
             upload_results[provider_name] = success
             self.logger.log_provider_operation(provider_name, "upload", success)
@@ -225,6 +318,9 @@ class EnhancedBackupCLI:
             except Exception as count_error:
                 self.logger.warning(f"Failed to increment backup count: {count_error}")
             
+            # Update backup state file with last backup timestamp and size
+            self._update_backup_state(local_path, backup_type='manual')
+            
             return local_path
         else:
             # Local provider already handled storage, clean up temp package
@@ -241,6 +337,10 @@ class EnhancedBackupCLI:
                     self.logger.warning("Failed to increment backup count, but backup was successful")
             except Exception as count_error:
                 self.logger.warning(f"Failed to increment backup count: {count_error}")
+            
+            # Update backup state file with last backup timestamp and size
+            # backup_path was set earlier in the loop when processing local provider
+            self._update_backup_state(backup_path, backup_type='manual')
             
             return None  # Local provider returns its own path
     
