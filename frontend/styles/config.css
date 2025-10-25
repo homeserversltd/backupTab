@@ -316,7 +316,7 @@
 }
 
 .remove-button:hover {
-  background: #c82333;
+  background: color-mix(in srgb, var(--error) 85%, var(--background) 15%);
   transform: scale(1.05);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
@@ -483,10 +483,10 @@
 .loading-state span::before {
   content: "⏳";
   font-size: 1.2rem;
-  animation: spin 1s linear infinite;
+  animation: backup-spin 1s linear infinite;
 }
 
-@keyframes spin {
+@keyframes backup-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
@@ -890,7 +890,7 @@
   background: var(--background);
   border-radius: 8px;
   border: 1px solid var(--border);
-  animation: slideInDown 0.3s ease-out;
+  animation: backup-slideInDown 0.3s ease-out;
 }
 
 .password-field label {
@@ -964,7 +964,7 @@
 }
 
 /* Animation for password field appearance */
-@keyframes slideInDown {
+@keyframes backup-slideInDown {
   from {
     opacity: 0;
     transform: translateY(-10px);

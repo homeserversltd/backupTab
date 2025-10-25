@@ -37,10 +37,10 @@
 .nav-button.disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  color: var(--textMuted);
+  color: var(--secondary);
 }
 
 .nav-button.disabled:hover {
   background: none;
-  color: var(--textMuted);
+  color: var(--secondary);
 }

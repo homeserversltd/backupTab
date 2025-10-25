@@ -138,12 +138,12 @@
 }
 
 .provider-status.not-configured {
-  background: #6c757d;
+  background: var(--secondary);
   color: var(--background);
 }
 
 .provider-status.not-available {
-  background: #ffc107;
+  background: var(--warning);
   color: var(--background);
 }
 
@@ -176,7 +176,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
+  background-color: var(--border);
   transition: 0.3s ease;
   border-radius: 26px;
   border: 2px solid transparent;
@@ -189,7 +189,7 @@
   width: 18px;
   left: 2px;
   bottom: 2px;
-  background-color: white;
+  background-color: var(--background);
   transition: 0.3s ease;
   border-radius: 50%;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -396,8 +396,8 @@ input:checked + .toggle-label {
 .warning-box {
   display: flex;
   align-items: flex-start;
-  background: #fff3cd;
-  border: 1px solid #ffeaa7;
+  background: color-mix(in srgb, var(--warning) 15%, var(--background));
+  border: 1px solid var(--warning);
   border-radius: 6px;
   padding: 1rem;
   margin: 0.5rem 0;
@@ -481,15 +481,15 @@ input:checked + .toggle-label {
 }
 
 .config-status-banner.configured {
-  background: #d4edda;
-  border-color: #c3e6cb;
-  color: #155724;
+  background: color-mix(in srgb, var(--success) 15%, var(--background));
+  border-color: var(--success);
+  color: var(--success);
 }
 
 .config-status-banner.warning {
-  background: #fff3cd;
-  border-color: #ffeaa7;
-  color: #856404;
+  background: color-mix(in srgb, var(--warning) 15%, var(--background));
+  border-color: var(--warning);
+  color: var(--warning);
 }
 
 .status-icon {

@@ -3,48 +3,47 @@
  */
 
 .overview-layout {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 0 !important;
-  height: 100% !important;
-  min-height: 600px !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 8px !important;
-  overflow: hidden !important;
-  box-shadow: 0 2px 4px var(--primary), 0 2px 4px var(--border) !important;
-  background-color: var(--hiddenTabBackground) !important;
-  border-radius: 12px !important;
-  position: relative !important;
-  margin: 0 !important;
-  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  height: 100%;
+  min-height: 600px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px var(--primary), 0 2px 4px var(--border);
+  background-color: var(--hiddenTabBackground);
+  position: relative;
+  margin: 0;
+  padding: 0;
 }
 
 .overview-content {
-  display: flex !important;
-  flex: 1 !important;
-  gap: 0 !important;
+  display: flex;
+  flex: 1;
+  gap: 0;
 }
 
 /* Left Column - Providers */
 .providers-panel {
-  flex: 0 0 300px !important;
-  background: var(--background) !important;
-  border-radius: 0 !important;
-  padding: 20px !important;
-  overflow-y: auto !important;
-  border-right: 2px solid var(--border) !important;
-  box-shadow: 4px 0 8px rgba(0, 0, 0, 0.1) !important;
-  margin: 0 !important;
+  flex: 0 0 300px;
+  background: var(--background);
+  border-radius: 0;
+  padding: 20px;
+  overflow-y: auto;
+  border-right: 2px solid var(--border);
+  box-shadow: 4px 0 8px rgba(0, 0, 0, 0.1);
+  margin: 0;
 }
 
 /* Right Column - Files */
 .files-panel {
-  flex: 1 !important;
-  background: var(--background) !important;
-  border-radius: 0 !important;
-  padding: 20px !important;
-  overflow-y: auto !important;
-  margin: 0 !important;
+  flex: 1;
+  background: var(--background);
+  border-radius: 0;
+  padding: 20px;
+  overflow-y: auto;
+  margin: 0;
 }
 
 /* Stats Banner */
@@ -144,10 +143,10 @@
 
 /* Click animation */
 .provider-item.clicked {
-  animation: providerClick 0.3s ease-out;
+  animation: backup-providerClick 0.3s ease-out;
 }
 
-@keyframes providerClick {
+@keyframes backup-providerClick {
   0% {
     transform: scale(1);
     box-shadow: 0 2px 4px var(--border);
@@ -292,24 +291,24 @@
 }
 
 /* Installation Section Integration */
-.installation-section {
-  margin: 0 !important;
-  padding: 0 !important;
-  width: 100% !important;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+.backup-tablet .installation-section {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
-/* Override parent container interference */
-.backup-tablet-content .overview-container {
-  padding: 0 !important;
-  margin: -1.5rem !important;
-  width: calc(100% + 3rem) !important;
+/* Container adjustments - scoped to backup tablet */
+.backup-tablet .overview-container {
+  padding: 0;
+  margin: 0;
+  width: 100%;
 }
 
-/* Ensure overview layout takes full width */
-.overview-layout {
-  width: 100% !important;
-  max-width: none !important;
+/* Scoped overview layout */
+.backup-tablet .overview-layout {
+  width: 100%;
+  max-width: none;
 }

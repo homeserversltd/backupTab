@@ -171,7 +171,7 @@ export function useBackupControls(): UseBackupControlsReturn {
 
   // Keyman credential management functions
   const createKeymanCredentials = useCallback(async (serviceName: string, username: string, password: string): Promise<boolean> => {
-    await handleApiCall(`/keyman/${serviceName}/create`, {
+    await handleApiCall(`/keyman/credentials/${serviceName}`, {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     });
@@ -183,22 +183,22 @@ export function useBackupControls(): UseBackupControlsReturn {
     if (username) body.username = username;
     if (oldPassword) body.old_password = oldPassword;
     
-    await handleApiCall(`/keyman/${serviceName}/update`, {
-      method: 'POST',
+    await handleApiCall(`/keyman/credentials/${serviceName}`, {
+      method: 'PUT',
       body: JSON.stringify(body),
     });
     return true;
   }, [handleApiCall]);
 
   const deleteKeymanCredentials = useCallback(async (serviceName: string): Promise<boolean> => {
-    await handleApiCall(`/keyman/${serviceName}/delete`, {
+    await handleApiCall(`/keyman/credentials/${serviceName}`, {
       method: 'DELETE',
     });
     return true;
   }, [handleApiCall]);
 
   const getKeymanCredentials = useCallback(async (serviceName: string): Promise<any> => {
-    return handleApiCall<any>(`/keyman/${serviceName}`);
+    return handleApiCall<any>(`/keyman/credentials/${serviceName}`);
   }, [handleApiCall]);
 
   const getProvidersStatus = useCallback(async (): Promise<ProviderStatus[]> => {

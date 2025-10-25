@@ -35,8 +35,10 @@ www-data ALL=(root) NOPASSWD: /bin/cp /tmp/*.cron /etc/cron.d/homeserver-backup
 www-data ALL=(root) NOPASSWD: /bin/rm /etc/cron.d/homeserver-backup
 www-data ALL=(root) NOPASSWD: /bin/cat /etc/cron.d/homeserver-backup
 
-# Allow keyman credential export operations
-www-data ALL=(root) NOPASSWD: /usr/bin/sudo /vault/keyman/exportkey.sh *
+# Allow keyman credential operations
+www-data ALL=(root) NOPASSWD: /vault/keyman/exportkey.sh *
+www-data ALL=(root) NOPASSWD: /vault/keyman/newkey.sh *
+www-data ALL=(root) NOPASSWD: /vault/keyman/change_key.sh *
 # Allow backup credential export helper script
 www-data ALL=(root) NOPASSWD: /var/www/homeserver/premium/backupTab/backend/export_credentials.sh *
 www-data ALL=(root) NOPASSWD: /usr/bin/test -f /vault/.keys/backup.key

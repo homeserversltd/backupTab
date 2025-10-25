@@ -107,9 +107,9 @@ class KeymanIntegration:
         Create new service credentials using keyman.
         """
         try:
-            # Use newkey.sh to create credentials
+            # Use newkey.sh to create credentials with full path sudo
             result = subprocess.run(
-                [str(self.keyman_dir / 'newkey.sh'), service_name, username, password],
+                ['/usr/bin/sudo', str(self.keyman_dir / 'newkey.sh'), service_name, username, password],
                 capture_output=True,
                 text=True,
                 timeout=30

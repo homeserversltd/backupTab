@@ -46,16 +46,16 @@
 .loading-spinner {
   font-size: 2rem;
   color: var(--accent);
-  animation: spin 1s linear infinite;
+  animation: backup-spin 1s linear infinite;
 }
 
 .loading-container p {
-  color: var(--text-secondary);
+  color: var(--secondary);
   font-size: 1rem;
   margin: 0;
 }
 
-@keyframes spin {
+@keyframes backup-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
@@ -349,7 +349,7 @@
   padding: 16px;
   margin-top: 8px;
   position: relative;
-  animation: slideInUp 0.3s ease-out;
+  animation: backup-slideInUp 0.3s ease-out;
 }
 
 .schedule-preview::before {
@@ -363,7 +363,7 @@
   border-radius: 8px 8px 0 0;
 }
 
-@keyframes slideInUp {
+@keyframes backup-slideInUp {
   from {
     opacity: 0;
     transform: translateY(20px);
@@ -642,10 +642,10 @@
   border-radius: 8px;
   padding: 20px;
   margin-top: 16px;
-  animation: slideInDown 0.3s ease-out;
+  animation: backup-slideInDown 0.3s ease-out;
 }
 
-@keyframes slideInDown {
+@keyframes backup-slideInDown {
   from {
     opacity: 0;
     transform: translateY(-10px);

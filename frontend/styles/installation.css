@@ -169,7 +169,7 @@
   border: 1px solid transparent;
   border-top: 1px solid currentColor;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: backup-spin 1s linear infinite;
   margin-left: 6px;
   display: inline-block;
 }
@@ -444,11 +444,11 @@
   border: 2px solid transparent;
   border-top: 2px solid currentColor;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: backup-spin 1s linear infinite;
   margin-left: 8px;
 }
 
-@keyframes spin {
+@keyframes backup-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
@@ -559,14 +559,14 @@
 
 /* Animation for status changes */
 .installation-status {
-  animation: fadeInUp 0.5s ease-out;
+  animation: backup-fadeInUp 0.5s ease-out;
 }
 
 .installation-manager-compact {
-  animation: fadeInUp 0.3s ease-out;
+  animation: backup-fadeInUp 0.3s ease-out;
 }
 
-@keyframes fadeInUp {
+@keyframes backup-fadeInUp {
   from {
     opacity: 0;
     transform: translateY(20px);
