@@ -28,7 +28,7 @@ class BackblazeProvider(BaseProvider):
     
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        self.logger = logging.getLogger(f'homeserver_backup.backblaze')
+        self.logger = logging.getLogger('backend.backupTab.utils')
         self.keyman = KeymanIntegration()
         
         # Check if keyman credentials are available

@@ -253,44 +253,111 @@ def run_backup():
         get_logger().error(f"Backup execution failed: {e}")
         return create_response(False, error=str(e), status_code=500)
 
+def _parse_backup_output(stdout: str, stderr: str) -> dict:
+    """Parse backup output to determine provider success/failure."""
+    provider_results = {}
+    
+    # Combine stdout and stderr for analysis
+    combined_output = stdout + "\n" + stderr
+    
+    # Look for provider success/failure patterns
+    lines = combined_output.split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        
+        # Look for success patterns: "✓ provider_name upload" or "✓ provider_name"
+        if '✓' in line and ('upload' in line or 'backup' in line):
+            # Extract provider name from success line
+            if 'local' in line.lower():
+                provider_results['local'] = True
+            elif 'backblaze' in line.lower():
+                provider_results['backblaze'] = True
+            elif 'aws' in line.lower() or 's3' in line.lower():
+                provider_results['aws_s3'] = True
+            elif 'google' in line.lower() or 'gcs' in line.lower():
+                provider_results['google_cloud_storage'] = True
+        
+        # Look for failure patterns: "✗ provider_name upload" or "✗ provider_name"
+        elif '✗' in line and ('upload' in line or 'backup' in line):
+            # Extract provider name from failure line
+            if 'local' in line.lower():
+                provider_results['local'] = False
+            elif 'backblaze' in line.lower():
+                provider_results['backblaze'] = False
+            elif 'aws' in line.lower() or 's3' in line.lower():
+                provider_results['aws_s3'] = False
+            elif 'google' in line.lower() or 'gcs' in line.lower():
+                provider_results['google_cloud_storage'] = False
+        
+        # Look for specific error patterns
+        elif 'B2 API not initialized' in line:
+            provider_results['backblaze'] = False
+        elif 'Failed to load credentials' in line and 'backblaze' in line.lower():
+            provider_results['backblaze'] = False
+        elif 'Missing application_key_id' in line:
+            provider_results['backblaze'] = False
+    
+    # If no providers were detected, assume local succeeded (fallback)
+    if not provider_results:
+        provider_results['local'] = True
+    
+    return provider_results
+
 @bp.route('/backup/sync-now', methods=['POST'])
 def sync_now():
-    """Run backup script directly (Sync Now button)"""
+    """Run backup using the installed backup system (Sync Now button)"""
     logger = get_logger()
     logger.info("=== SYNC NOW REQUEST STARTED ===")
     
     try:
-        # Path to the backup script
-        backup_script = '/var/www/homeserver/premium/backupTab/backend/backup'
+        # Use the installed backup system instead of source script
+        installed_backup_script = '/var/www/homeserver/premium/backup/backup-venv'
+        fallback_backup_script = '/var/www/homeserver/premium/backupTab/backend/backup'
+        
+        # Check which backup script to use
+        if os.path.exists(installed_backup_script):
+            backup_script = installed_backup_script
+            logger.info(f"Using installed backup system: {backup_script}")
+        elif os.path.exists(fallback_backup_script):
+            backup_script = fallback_backup_script
+            logger.info(f"Using fallback backup script: {backup_script}")
+        else:
+            logger.error("No backup script found")
+            return create_response(False, error='Backup script not found', status_code=404)
+        
         logger.info(f"Backup script path: {backup_script}")
         
-        # Check if script exists
+        # Check if script exists and is executable
         if not os.path.exists(backup_script):
             logger.error(f"Backup script not found at: {backup_script}")
             return create_response(False, error='Backup script not found', status_code=404)
         
-        logger.info("Backup script exists, checking permissions...")
+        # Check if script is executable
+        if not os.access(backup_script, os.X_OK):
+            logger.warning(f"Backup script not executable, attempting to fix permissions...")
+            try:
+                os.chmod(backup_script, 0o755)
+                logger.info("Fixed backup script permissions")
+            except PermissionError:
+                logger.warning("Could not fix permissions, trying with sudo...")
+                try:
+                    subprocess.run(['sudo', 'chmod', '755', backup_script], check=True)
+                    logger.info("Fixed backup script permissions with sudo")
+                except subprocess.CalledProcessError as e:
+                    logger.error(f"Failed to fix permissions: {e}")
+                    return create_response(False, error='Backup script not executable', status_code=500)
         
-        # Make script executable
-        os.chmod(backup_script, 0o755)
-        logger.info("Made backup script executable")
+        logger.info("Backup script ready, proceeding with execution...")
         
-        # Check current working directory
-        cwd = '/var/www/homeserver/premium/backupTab/backend'
+        # Set working directory based on which script we're using
+        if backup_script == installed_backup_script:
+            cwd = '/var/www/homeserver/premium/backup'
+        else:
+            cwd = '/var/www/homeserver/premium/backupTab/backend'
+        
         logger.info(f"Working directory: {cwd}")
         logger.info(f"Directory exists: {os.path.exists(cwd)}")
-        
-        # List files in working directory
-        try:
-            files = os.listdir(cwd)
-            logger.info(f"Files in working directory: {files}")
-        except Exception as e:
-            logger.warning(f"Could not list directory contents: {e}")
-        
-        # Check if settings.json exists
-        settings_path = os.path.join(cwd, 'src/config/settings.json')
-        logger.info(f"Settings file path: {settings_path}")
-        logger.info(f"Settings file exists: {os.path.exists(settings_path)}")
         
         logger.info("Starting backup script execution...")
         
@@ -307,13 +374,38 @@ def sync_now():
         logger.info(f"STDOUT: {result.stdout}")
         logger.info(f"STDERR: {result.stderr}")
         
+        # Parse backup output to determine provider success/failure
+        provider_results = _parse_backup_output(result.stdout, result.stderr)
+        
         if result.returncode == 0:
-            logger.info("Backup completed successfully")
-            return create_response(True, {
-                'message': 'Backup completed successfully',
-                'output': result.stdout,
-                'timestamp': create_backup_timestamp()
-            })
+            # Check if all providers succeeded
+            failed_providers = [provider for provider, success in provider_results.items() if not success]
+            successful_providers = [provider for provider, success in provider_results.items() if success]
+            
+            if failed_providers:
+                # Partial success - some providers failed
+                logger.warning(f"Backup completed with partial success. Failed providers: {failed_providers}")
+                return create_response(True, {
+                    'message': f'Backup completed with partial success. Failed providers: {", ".join(failed_providers)}',
+                    'output': result.stdout,
+                    'timestamp': create_backup_timestamp(),
+                    'provider_results': provider_results,
+                    'successful_providers': successful_providers,
+                    'failed_providers': failed_providers,
+                    'partial_success': True
+                })
+            else:
+                # Complete success
+                logger.info("Backup completed successfully")
+                return create_response(True, {
+                    'message': 'Backup completed successfully',
+                    'output': result.stdout,
+                    'timestamp': create_backup_timestamp(),
+                    'provider_results': provider_results,
+                    'successful_providers': successful_providers,
+                    'failed_providers': [],
+                    'partial_success': False
+                })
         else:
             error_msg = f'Backup failed with return code {result.returncode}. STDOUT: {result.stdout}. STDERR: {result.stderr}'
             logger.error(error_msg)

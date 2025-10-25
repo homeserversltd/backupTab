@@ -306,6 +306,11 @@ export interface UseBackupControlsReturn {
   getProvidersStatus: () => Promise<ProviderStatus[]>;
   installBackupSystem: () => Promise<boolean>;
   uninstallBackupSystem: () => Promise<boolean>;
+  // Keyman credential management
+  createKeymanCredentials: (serviceName: string, username: string, password: string) => Promise<boolean>;
+  updateKeymanCredentials: (serviceName: string, newPassword: string, username?: string, oldPassword?: string) => Promise<boolean>;
+  deleteKeymanCredentials: (serviceName: string) => Promise<boolean>;
+  getKeymanCredentials: (serviceName: string) => Promise<any>;
   isLoading: boolean;
   error: string | null;
   clearError: () => void;

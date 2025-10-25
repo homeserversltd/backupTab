@@ -17,7 +17,7 @@ class LocalProvider(BaseProvider):
     
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        self.logger = logging.getLogger(f'homeserver_backup.local')
+        self.logger = logging.getLogger('backend.backupTab.utils')
         
         # Configuration - support both 'container' and 'path' for compatibility
         self.container = config.get('container') or config.get('path', '/mnt/nas/backups/homeserver')

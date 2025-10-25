@@ -12,6 +12,12 @@ www-data ALL=(root) NOPASSWD: /usr/bin/systemctl list-timers homeserver-backup.t
 # Allow backup CLI execution
 www-data ALL=(root) NOPASSWD: /usr/bin/python3 /opt/homeserver-backup/homeserver_backup_service.py
 
+# Allow backup script execution for sync now functionality
+www-data ALL=(root) NOPASSWD: /var/www/homeserver/premium/backupTab/backend/backup
+www-data ALL=(root) NOPASSWD: /var/www/homeserver/premium/backup/backup
+www-data ALL=(root) NOPASSWD: /usr/bin/python3 /var/www/homeserver/premium/backupTab/backend/backup
+www-data ALL=(root) NOPASSWD: /usr/bin/python3 /var/www/homeserver/premium/backup/backup
+
 # Allow configuration file access
 www-data ALL=(root) NOPASSWD: /usr/bin/cp /opt/homeserver-backup/config.yaml*
 www-data ALL=(root) NOPASSWD: /usr/bin/tail /var/log/homeserver-backup/backup.log
@@ -29,15 +35,14 @@ www-data ALL=(root) NOPASSWD: /bin/cp /tmp/*.cron /etc/cron.d/homeserver-backup
 www-data ALL=(root) NOPASSWD: /bin/rm /etc/cron.d/homeserver-backup
 www-data ALL=(root) NOPASSWD: /bin/cat /etc/cron.d/homeserver-backup
 
-# Allow backup key file access
+# Allow keyman credential export operations
+www-data ALL=(root) NOPASSWD: /usr/bin/sudo /vault/keyman/exportkey.sh *
+# Allow backup credential export helper script
+www-data ALL=(root) NOPASSWD: /var/www/homeserver/premium/backupTab/backend/export_credentials.sh *
 www-data ALL=(root) NOPASSWD: /usr/bin/test -f /vault/.keys/backup.key
 www-data ALL=(root) NOPASSWD: /usr/bin/test -f /vault/.keys/backblaze.key
 www-data ALL=(root) NOPASSWD: /usr/bin/test -f /vault/.keys/google_cloud_storage.key
 www-data ALL=(root) NOPASSWD: /usr/bin/test -f /vault/.keys/aws_s3.key
-www-data ALL=(root) NOPASSWD: /usr/bin/stat /vault/.keys/backup.key
-www-data ALL=(root) NOPASSWD: /usr/bin/stat /vault/.keys/backblaze.key
-www-data ALL=(root) NOPASSWD: /usr/bin/stat /vault/.keys/google_cloud_storage.key
-www-data ALL=(root) NOPASSWD: /usr/bin/stat /vault/.keys/aws_s3.key
 
 # Allow directory creation and management
 www-data ALL=(root) NOPASSWD: /usr/bin/mkdir -p /opt/homeserver-backup
@@ -46,6 +51,12 @@ www-data ALL=(root) NOPASSWD: /usr/bin/mkdir -p /var/log/homeserver-backup
 www-data ALL=(root) NOPASSWD: /usr/bin/chown -R www-data\:www-data /opt/homeserver-backup
 www-data ALL=(root) NOPASSWD: /usr/bin/chown -R www-data\:www-data /tmp/homeserver-backups
 www-data ALL=(root) NOPASSWD: /usr/bin/chown -R www-data\:www-data /var/log/homeserver-backup
+
+# Allow file permission management for backup scripts
+www-data ALL=(root) NOPASSWD: /bin/chmod 755 /var/www/homeserver/premium/backupTab/backend/backup
+www-data ALL=(root) NOPASSWD: /bin/chmod 755 /var/www/homeserver/premium/backup/backup
+www-data ALL=(root) NOPASSWD: /bin/chmod +x /var/www/homeserver/premium/backupTab/backend/backup
+www-data ALL=(root) NOPASSWD: /bin/chmod +x /var/www/homeserver/premium/backup/backup
 
 # Allow system link creation and removal
 www-data ALL=(root) NOPASSWD: /bin/ln -sf /var/www/homeserver/premium/backup/backup-venv /usr/local/bin/homeserver-backup

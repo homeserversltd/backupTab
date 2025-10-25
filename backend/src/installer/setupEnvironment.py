@@ -232,7 +232,8 @@ class BackupEnvironmentSetup:
             items_to_copy = [
                 "backup",
                 "src",
-                "requirements.txt"
+                "requirements.txt",
+                "export_credentials.sh"
             ]
             
             for item in items_to_copy:
@@ -251,6 +252,21 @@ class BackupEnvironmentSetup:
                 else:
                     shutil.copy2(source_path, dest_path)
                     self.log(f"Copied file {item}")
+                    
+                    # Ensure backup script is executable after copying
+                    if item == "backup" and dest_path.exists():
+                        try:
+                            os.chmod(dest_path, 0o755)
+                            self.log(f"Set execute permissions on copied backup script")
+                        except PermissionError as e:
+                            self.log(f"Permission denied setting execute permissions on copied backup script: {e}", "WARNING")
+                            try:
+                                subprocess.run(['/usr/bin/sudo', '/bin/chmod', '755', str(dest_path)], check=True)
+                                self.log(f"Set execute permissions on copied backup script with sudo")
+                            except subprocess.CalledProcessError as sudo_e:
+                                self.log(f"Failed to set execute permissions with sudo on copied backup script: {sudo_e}", "WARNING")
+                        except Exception as e:
+                            self.log(f"Failed to set execute permissions on copied backup script: {e}", "WARNING")
             
             return True
             
@@ -300,6 +316,54 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
             self.log(f"Failed to create wrapper script: {e}", "ERROR")
             return False
     
+    def ensure_backup_script_permissions(self) -> bool:
+        """Ensure backup script has proper execute permissions immediately."""
+        self.log("Ensuring backup script permissions...")
+        
+        try:
+            # Check both possible locations for the backup script
+            backup_script_paths = [
+                self.source_dir / "backup",
+                Path("/var/www/homeserver/premium/backupTab/backend/backup"),
+                Path("/var/www/homeserver/premium/backup/backup")
+            ]
+            
+            success_count = 0
+            total_scripts = 0
+            
+            for script_path in backup_script_paths:
+                if script_path.exists():
+                    total_scripts += 1
+                    # Check if already executable
+                    if not os.access(script_path, os.X_OK):
+                        try:
+                            os.chmod(script_path, 0o755)
+                            self.log(f"Made backup script executable: {script_path}")
+                            success_count += 1
+                        except PermissionError:
+                            # Try with sudo if we don't have permission
+                            try:
+                                subprocess.run(['/usr/bin/sudo', '/bin/chmod', '755', str(script_path)], check=True)
+                                self.log(f"Made backup script executable with sudo: {script_path}")
+                                success_count += 1
+                            except subprocess.CalledProcessError as e:
+                                self.log(f"Failed to set permissions with sudo: {e}", "WARNING")
+                    else:
+                        self.log(f"Backup script already executable: {script_path}")
+                        success_count += 1
+            
+            # Consider it successful if we found and handled at least one script
+            if success_count > 0:
+                self.log("Backup script permissions verified")
+                return True
+            else:
+                self.log("No backup scripts found or all failed", "WARNING")
+                return True  # Don't fail installation for this
+            
+        except Exception as e:
+            self.log(f"Failed to ensure backup script permissions: {e}", "ERROR")
+            return False
+    
     def set_permissions(self) -> bool:
         """Set proper permissions on installed files."""
         self.log("Setting file permissions...")
@@ -310,17 +374,56 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
                 self.install_dir / "backup",
                 self.install_dir / "backup-venv",
                 self.install_dir / "src" / "service" / "backup_service.py",
+                self.install_dir / "export_credentials.sh",
             ]
+            
+            success_count = 0
+            total_scripts = 0
             
             for script in scripts:
                 if script.exists():
-                    os.chmod(script, 0o755)
-                    self.log(f"Made executable: {script.name}")
+                    total_scripts += 1
+                    try:
+                        os.chmod(script, 0o755)
+                        self.log(f"Made executable: {script.name}")
+                        success_count += 1
+                    except PermissionError as e:
+                        self.log(f"Permission denied for {script.name}: {e}", "WARNING")
+                        # Try with sudo if we don't have permission
+                        try:
+                            subprocess.run(['/usr/bin/sudo', '/bin/chmod', '755', str(script)], check=True)
+                            self.log(f"Made executable with sudo: {script.name}")
+                            success_count += 1
+                        except subprocess.CalledProcessError as sudo_e:
+                            self.log(f"Failed to set permissions with sudo for {script.name}: {sudo_e}", "WARNING")
+                    except Exception as e:
+                        self.log(f"Failed to set permissions for {script.name}: {e}", "WARNING")
+                else:
+                    self.log(f"Script not found: {script}", "WARNING")
             
-            # File permissions set successfully
-            self.log("File permissions set successfully")
+            # Also ensure the source backup script is executable
+            source_backup_script = self.source_dir / "backup"
+            if source_backup_script.exists():
+                try:
+                    os.chmod(source_backup_script, 0o755)
+                    self.log(f"Made source backup script executable: {source_backup_script}")
+                except PermissionError as e:
+                    self.log(f"Permission denied for source backup script: {e}", "WARNING")
+                    try:
+                        subprocess.run(['/usr/bin/sudo', '/bin/chmod', '755', str(source_backup_script)], check=True)
+                        self.log(f"Made source backup script executable with sudo")
+                    except subprocess.CalledProcessError as sudo_e:
+                        self.log(f"Failed to set permissions with sudo for source backup script: {sudo_e}", "WARNING")
+                except Exception as e:
+                    self.log(f"Failed to set permissions for source backup script: {e}", "WARNING")
             
-            return True
+            # Consider it successful if we managed to set permissions on at least some scripts
+            if success_count > 0 or total_scripts == 0:
+                self.log("File permissions set successfully")
+                return True
+            else:
+                self.log("Failed to set permissions on any scripts", "ERROR")
+                return False
             
         except Exception as e:
             self.log(f"Failed to set permissions: {e}", "ERROR")
@@ -563,6 +666,13 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
             logger.error("Permission setting failed")
             return False
         logger.info("Permissions set successfully")
+        
+        # Ensure backup script permissions are correct
+        logger.info("Ensuring backup script permissions...")
+        if not self.ensure_backup_script_permissions():
+            logger.error("Backup script permission check failed")
+            return False
+        logger.info("Backup script permissions verified")
         
         # Create log directory
         logger.info("Creating log directory...")

@@ -16,7 +16,7 @@ class BackupManager:
     """Main backup management system."""
     
     def __init__(self, config_path: str = None):
-        self.logger = logging.getLogger(f'homeserver_backup.manager')
+        self.logger = logging.getLogger('backend.backupTab.utils')
         self.keyman = KeymanIntegration()
         self.provider_factory = ProviderFactory()
         

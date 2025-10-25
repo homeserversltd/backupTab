@@ -46,7 +46,7 @@ class ProviderFactory:
     """Factory for creating backup providers with keyman integration."""
     
     def __init__(self):
-        self.logger = logging.getLogger(f'homeserver_backup.provider_factory')
+        self.logger = logging.getLogger('backend.backupTab.utils')
         self.keyman = KeymanIntegration()
         
         # Registry of available providers

@@ -15,7 +15,7 @@ class KeymanIntegration:
     """Integration with keyman credential management system."""
     
     def __init__(self):
-        self.logger = logging.getLogger(f'homeserver_backup.keyman')
+        self.logger = logging.getLogger('backend.backupTab.utils')
         self.vault_dir = Path('/vault/.keys')
         self.keyman_dir = Path('/vault/keyman')
         self.temp_dir = Path('/mnt/keyexchange')
@@ -45,24 +45,6 @@ class KeymanIntegration:
                 if result.stderr:
                     self.logger.info(f"Sudo test stderr: {result.stderr}")
             
-            if file_exists:
-                # Get file info using sudo stat
-                try:
-                    stat_result = subprocess.run(
-                        ['/usr/bin/sudo', '/usr/bin/stat', str(key_file)],
-                        capture_output=True,
-                        text=True,
-                        timeout=10
-                    )
-                    
-                    if stat_result.returncode == 0:
-                        self.logger.info(f"File stat successful: {stat_result.stdout.strip()}")
-                    else:
-                        self.logger.warning(f"File stat failed: {stat_result.stderr}")
-                        
-                except Exception as e:
-                    self.logger.warning(f"Error getting file stat: {e}")
-            
             return file_exists
             
         except subprocess.TimeoutExpired:
@@ -82,9 +64,10 @@ class KeymanIntegration:
             return None
         
         try:
-            # Use exportkey.sh to get decrypted credentials
+            # Use our helper script to get decrypted credentials
+            helper_script = Path(__file__).parent.parent.parent / "export_credentials.sh"
             result = subprocess.run(
-                [str(self.keyman_dir / 'exportkey.sh'), service_name],
+                ['sudo', str(helper_script), service_name],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -94,31 +77,13 @@ class KeymanIntegration:
                 self.logger.error(f"Failed to export credentials for {service_name}: {result.stderr}")
                 return None
             
-            # Wait for ramdisk to be created and credentials file to exist
-            cred_file = self.temp_dir / service_name
-            max_wait_time = 10  # seconds
-            wait_interval = 0.1  # seconds
-            waited = 0
-            
-            while not cred_file.exists() and waited < max_wait_time:
-                import time
-                time.sleep(wait_interval)
-                waited += wait_interval
-            
-            if not cred_file.exists():
-                self.logger.error(f"Credentials file not found at {cred_file} after waiting {max_wait_time}s")
-                return None
-            
-            # Parse credentials file (format: username="user" password="pass")
+            # Parse credentials from helper script output
             credentials = {}
-            with open(cred_file, 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    if '=' in line:
-                        key, value = line.split('=', 1)
-                        # Remove quotes from value
-                        value = value.strip('"')
-                        credentials[key.strip()] = value
+            for line in result.stdout.strip().split('\n'):
+                line = line.strip()
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    credentials[key.strip()] = value.strip()
             
             if 'username' not in credentials or 'password' not in credentials:
                 self.logger.error(f"Invalid credentials format for {service_name}")
@@ -127,8 +92,11 @@ class KeymanIntegration:
             self.logger.info(f"Successfully retrieved credentials for {service_name}")
             return credentials
             
+        except FileNotFoundError:
+            self.logger.error(f"Credential export helper script not found at {helper_script}")
+            return None
         except subprocess.TimeoutExpired:
-            self.logger.error(f"Timeout while exporting credentials for {service_name}")
+            self.logger.error(f"Credential export helper script timed out for {service_name}")
             return None
         except Exception as e:
             self.logger.error(f"Error getting credentials for {service_name}: {e}")

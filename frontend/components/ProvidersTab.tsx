@@ -29,7 +29,7 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
   const [providerStatuses, setProviderStatuses] = useState<ProviderStatus[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
-  const { getProvidersStatus } = useBackupControls();
+  const { getProvidersStatus, createKeymanCredentials } = useBackupControls();
 
   // Load provider statuses on component mount
   useEffect(() => {
@@ -225,13 +225,50 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
     
     setIsLoading(true);
     try {
+      // Handle keyman credentials for providers that need them
+      if (selectedProvider === 'backblaze' && providerConfig.application_key_id && providerConfig.application_key) {
+        try {
+          await createKeymanCredentials(
+            'backblaze',
+            providerConfig.application_key_id,
+            providerConfig.application_key
+          );
+          console.log('Backblaze credentials saved to keyman system');
+        } catch (keymanErr) {
+          console.warn('Failed to save credentials to keyman system:', keymanErr);
+          // Continue with config save even if keyman fails
+        }
+      } else if (selectedProvider === 'aws_s3' && providerConfig.access_key && providerConfig.secret_key) {
+        try {
+          await createKeymanCredentials(
+            'aws_s3',
+            providerConfig.access_key,
+            providerConfig.secret_key
+          );
+          console.log('AWS S3 credentials saved to keyman system');
+        } catch (keymanErr) {
+          console.warn('Failed to save credentials to keyman system:', keymanErr);
+          // Continue with config save even if keyman fails
+        }
+      }
+      
+      // Remove sensitive credentials from config before saving (they're now in keyman)
+      const configToSave = { ...providerConfig };
+      if (selectedProvider === 'backblaze') {
+        delete configToSave.application_key_id;
+        delete configToSave.application_key;
+      } else if (selectedProvider === 'aws_s3') {
+        delete configToSave.access_key;
+        delete configToSave.secret_key;
+      }
+      
       const updatedConfig = {
         ...config,
         providers: {
           ...config.providers,
           [selectedProvider]: {
             ...config.providers[selectedProvider],
-            ...providerConfig
+            ...configToSave
           }
         }
       };

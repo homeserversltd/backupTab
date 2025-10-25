@@ -53,7 +53,8 @@
       "schedule_handlers": "backend/schedule_handlers.py",
       "backup_manager": "backend/src/backup_manager.py",
       "provider_factory": "backend/src/providers/provider_factory.py",
-      "keyman_integration": "backend/src/utils/keyman_integration.py"
+      "keyman_integration": "backend/src/utils/keyman_integration.py",
+      "export_credentials": "backend/export_credentials.sh"
     },
     "frontend": {
       "index": "frontend/index.json",
