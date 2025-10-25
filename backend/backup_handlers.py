@@ -12,7 +12,6 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 from .utils import (
     BACKUP_CONFIG_PATH,
-    BACKUP_STATE_PATH,
     BACKUP_LOG_PATH,
     BACKUP_CLI_PATH,
     get_logger,
@@ -56,15 +55,15 @@ class BackupHandler:
                 except Exception as e:
                     self.logger.error(f"Failed to read config: {e}")
             
-            # Check if state file exists
-            if os.path.exists(BACKUP_STATE_PATH):
-                status['state_exists'] = True
-                try:
-                    with open(BACKUP_STATE_PATH, 'r') as f:
-                        state = json.load(f)
-                        status['last_backup'] = state.get('last_daily_backup')
-                except Exception as e:
-                    self.logger.error(f"Failed to read state: {e}")
+            # Check if state exists in config
+            try:
+                config = self.config_manager.get_config()
+                if 'state' in config:
+                    status['state_exists'] = True
+                    state = config['state']
+                    status['last_backup'] = state.get('last_daily_backup')
+            except Exception as e:
+                self.logger.error(f"Failed to read state: {e}")
             
             # Check systemd service status
             status['service_status'] = get_systemd_service_status('homeserver-backup.timer')
@@ -138,12 +137,12 @@ class BackupHandler:
                 'state': {}
             }
             
-            # Read state file
-            if os.path.exists(BACKUP_STATE_PATH):
-                with open(BACKUP_STATE_PATH, 'r') as f:
-                    state = json.load(f)
-                    history['state'] = state
-                    history['recent_backups'] = state.get('backup_history', [])[-10:]  # Last 10 backups
+            # Read state from config
+            config = self.config_manager.get_config()
+            if 'state' in config:
+                state = config['state']
+                history['state'] = state
+                history['recent_backups'] = state.get('backup_history', [])[-10:]  # Last 10 backups
             
             # Read log file (last 50 lines)
             if os.path.exists(BACKUP_LOG_PATH):
@@ -243,18 +242,17 @@ class BackupHandler:
             providers = config.get('providers', {})
             stats['providers_configured'] = len([p for p in providers.values() if p.get('enabled', False)])
             
-            # Get state information
-            if os.path.exists(BACKUP_STATE_PATH):
-                with open(BACKUP_STATE_PATH, 'r') as f:
-                    state = json.load(f)
-                    backup_history = state.get('backup_history', [])
-                    stats['total_backups'] = len(backup_history)
-                    stats['last_backup'] = state.get('last_daily_backup')
-                    
-                    # Calculate success rate
-                    if backup_history:
-                        successful = len([b for b in backup_history if b.get('success', False)])
-                        stats['backup_success_rate'] = (successful / len(backup_history)) * 100
+            # Get state information from config
+            if 'state' in config:
+                state = config['state']
+                backup_history = state.get('backup_history', [])
+                stats['total_backups'] = len(backup_history)
+                stats['last_backup'] = state.get('last_daily_backup')
+                
+                # Calculate success rate
+                if backup_history:
+                    successful = len([b for b in backup_history if b.get('success', False)])
+                    stats['backup_success_rate'] = (successful / len(backup_history)) * 100
             
             # Get log file size if exists
             if os.path.exists(BACKUP_LOG_PATH):

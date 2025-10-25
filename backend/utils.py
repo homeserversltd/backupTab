@@ -16,7 +16,6 @@ from typing import Dict, Any, Optional
 # Import centralized paths from config_manager
 from .src.utils.config_manager import BACKUP_CONFIG_PATH, BACKUP_LOG_PATH, BACKUP_BASE_DIR
 
-BACKUP_STATE_PATH = "/opt/homeserver-backup/backup_state.json"
 BACKUP_CLI_PATH = BACKUP_BASE_DIR
 
 def get_logger():

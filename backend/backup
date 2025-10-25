@@ -52,7 +52,8 @@ class EnhancedBackupCLI:
             self.config_file = config_file
         self.temp_dir = Path("/tmp/homeserver-backup-cli-enhanced")
         self.backup_dir = Path(BACKUP_BASE_DIR)
-        self.state_file = Path("/opt/homeserver-backup/backup_state.json")
+        # State is now stored in settings.json, no separate state file needed
+        self.state_file = None
         
         # Initialize utilities
         self.logger = get_logger()
@@ -63,9 +64,6 @@ class EnhancedBackupCLI:
         # Ensure directories exist
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.backup_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Ensure state directory exists
-        self.state_file.parent.mkdir(parents=True, exist_ok=True)
         
         # Load configuration
         self.config = self.config_manager.load_config()
@@ -91,7 +89,7 @@ class EnhancedBackupCLI:
                     print(f"WARNING: Failed to initialize provider {provider_name}: {e}")
     
     def _update_backup_state(self, backup_path: Optional[Path], backup_type: str = 'manual'):
-        """Update the backup state file with last backup timestamp and size."""
+        """Update the backup state in settings.json with last backup timestamp and size."""
         try:
             # Get backup size
             backup_size_bytes = 0
@@ -114,29 +112,30 @@ class EnhancedBackupCLI:
             # Current timestamp
             current_timestamp = datetime.now().isoformat()
             
-            # Load existing state or create new
-            state = {}
-            if self.state_file.exists():
-                try:
-                    with open(self.state_file, 'r') as f:
-                        state = json.load(f)
-                except Exception as e:
-                    self.logger.warning(f"Failed to load existing state: {e}")
-                    state = {}
+            # Load existing settings
+            try:
+                with open(self.config_file, 'r') as f:
+                    settings = json.load(f)
+            except Exception as e:
+                self.logger.warning(f"Failed to load settings: {e}")
+                settings = {}
             
-            # Initialize backup_history if it doesn't exist
-            if 'backup_history' not in state:
-                state['backup_history'] = []
+            # Initialize state section if it doesn't exist
+            if 'state' not in settings:
+                settings['state'] = {}
+            
+            # Load existing backup_history
+            backup_history = settings['state'].get('backup_history', [])
             
             # Update last backup information
-            state['last_backup'] = current_timestamp
-            state['last_backup_size_bytes'] = backup_size_bytes
-            state['last_backup_size_display'] = backup_size_display
-            state['last_backup_type'] = backup_type
+            settings['state']['last_backup'] = current_timestamp
+            settings['state']['last_backup_size_bytes'] = backup_size_bytes
+            settings['state']['last_backup_size_display'] = backup_size_display
+            settings['state']['last_backup_type'] = backup_type
             
             # If this is a daily/scheduled backup, also update last_daily_backup
             if backup_type == 'daily' or backup_type == 'scheduled':
-                state['last_daily_backup'] = current_timestamp
+                settings['state']['last_daily_backup'] = current_timestamp
             
             # Add to backup history (keep last 100 entries)
             backup_entry = {
@@ -146,13 +145,14 @@ class EnhancedBackupCLI:
                 'size_display': backup_size_display,
                 'success': True
             }
-            state['backup_history'].append(backup_entry)
-            if len(state['backup_history']) > 100:
-                state['backup_history'] = state['backup_history'][-100:]
+            backup_history.append(backup_entry)
+            if len(backup_history) > 100:
+                backup_history = backup_history[-100:]
+            settings['state']['backup_history'] = backup_history
             
-            # Write state file
-            with open(self.state_file, 'w') as f:
-                json.dump(state, f, indent=2)
+            # Write settings.json
+            with open(self.config_file, 'w') as f:
+                json.dump(settings, f, indent=2)
             
             self.logger.info(f"Backup state updated: {backup_type} backup at {current_timestamp}, size: {backup_size_display}")
             return True

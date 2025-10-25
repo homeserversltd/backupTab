@@ -436,9 +436,11 @@ def get_config():
     """Get backup configuration"""
     try:
         config = config_manager.get_safe_config()
-        # Ensure backup_count is included
-        if 'backup_count' not in config:
-            config['backup_count'] = 0
+        # Ensure state section exists with backup_count
+        if 'state' not in config:
+            config['state'] = {}
+        if 'backup_count' not in config['state']:
+            config['state']['backup_count'] = 0
         return create_response(True, config)
     except Exception as e:
         get_logger().error(f"Config retrieval failed: {e}")
@@ -591,9 +593,10 @@ def get_backup_statistics():
         # Get basic stats from backup handler
         stats = backup_handler.get_backup_statistics()
         
-        # Add backup count from config
+        # Add backup count from config state
         config = config_manager.get_safe_config()
-        stats['backup_count'] = config.get('backup_count', 0)
+        state = config.get('state', {})
+        stats['backup_count'] = state.get('backup_count', 0)
         
         # Add backup type from schedule configuration
         schedule_config = config.get('schedule', {})
@@ -1094,32 +1097,29 @@ def get_header_stats():
             get_logger().warning(f"Error getting schedule status: {e}")
             next_backup_display = "Not scheduled"
         
-        # Get backup size information from state file
+        # Get backup size information from settings.json state section
         backup_size_bytes = None
         backup_size_display = "Unknown"
         
         if last_backup:
-            # Try to get backup size from state file
-            state_file = "/opt/homeserver-backup/backup_state.json"
+            # Try to get backup size from settings.json state section
             try:
-                if os.path.exists(state_file):
-                    with open(state_file, 'r') as f:
-                        import json
-                        state = json.load(f)
-                        backup_size_bytes = state.get('last_backup_size_bytes')
-                        backup_size_display = state.get('last_backup_size_display', 'Unknown')
-                        
-                        # If we got size bytes but no display, format it
-                        if backup_size_bytes and isinstance(backup_size_bytes, (int, float)) and backup_size_bytes > 0 and backup_size_display == "Unknown":
-                            units = ['B', 'KB', 'MB', 'GB', 'TB']
-                            unit_index = 0
-                            size_value = float(backup_size_bytes)
-                            
-                            while size_value >= 1024 and unit_index < len(units) - 1:
-                                size_value /= 1024
-                                unit_index += 1
-                            
-                            backup_size_display = f"{size_value:.1f} {units[unit_index]}"
+                config = config_manager.get_safe_config()
+                state = config.get('state', {})
+                backup_size_bytes = state.get('last_backup_size_bytes')
+                backup_size_display = state.get('last_backup_size_display', 'Unknown')
+                
+                # If we got size bytes but no display, format it
+                if backup_size_bytes and isinstance(backup_size_bytes, (int, float)) and backup_size_bytes > 0 and backup_size_display == "Unknown":
+                    units = ['B', 'KB', 'MB', 'GB', 'TB']
+                    unit_index = 0
+                    size_value = float(backup_size_bytes)
+                    
+                    while size_value >= 1024 and unit_index < len(units) - 1:
+                        size_value /= 1024
+                        unit_index += 1
+                    
+                    backup_size_display = f"{size_value:.1f} {units[unit_index]}"
             except Exception as e:
                 get_logger().warning(f"Error getting backup size from state: {e}")
         

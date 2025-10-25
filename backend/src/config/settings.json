@@ -2,17 +2,6 @@
     "backup_items": [
       "/tmp/test.txt"
     ],
-    "compression": {
-      "enabled": true,
-      "level": 6
-    },
-    "encryption": {
-      "enabled": true
-    },
-    "timestamp_chains": {
-      "enabled": true,
-      "format": "%Y%m%d_%H%M%S"
-    },
     "providers": {
       "local": {
         "enabled": true,
@@ -65,8 +54,16 @@
       }
     },
     "retention_days": 30,
-    "encryption_enabled": true,
-    "backup_count": 0,
+    "state": {
+      "encryption_enabled": true,
+      "backup_count": 0,
+      "last_backup": null,
+      "last_backup_size_bytes": null,
+      "last_backup_size_display": null,
+      "last_backup_type": null,
+      "last_daily_backup": null,
+      "backup_history": []
+    },
     "logging": {
       "enabled": true,
       "log_file": "/var/log/homeserver/backup.log",

@@ -442,9 +442,13 @@ class BackupConfigManager:
             # Load current config
             config = self.get_config()
             
-            # Increment backup count
-            current_count = config.get('backup_count', 0)
-            config['backup_count'] = current_count + 1
+            # Initialize state section if it doesn't exist
+            if 'state' not in config:
+                config['state'] = {}
+            
+            # Increment backup count in state section
+            current_count = config['state'].get('backup_count', 0)
+            config['state']['backup_count'] = current_count + 1
             
             # Write updated config using /usr/bin/sudo
             import tempfile
@@ -456,7 +460,7 @@ class BackupConfigManager:
             subprocess.run(['/usr/bin/sudo', '/bin/cp', temp_path, BACKUP_CONFIG_PATH], check=True)
             os.unlink(temp_path)  # Clean up temp file
             
-            self.logger.info(f"Backup count incremented to {config['backup_count']}")
+            self.logger.info(f"Backup count incremented to {config['state']['backup_count']}")
             return True
         
         except Exception as e:
@@ -487,11 +491,22 @@ class BackupConfigManager:
                     'message': 'Must be between 1 and 3650 days'
                 }
             },
-            'encryption_enabled': {
-                'type': 'boolean',
-                'description': 'Enable global encryption for backup packages',
-                'default': True,
-                'required': False
+            'state': {
+                'type': 'object',
+                'description': 'Backup system state and tracking data',
+                'required': False,
+                'properties': {
+                    'encryption_enabled': {
+                        'type': 'boolean',
+                        'description': 'Enable global encryption for backup packages',
+                        'default': True
+                    },
+                    'backup_count': {
+                        'type': 'integer',
+                        'description': 'Total number of backups performed',
+                        'default': 0
+                    }
+                }
             },
             'logging': {
                 'type': 'object',

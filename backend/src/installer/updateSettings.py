@@ -171,11 +171,19 @@ class SettingsUpdater:
         """Validate merged configuration structure."""
         self.log("Validating merged configuration...")
         
-        required_fields = ['backup_items', 'providers', 'retention_days', 'encryption_enabled']
+        required_fields = ['backup_items', 'providers', 'state']
         
         for field in required_fields:
             if field not in config:
                 self.log(f"Missing required field: {field}", "ERROR")
+                return False
+        
+        # Validate state section has required fields
+        state = config.get('state', {})
+        required_state_fields = ['encryption_enabled', 'backup_count']
+        for field in required_state_fields:
+            if field not in state:
+                self.log(f"Missing required state field: {field}", "ERROR")
                 return False
         
         # Validate providers structure
