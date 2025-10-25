@@ -32,26 +32,39 @@ class BackblazeProvider(BaseProvider):
         self.keyman = KeymanIntegration()
         
         # Check if keyman credentials are available
+        self.logger.info("=== BACKBLAZE PROVIDER INITIALIZATION ===")
+        self.logger.info(f"Checking if keyman service 'backblaze' is configured...")
         self.keyman_configured = self.keyman.service_configured('backblaze')
+        self.logger.info(f"Keyman configured result: {self.keyman_configured}")
         
         if not self.keyman_configured:
             self.logger.error("Backblaze provider requires keyman credentials. Use CLI to set credentials:")
             self.logger.error("  ./backup set-credentials backblaze --username <application_key_id> --password <application_key>")
             self.application_key_id = None
             self.application_key = None
+            self.logger.error("Backblaze provider initialization FAILED - no keyman credentials")
         else:
             # Load credentials from keyman
+            self.logger.info("Attempting to load credentials from keyman system...")
             credentials = self.keyman.get_service_credentials('backblaze')
+            self.logger.info(f"Keyman credentials result: {bool(credentials)} (not showing actual values)")
+            
             if credentials:
                 self.application_key_id = credentials.get('username')
                 self.application_key = credentials.get('password')
+                self.logger.info(f"Successfully loaded Backblaze credentials - key_id length: {len(self.application_key_id) if self.application_key_id else 0}, key length: {len(self.application_key) if self.application_key else 0}")
                 self.logger.info("Loaded Backblaze credentials from keyman system")
             else:
                 self.logger.error("Failed to load credentials from keyman system")
+                self.logger.error("This means keyman.get_service_credentials('backblaze') returned None")
                 self.application_key_id = None
                 self.application_key = None
         
-        self.bucket_name = config.get('bucket', 'homeserver-backups')
+        # Try both 'bucket' and 'container' fields for backwards compatibility
+        self.bucket_name = config.get('bucket') or config.get('container', 'homeserver-backups')
+        self.logger.info(f"Using bucket name: {self.bucket_name}")
+        self.logger.info(f"Config had bucket field: {bool(config.get('bucket'))}")
+        self.logger.info(f"Config had container field: {bool(config.get('container'))}")
         self.region = config.get('region', 'us-west-000')  # Default B2 region
         
         # Retry configuration
@@ -91,12 +104,19 @@ class BackblazeProvider(BaseProvider):
     
     def _validate_config(self) -> bool:
         """Validate Backblaze configuration."""
+        self.logger.info("=== BACKBLAZE CONFIG VALIDATION ===")
+        self.logger.info(f"application_key_id present: {bool(self.application_key_id)}")
+        self.logger.info(f"application_key present: {bool(self.application_key)}")
+        self.logger.info(f"bucket_name present: {bool(self.bucket_name)}")
+        
         if not self.application_key_id:
             self.logger.error("Missing application_key_id in Backblaze configuration")
+            self.logger.error("This is likely why B2 API initialization is failing")
             return False
         
         if not self.application_key:
             self.logger.error("Missing application_key in Backblaze configuration")
+            self.logger.error("This is likely why B2 API initialization is failing")
             return False
         
         if not self.bucket_name:
@@ -104,6 +124,7 @@ class BackblazeProvider(BaseProvider):
             return False
         
         self.logger.info(f"Backblaze configuration validated for bucket: {self.bucket_name}")
+        self.logger.info("All required credentials are present")
         return True
     
     def _initialize_api(self) -> None:

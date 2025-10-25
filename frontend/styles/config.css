@@ -824,7 +824,7 @@
   height: 0;
 }
 
-.toggle-label {
+.backup-tablet .toggle-label {
   position: absolute;
   cursor: pointer;
   top: 0;
@@ -837,7 +837,7 @@
   border: 2px solid var(--border);
 }
 
-.toggle-label:hover {
+.backup-tablet .toggle-label:hover {
   background-color: color-mix(in srgb, var(--accent) 20%, var(--border));
 }
 
@@ -854,12 +854,12 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.toggle-switch input:checked + .toggle-label {
+.backup-tablet .toggle-switch input:checked + .toggle-label {
   background-color: var(--accent);
   border-color: var(--accent);
 }
 
-.toggle-switch input:checked + .toggle-label .toggle-slider {
+.backup-tablet .toggle-switch input:checked + .toggle-label .toggle-slider {
   transform: translateX(26px);
 }
 
