@@ -361,9 +361,10 @@ def sync_now():
         
         logger.info("Starting backup script execution...")
         
-        # Run the backup script
+        # Run the backup script as root to access protected directories
+        # The script needs to access /opt/gogs (git:git) and keyman credentials
         result = subprocess.run(
-            [backup_script, 'create'],
+            ['/usr/bin/sudo', backup_script, 'create'],
             capture_output=True,
             text=True,
             timeout=300,  # 5 minute timeout

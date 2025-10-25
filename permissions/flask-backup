@@ -15,6 +15,7 @@ www-data ALL=(root) NOPASSWD: /usr/bin/python3 /opt/homeserver-backup/homeserver
 # Allow backup script execution for sync now functionality
 www-data ALL=(root) NOPASSWD: /var/www/homeserver/premium/backupTab/backend/backup
 www-data ALL=(root) NOPASSWD: /var/www/homeserver/premium/backup/backup
+www-data ALL=(root) NOPASSWD: /var/www/homeserver/premium/backup/backup-venv
 www-data ALL=(root) NOPASSWD: /usr/bin/python3 /var/www/homeserver/premium/backupTab/backend/backup
 www-data ALL=(root) NOPASSWD: /usr/bin/python3 /var/www/homeserver/premium/backup/backup
 

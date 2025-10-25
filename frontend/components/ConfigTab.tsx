@@ -78,7 +78,7 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
 
   // Professional backup presets - the grunge way
   const backupPresets = [
-    `/opt/gogs/repositories`,
+    `/opt/gogs`,
     `/etc/postgresql/15/main`,
   ];
 

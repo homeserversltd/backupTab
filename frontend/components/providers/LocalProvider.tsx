@@ -101,7 +101,7 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
             <div className="collapsible-content expanded">
               <div className="info-box">
                 <div className="info-item">
-                  <strong>Target Sources:</strong> All items configured in the Config tab (e.g., /opt/gogs/repositories, /etc/postgresql/15/main)
+                  <strong>Target Sources:</strong> All items configured in the Config tab (e.g., /opt/gogs, /etc/postgresql/15/main)
                 </div>
                 <div className="info-item">
                   <strong>Process:</strong> Glob targets → Create compressed tarball → Store on NAS
