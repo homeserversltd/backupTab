@@ -2,4 +2,4 @@
 # Schedule: {SCHEDULE}
 # This file is managed by the backup CLI - do not edit manually
 # Generated on: {TIMESTAMP}
-{SCHEDULE} www-data sleep $((RANDOM % 3600)) && /usr/bin/python3 {BACKUP_SCRIPT_PATH} >> {BACKUP_LOG_PATH} 2>&1
+{SCHEDULE} www-data /usr/bin/python3 {BACKUP_SCRIPT_PATH} >> {BACKUP_LOG_PATH} 2>&1

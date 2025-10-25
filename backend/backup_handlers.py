@@ -61,7 +61,8 @@ class BackupHandler:
                 if 'state' in config:
                     status['state_exists'] = True
                     state = config['state']
-                    status['last_backup'] = state.get('last_daily_backup')
+                    # Use last_backup (includes all backup types) instead of just last_daily_backup
+                    status['last_backup'] = state.get('last_backup')
             except Exception as e:
                 self.logger.error(f"Failed to read state: {e}")
             
