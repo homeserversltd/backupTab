@@ -10,23 +10,85 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Callable
 import logging
 import os
+import subprocess
 from .base import BaseProvider
 
 class LocalProvider(BaseProvider):
     """Local file system provider."""
-    
+
+    def _is_external_mount(self, path: Path) -> bool:
+        """Check if path is on an external mount (not root filesystem)."""
+        try:
+            # Get mount info for the path
+            result = subprocess.run(['findmnt', '-n', '-o', 'SOURCE,TARGET', str(path)],
+                                  capture_output=True, text=True, timeout=10)
+
+            if result.returncode != 0:
+                self.logger.warning(f"Could not determine mount for {path}: {result.stderr}")
+                return False
+
+            lines = result.stdout.strip().split('\n')
+            if not lines:
+                return False
+
+            # Check if this is mounted on something other than root
+            for line in lines:
+                parts = line.split()
+                if len(parts) >= 2:
+                    mount_source, mount_target = parts[0], parts[1]
+                    # If mount target is / or root filesystem, this is not external
+                    if mount_target == '/' or mount_source.startswith('/dev/sda'):
+                        self.logger.warning(f"Path {path} is on root filesystem mount: {mount_source} -> {mount_target}")
+                        return False
+
+            # If we get here, it's likely an external mount
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error checking mount for {path}: {e}")
+            return False
+
+    def _validate_backup_target(self, path: Path, required_space_gb: float = 10.0) -> bool:
+        """Validate that backup target is suitable: external mount with sufficient space."""
+        # Check if path is on external mount
+        if not self._is_external_mount(path):
+            raise ValueError(f"Backup target {path} must be on an external mounted drive, not the root filesystem")
+
+        # Check available space
+        try:
+            statvfs = os.statvfs(path)
+            free_bytes = statvfs.f_frsize * statvfs.f_available
+            free_gb = free_bytes / (1024**3)
+
+            if free_gb < required_space_gb:
+                raise ValueError(f"Insufficient space on {path}: {free_gb:.1f}GB free, need {required_space_gb}GB")
+
+            self.logger.info(f"Backup target validation passed: {path} has {free_gb:.1f}GB free")
+            return True
+
+        except Exception as e:
+            raise ValueError(f"Could not validate backup target {path}: {e}")
+
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.logger = logging.getLogger('backend.backupTab.utils')
-        
+
         # Configuration - support both 'container' and 'path' for compatibility
-        self.container = config.get('container') or config.get('path', '/mnt/nas/backups/homeserver')
+        # NOTE: Path MUST be on an external mounted drive, not root filesystem!
+        self.container = config.get('container') or config.get('path', '/mnt/external-drive/backups/homeserver')
         self.base_path = Path(self.container)
-        
+
+        # Validate that backup target is on external mount with sufficient space
+        try:
+            self._validate_backup_target(self.base_path.parent, required_space_gb=10.0)
+        except ValueError as e:
+            self.logger.error(f"Backup target validation failed: {e}")
+            raise
+
         # Ensure base path exists
         self.base_path.mkdir(parents=True, exist_ok=True)
-        
-        self.logger.info(f"Local provider initialized with base path: {self.base_path}")
+
+        self.logger.info(f"Local provider initialized with validated base path: {self.base_path}")
     
     def upload(self, file_path: Path, remote_name: str, progress_callback: Optional[Callable] = None) -> bool:
         """Upload file to local storage."""
@@ -182,12 +244,43 @@ class LocalProvider(BaseProvider):
     def create_backup(self, backup_items: List[str], timestamp: str) -> Optional[Path]:
         """Create a compressed backup tarball of the specified items (no encryption)."""
         try:
-            backup_name = f"homeserver_backup_{timestamp}.tar.gz"
+            backup_name = "homeserver_backup_latest.tar.gz"
             backup_path = self.base_path / backup_name
-            
+
             # Ensure base path exists
             self.base_path.mkdir(parents=True, exist_ok=True)
-            
+
+            # Re-validate backup target before creating large backup
+            try:
+                # Estimate backup size (rough calculation)
+                estimated_size_gb = 0
+                for item in backup_items:
+                    item_path = Path(item)
+                    if item_path.exists():
+                        if item_path.is_file():
+                            estimated_size_gb += item_path.stat().st_size / (1024**3)
+                        else:
+                            # For directories, estimate based on du
+                            try:
+                                result = subprocess.run(['du', '-sb', str(item_path)],
+                                                      capture_output=True, text=True, timeout=30)
+                                if result.returncode == 0:
+                                    size_bytes = int(result.stdout.split()[0])
+                                    estimated_size_gb += size_bytes / (1024**3)
+                            except:
+                                # Fallback: assume 1GB per directory
+                                estimated_size_gb += 1.0
+
+                # Add 20% overhead for compression artifacts
+                required_space_gb = max(estimated_size_gb * 1.2, 2.0)  # Minimum 2GB
+
+                self._validate_backup_target(self.base_path.parent, required_space_gb=required_space_gb)
+                self.logger.info(f"Estimated backup size: {estimated_size_gb:.1f}GB, requiring {required_space_gb:.1f}GB space")
+
+            except ValueError as e:
+                self.logger.error(f"Backup target validation failed before backup creation: {e}")
+                return None
+
             # Create compressed tarball (no encryption - handled by main script)
             import tarfile
             with tarfile.open(backup_path, "w:gz", compresslevel=6) as tar:
@@ -198,10 +291,10 @@ class LocalProvider(BaseProvider):
                         self.logger.info(f"Added to backup: {item}")
                     else:
                         self.logger.warning(f"Item not found: {item}")
-            
+
             self.logger.info(f"Created local backup: {backup_path}")
             return backup_path
-            
+
         except Exception as e:
             self.logger.error(f"Failed to create backup: {e}")
             return None
