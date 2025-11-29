@@ -58,19 +58,10 @@ class EncryptionManager:
     
     def encrypt_file(self, file_path: Path, output_path: Optional[Path] = None) -> Optional[Path]:
         """Encrypt a file using SUK key with streaming encryption for large files."""
-        import sys
-        print(f"DEBUG: encrypt_file() called with file_path={file_path}")
-        sys.stdout.flush()
-        
         suk_key = self.get_suk_key()
         if not suk_key:
-            print("DEBUG: Failed to get SUK key")
-            sys.stdout.flush()
             self.logger.error("Failed to get SUK key, cannot encrypt file")
             return None
-        
-        print(f"DEBUG: SUK key obtained, starting encryption")
-        sys.stdout.flush()
         
         # Determine output path
         if output_path is None:
@@ -79,67 +70,38 @@ class EncryptionManager:
         try:
             # Get file size to decide on encryption method
             file_size = file_path.stat().st_size
-            print(f"DEBUG: File size: {file_size} bytes ({file_size / (1024*1024*1024):.2f} GB)")
-            sys.stdout.flush()
             
             # For files larger than 1GB, use streaming encryption
             # For smaller files, use Fernet (simpler, but requires full file in memory)
             if file_size > 1024 * 1024 * 1024:  # 1GB threshold
-                print(f"DEBUG: Large file detected, using streaming AES encryption")
-                sys.stdout.flush()
+                self.logger.info(f"Large file detected ({file_size / (1024*1024*1024):.2f} GB), using streaming encryption")
                 return self._encrypt_file_streaming(file_path, output_path, suk_key)
             else:
-                print(f"DEBUG: Small file, using Fernet encryption")
-                sys.stdout.flush()
                 return self._encrypt_file_fernet(file_path, output_path, suk_key)
             
         except Exception as e:
-            print(f"DEBUG: Exception in encrypt_file(): {e}")
             import traceback
-            print(f"DEBUG: Traceback: {traceback.format_exc()}")
-            sys.stdout.flush()
             self.logger.error(f"Failed to encrypt file {file_path}: {e}")
-            import traceback
             self.logger.error(f"Traceback: {traceback.format_exc()}")
             return None
     
     def _encrypt_file_fernet(self, file_path: Path, output_path: Path, suk_key: bytes) -> Optional[Path]:
         """Encrypt small files using Fernet (loads entire file into memory)."""
-        import sys
-        print(f"DEBUG: Using Fernet encryption")
-        sys.stdout.flush()
-        
         fernet = Fernet(suk_key)
         
-        print(f"DEBUG: Reading file: {file_path}")
-        sys.stdout.flush()
         with open(file_path, "rb") as f:
             file_data = f.read()
-        print(f"DEBUG: File read, size: {len(file_data)} bytes")
-        sys.stdout.flush()
         
-        print(f"DEBUG: Encrypting data...")
-        sys.stdout.flush()
         encrypted_data = fernet.encrypt(file_data)
-        print(f"DEBUG: Data encrypted, size: {len(encrypted_data)} bytes")
-        sys.stdout.flush()
         
-        print(f"DEBUG: Writing encrypted file to: {output_path}")
-        sys.stdout.flush()
         with open(output_path, "wb") as f:
             f.write(encrypted_data)
         
-        print(f"DEBUG: Encrypted file written successfully")
-        sys.stdout.flush()
         self.logger.info(f"File encrypted: {output_path}")
         return output_path
     
     def _encrypt_file_streaming(self, file_path: Path, output_path: Path, suk_key: bytes) -> Optional[Path]:
         """Encrypt large files using streaming AES-GCM encryption."""
-        import sys
-        print(f"DEBUG: Using streaming AES-GCM encryption")
-        sys.stdout.flush()
-        
         # Derive AES key from Fernet key (Fernet key is base64, decode it)
         # Fernet keys are 32 bytes when base64 decoded
         try:
@@ -167,9 +129,6 @@ class EncryptionManager:
         # Generate random IV (12 bytes for GCM)
         iv = os.urandom(12)
         
-        print(f"DEBUG: Creating AES-GCM cipher with streaming")
-        sys.stdout.flush()
-        
         # Create cipher
         cipher = Cipher(algorithms.AES(raw_key), modes.GCM(iv), backend=default_backend())
         encryptor = cipher.encryptor()
@@ -177,9 +136,6 @@ class EncryptionManager:
         # Get file size for progress tracking
         file_size = file_path.stat().st_size
         chunk_size = 64 * 1024 * 1024  # 64MB chunks
-        
-        print(f"DEBUG: Encrypting in {chunk_size / (1024*1024):.0f}MB chunks")
-        sys.stdout.flush()
         
         # Write IV first, then encrypted data
         with open(output_path, "wb") as out_file:
@@ -200,17 +156,15 @@ class EncryptionManager:
                     
                     bytes_processed += len(chunk)
                     progress = (bytes_processed / file_size) * 100
-                    if bytes_processed % (100 * 1024 * 1024) == 0 or not chunk:  # Log every 100MB
-                        print(f"DEBUG: Encrypted {bytes_processed / (1024*1024*1024):.2f}GB / {file_size / (1024*1024*1024):.2f}GB ({progress:.1f}%)")
-                        sys.stdout.flush()
+                    # Log progress every 100MB
+                    if bytes_processed % (100 * 1024 * 1024) == 0 or not chunk:
+                        self.logger.info(f"Encryption progress: {bytes_processed / (1024*1024*1024):.2f}GB / {file_size / (1024*1024*1024):.2f}GB ({progress:.1f}%)")
             
             # Finalize encryption and write tag
             encrypted_chunk = encryptor.finalize()
             out_file.write(encrypted_chunk)
             out_file.write(encryptor.tag)  # 16-byte authentication tag
         
-        print(f"DEBUG: Streaming encryption complete: {output_path}")
-        sys.stdout.flush()
         self.logger.info(f"File encrypted (streaming): {output_path}")
         return output_path
     

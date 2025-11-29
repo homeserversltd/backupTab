@@ -226,70 +226,34 @@ class EnhancedBackupCLI:
             return package_path
         
         print("Encrypting backup package...")
-        sys.stdout.flush()
         
         if not self.encryption_manager.is_encryption_available():
             print("ERROR: FAK key not available, cannot encrypt backup")
-            sys.stdout.flush()
             return None
-        
-        print(f"DEBUG: Calling encrypt_file() with path: {package_path}")
-        print(f"DEBUG: package_path type: {type(package_path)}, exists: {package_path.exists() if package_path else 'N/A'}")
-        print(f"DEBUG: encryption_manager type: {type(self.encryption_manager)}")
-        print(f"DEBUG: encryption_manager.encrypt_file: {hasattr(self.encryption_manager, 'encrypt_file')}")
-        sys.stdout.flush()
         
         try:
-            print(f"DEBUG: About to call encryption_manager.encrypt_file()")
-            sys.stdout.flush()
             encrypted_path = self.encryption_manager.encrypt_file(package_path)
-            print(f"DEBUG: encrypt_file() returned: {encrypted_path}")
-            sys.stdout.flush()
         except KeyboardInterrupt:
-            print("DEBUG: KeyboardInterrupt in encrypt_file()")
-            sys.stdout.flush()
             raise
         except SystemExit as e:
-            print(f"DEBUG: SystemExit in encrypt_file(): {e}")
-            sys.stdout.flush()
             raise
-        except BaseException as e:
-            print(f"DEBUG: BaseException in encrypt_file(): {type(e).__name__}: {e}")
-            import traceback
-            traceback_str = traceback.format_exc()
-            print(f"DEBUG: Full traceback:\n{traceback_str}")
-            sys.stdout.flush()
-            self.logger.error(f"Exception during encrypt_file: {type(e).__name__}: {e}")
-            self.logger.error(f"Traceback: {traceback_str}")
-            return None
         except Exception as e:
-            print(f"DEBUG: Exception in encrypt_file(): {type(e).__name__}: {e}")
             import traceback
-            traceback_str = traceback.format_exc()
-            print(f"DEBUG: Traceback: {traceback_str}")
-            sys.stdout.flush()
             self.logger.error(f"Exception during encrypt_file: {type(e).__name__}: {e}")
-            self.logger.error(f"Traceback: {traceback_str}")
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
             return None
         
         if not encrypted_path:
-            print("ERROR: Failed to encrypt backup package (encrypted_path is None)")
-            sys.stdout.flush()
+            print("ERROR: Failed to encrypt backup package")
             return None
         
         # Clean up unencrypted package
-        print(f"DEBUG: Deleting unencrypted package: {package_path}")
-        sys.stdout.flush()
         try:
             package_path.unlink()
-            print(f"DEBUG: Successfully deleted unencrypted package")
-            sys.stdout.flush()
         except Exception as e:
-            print(f"DEBUG: Warning: Failed to delete unencrypted package: {e}")
-            sys.stdout.flush()
+            self.logger.warning(f"Failed to delete unencrypted package: {e}")
         
         print(f"Encrypted backup package: {encrypted_path}")
-        sys.stdout.flush()
         return encrypted_path
     
     def create_backup(self, items: Optional[List[str]] = None) -> Optional[Path]:
@@ -308,64 +272,45 @@ class EnhancedBackupCLI:
         # Encrypt if enabled (for cloud providers only)
         encrypted_path = None
         if self.config["encryption"]["enabled"]:
-            print("DEBUG: Encryption is enabled, calling _encrypt_backup()")
-            sys.stdout.flush()
             try:
                 encrypted_path = self._encrypt_backup(package_path)
-                print(f"DEBUG: _encrypt_backup() returned: {encrypted_path}")
-                sys.stdout.flush()
             except Exception as e:
-                print(f"DEBUG: Exception in _encrypt_backup(): {e}")
                 import traceback
-                print(f"DEBUG: Traceback: {traceback.format_exc()}")
-                sys.stdout.flush()
                 self.logger.error(f"Exception during encryption: {e}")
+                self.logger.error(f"Traceback: {traceback.format_exc()}")
                 self.logger.log_backup_failure("Failed to encrypt backup package")
                 return None
             if not encrypted_path:
-                print("DEBUG: encrypted_path is None, returning")
-                sys.stdout.flush()
                 self.logger.log_backup_failure("Failed to encrypt backup package")
                 return None
             self.logger.info("Backup package encrypted for cloud providers")
-            print(f"DEBUG: Encryption complete, encrypted_path={encrypted_path}")
-            sys.stdout.flush()
         else:
             self.logger.info("Encryption disabled - all providers will receive unencrypted data")
         
-        print(f"DEBUG: About to start upload loop, providers={list(self.providers.keys())}, count={len(self.providers)}")
-        sys.stdout.flush()
         # Upload to all enabled providers
         upload_results = {}
-        print(f"DEBUG: Starting upload loop with {len(self.providers)} providers: {list(self.providers.keys())}")
+        # Upload to all enabled providers
         for provider_name, provider in self.providers.items():
-            print(f"DEBUG: Processing provider: {provider_name}")
             self.logger.info(f"Processing with {provider_name}...")
-            print(f"DEBUG: Provider object: {provider}, type: {type(provider)}")
             
             # Choose which version to upload based on provider type
             if provider_name == "local":
                 # Local provider gets unencrypted version
                 upload_path = package_path
                 self.logger.info("Using unencrypted package for local provider")
-                print("DEBUG: Local provider - using unencrypted package")
             else:
                 # Cloud providers get encrypted version (if encryption is enabled)
                 upload_path = encrypted_path if encrypted_path else package_path
                 if encrypted_path:
                     self.logger.info(f"Using encrypted package for {provider_name} provider")
-                    print(f"DEBUG: {provider_name} - using encrypted package: {encrypted_path}")
                 else:
                     self.logger.info(f"Using unencrypted package for {provider_name} provider (encryption disabled)")
-                    print(f"DEBUG: {provider_name} - using unencrypted package: {package_path}")
             
             # Upload to the provider
             if provider_name == "local":
                 # Local provider handles tarball creation internally
-                print("DEBUG: Calling local provider.create_backup()")
                 backup_path = provider.create_backup(backup_items, timestamp)
                 success = backup_path is not None
-                print(f"DEBUG: Local backup result: success={success}, path={backup_path}")
                 if success:
                     self.logger.info(f"Local backup created: {backup_path}")
             else:
@@ -375,34 +320,20 @@ class EnhancedBackupCLI:
                 if encrypted_path and upload_path == encrypted_path:
                     remote_name = "homeserver_backup_latest.tar.gz.enc"  # Mark encrypted files
                 
-                print(f"DEBUG: Starting {provider_name} upload: {upload_path} -> {remote_name}")
-                print(f"DEBUG: Upload path exists: {upload_path.exists() if upload_path else 'None'}")
-                if hasattr(provider, 'b2_api'):
-                    print(f"DEBUG: Backblaze b2_api: {provider.b2_api}, bucket: {provider.bucket}")
-                elif hasattr(provider, 'base_path'):
-                    print(f"DEBUG: Local provider base_path: {provider.base_path}")
-                
                 self.logger.info(f"Starting upload to {provider_name}: {upload_path} -> {remote_name}")
                 try:
-                    print(f"DEBUG: Calling provider.upload() for {provider_name}")
                     success = provider.upload(upload_path, remote_name)
-                    print(f"DEBUG: Upload returned: {success}")
                     if success:
                         self.logger.info(f"Successfully uploaded to {provider_name}: {remote_name}")
-                        print(f"DEBUG: Upload to {provider_name} succeeded")
                     else:
                         self.logger.error(f"Upload to {provider_name} failed (returned False)")
-                        print(f"DEBUG: Upload to {provider_name} returned False")
                 except Exception as e:
                     self.logger.error(f"Upload to {provider_name} failed with exception: {e}")
                     import traceback
                     self.logger.error(f"Traceback: {traceback.format_exc()}")
-                    print(f"DEBUG: Upload to {provider_name} raised exception: {e}")
-                    print(f"DEBUG: Traceback: {traceback.format_exc()}")
                     success = False
             
             upload_results[provider_name] = success
-            print(f"DEBUG: Upload result for {provider_name}: {success}")
             self.logger.log_provider_operation(provider_name, "upload", success)
         
         # Move to local backup directory (only if not using local provider)
