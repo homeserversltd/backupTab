@@ -49,6 +49,8 @@ export interface ProviderStatus {
   enabled: boolean;
   available: boolean;
   configured: boolean;
+  initialized?: boolean;
+  initialization_error?: string;
   display_name: string;
   description: string;
   icon: string;

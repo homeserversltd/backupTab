@@ -194,11 +194,35 @@ def get_providers_status():
                     get_logger().warning(f"Keyman check failed for {provider_name}: {e}")
                     keyman_configured = False
             
+            # Try to actually initialize the provider to see if it works
+            is_initialized = False
+            initialization_error = None
+            if is_configured and provider_config.get('enabled', False):
+                try:
+                    provider = backup_manager.provider_factory.create_provider(provider_name, provider_config)
+                    if provider:
+                        # Check if provider has required attributes (indicates successful init)
+                        if provider_name == 'backblaze':
+                            is_initialized = hasattr(provider, 'b2_api') and provider.b2_api is not None
+                        elif provider_name == 'local':
+                            is_initialized = hasattr(provider, 'base_path') and provider.base_path is not None
+                        else:
+                            # For other providers, just check if instance exists
+                            is_initialized = provider is not None
+                    else:
+                        is_initialized = False
+                except Exception as e:
+                    is_initialized = False
+                    initialization_error = str(e)
+                    get_logger().warning(f"Provider {provider_name} failed to initialize: {e}")
+            
             provider_status.append({
                 'name': provider_name,
                 'enabled': provider_config.get('enabled', False),
                 'available': is_available,
                 'configured': is_configured,
+                'initialized': is_initialized,
+                'initialization_error': initialization_error,
                 'display_name': provider_name.replace('_', ' ').title(),
                 'description': _get_provider_description(provider_name),
                 'icon': _get_provider_icon(provider_name),
@@ -223,6 +247,8 @@ def get_providers_status():
                     'enabled': provider_config.get('enabled', False),
                     'available': _is_provider_available(provider_name),  # Use proper availability check
                     'configured': False,  # Mark as not configured if we can't check
+                    'initialized': False,  # Mark as not initialized if we can't check
+                    'initialization_error': None,
                     'display_name': provider_name.replace('_', ' ').title(),
                     'description': _get_provider_description(provider_name),
                     'icon': _get_provider_icon(provider_name),

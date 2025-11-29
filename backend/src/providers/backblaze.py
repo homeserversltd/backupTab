@@ -162,12 +162,23 @@ class BackblazeProvider(BaseProvider):
     
     def upload(self, file_path: Path, remote_name: str, progress_callback: Optional[Callable] = None) -> bool:
         """Upload file to Backblaze B2 with retry logic and progress tracking."""
+        # Convert to Path if it's a string
+        if isinstance(file_path, str):
+            file_path = Path(file_path)
+        
+        print(f"DEBUG Backblaze.upload: file_path={file_path}, remote_name={remote_name}")
+        print(f"DEBUG Backblaze.upload: b2_api={self.b2_api}, bucket={self.bucket}")
+        
         if not self.b2_api or not self.bucket:
-            self.logger.error("B2 API not initialized")
+            error_msg = f"B2 API not initialized - b2_api={self.b2_api}, bucket={self.bucket}"
+            self.logger.error(error_msg)
+            print(f"DEBUG Backblaze.upload ERROR: {error_msg}")
             return False
         
         if not file_path.exists():
-            self.logger.error(f"File not found: {file_path}")
+            error_msg = f"File not found: {file_path}"
+            self.logger.error(error_msg)
+            print(f"DEBUG Backblaze.upload ERROR: {error_msg}")
             return False
         
         file_size = file_path.stat().st_size

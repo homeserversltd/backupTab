@@ -19,30 +19,58 @@ class LocalProvider(BaseProvider):
     def _is_external_mount(self, path: Path) -> bool:
         """Check if path is on an external mount (not root filesystem)."""
         try:
-            # Get mount info for the path
-            result = subprocess.run(['findmnt', '-n', '-o', 'SOURCE,TARGET', str(path)],
+            # Resolve the path to absolute and walk up to find mount point
+            # findmnt may fail on subdirectories, so we walk up the tree
+            current_path = path.resolve() if path.exists() else Path(str(path))
+            
+            # Try findmnt on the path first
+            result = subprocess.run(['findmnt', '-n', '-o', 'SOURCE,TARGET', str(current_path)],
                                   capture_output=True, text=True, timeout=10)
 
+            # If that fails, walk up the directory tree to find the mount point
             if result.returncode != 0:
-                self.logger.warning(f"Could not determine mount for {path}: {result.stderr}")
+                # Walk up until we find a mount point or reach root
+                check_path = current_path
+                while check_path != check_path.parent and check_path != Path('/'):
+                    check_path = check_path.parent
+                    result = subprocess.run(['findmnt', '-n', '-o', 'SOURCE,TARGET', str(check_path)],
+                                          capture_output=True, text=True, timeout=10)
+                    if result.returncode == 0 and result.stdout.strip():
+                        break
+                
+                if result.returncode != 0:
+                    self.logger.warning(f"Could not determine mount for {path} (tried up to {check_path})")
+                    return False
+
+            output = result.stdout.strip()
+            if not output:
+                self.logger.warning(f"No mount information returned for {path}")
                 return False
 
-            lines = result.stdout.strip().split('\n')
-            if not lines:
-                return False
-
-            # Check if this is mounted on something other than root
+            # findmnt returns: SOURCE TARGET (e.g., "/dev/mapper/sdc_crypt /mnt/nas")
+            lines = output.split('\n')
             for line in lines:
                 parts = line.split()
                 if len(parts) >= 2:
                     mount_source, mount_target = parts[0], parts[1]
+                    
                     # If mount target is / or root filesystem, this is not external
-                    if mount_target == '/' or mount_source.startswith('/dev/sda'):
+                    if mount_target == '/':
                         self.logger.warning(f"Path {path} is on root filesystem mount: {mount_source} -> {mount_target}")
                         return False
+                    
+                    # Treat system drive (/dev/sda*) as non-external
+                    if mount_source.startswith('/dev/sda'):
+                        self.logger.warning(f"Path {path} is on system drive mount: {mount_source} -> {mount_target}")
+                        return False
+                    
+                    # Found valid external mount
+                    self.logger.info(f"Path {path} verified on external mount: {mount_source} -> {mount_target}")
+                    return True
 
-            # If we get here, it's likely an external mount
-            return True
+            # If we get here, no valid mount was found
+            self.logger.warning(f"Could not determine if {path} is on external mount")
+            return False
 
         except Exception as e:
             self.logger.error(f"Error checking mount for {path}: {e}")
@@ -57,7 +85,9 @@ class LocalProvider(BaseProvider):
         # Check available space
         try:
             statvfs = os.statvfs(path)
-            free_bytes = statvfs.f_frsize * statvfs.f_available
+            # Use f_bavail (available to non-root) for compatibility with older Python versions
+            # f_bavail is available in Python 2.7+, f_available is Python 3.3+
+            free_bytes = statvfs.f_frsize * statvfs.f_bavail
             free_gb = free_bytes / (1024**3)
 
             if free_gb < required_space_gb:
@@ -224,7 +254,8 @@ class LocalProvider(BaseProvider):
             
             # Calculate sizes
             total_bytes = statvfs.f_frsize * statvfs.f_blocks
-            free_bytes = statvfs.f_frsize * statvfs.f_available
+            # Use f_bavail (available to non-root) for compatibility with older Python versions
+            free_bytes = statvfs.f_frsize * statvfs.f_bavail
             used_bytes = total_bytes - free_bytes
             
             return {

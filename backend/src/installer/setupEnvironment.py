@@ -287,8 +287,6 @@ class BackupEnvironmentSetup:
 # HOMESERVER Backup System Wrapper Script
 # Uses virtual environment for dependencies
 
-set -e
-
 VENV_PYTHON="{venv_python}"
 BACKUP_SCRIPT="{backup_script}"
 

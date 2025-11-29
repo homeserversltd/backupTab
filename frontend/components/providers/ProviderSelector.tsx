@@ -65,6 +65,8 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
           const isSelected = selectedProvider === providerStatus.name;
           const isAvailable = providerStatus.available;
           const isConfigured = providerStatus.configured;
+          const isInitialized = providerStatus.initialized ?? false;
+          const initError = providerStatus.initialization_error;
 
           return (
             <div
@@ -90,7 +92,13 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
                   </div>
                 )}
                 
-                {isAvailable && isConfigured && (
+                {isAvailable && isConfigured && !isInitialized && (
+                  <div className="provider-status not-initialized" title={initError || 'Provider configured but failed to initialize'}>
+                    Configured but Not Working
+                  </div>
+                )}
+                
+                {isAvailable && isConfigured && isInitialized && (
                   <div className="provider-status available">
                     Ready
                   </div>
