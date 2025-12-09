@@ -337,8 +337,8 @@ def sync_now():
     logger.info("=== SYNC NOW REQUEST STARTED ===")
     
     try:
-        # Use the installed backup system instead of source script
-        installed_backup_script = '/var/www/homeserver/premium/backup/backup-venv'
+        # Use the installed backup system (all files in /var/www/homeserver/premium/backupTab/)
+        installed_backup_script = '/var/www/homeserver/premium/backupTab/backend/backup-venv'
         fallback_backup_script = '/var/www/homeserver/premium/backupTab/backend/backup'
         
         # Check which backup script to use
@@ -376,11 +376,8 @@ def sync_now():
         
         logger.info("Backup script ready, proceeding with execution...")
         
-        # Set working directory based on which script we're using
-        if backup_script == installed_backup_script:
-            cwd = '/var/www/homeserver/premium/backup'
-        else:
-            cwd = '/var/www/homeserver/premium/backupTab/backend'
+        # Working directory is always /var/www/homeserver/premium/backupTab/backend
+        cwd = '/var/www/homeserver/premium/backupTab/backend'
         
         logger.info(f"Working directory: {cwd}")
         logger.info(f"Directory exists: {os.path.exists(cwd)}")
@@ -1194,11 +1191,11 @@ def get_header_stats():
             # Check for system config file
             config_exists = os.path.exists("/etc/backupTab/settings.json")
             
-            # Check for backup CLI script
-            cli_exists = os.path.exists("/var/www/homeserver/premium/backup/backup")
+            # Check for backup CLI script (in consolidated location)
+            cli_exists = os.path.exists("/var/www/homeserver/premium/backupTab/backend/backup")
             
-            # Check for virtual environment
-            venv_exists = os.path.exists("/var/www/homeserver/premium/backup/venv")
+            # Check for virtual environment (in consolidated location)
+            venv_exists = os.path.exists("/var/www/homeserver/premium/backupTab/backend/venv")
             
             # Check for cron job
             cron_exists = os.path.exists("/etc/cron.d/homeserver-backup")
@@ -1223,7 +1220,7 @@ def get_header_stats():
             "installation_timestamp": None,  # Could be enhanced to read from actual installation log
             "installation_method": "cli" if is_configured else None,
             "version": "1.0.0",  # Could be enhanced to read from actual version
-            "installation_path": "/var/www/homeserver/premium/backup" if is_configured else None,
+            "installation_path": "/var/www/homeserver/premium/backupTab/backend" if is_configured else None,
             "missing_components": [] if is_configured else ["config", "cli", "venv", "cron"],
             "can_install": not is_configured,
             "can_uninstall": is_configured

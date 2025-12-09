@@ -21,16 +21,18 @@ class BackupEnvironmentSetup:
     """Environment setup for HOMESERVER Backup System."""
     
     def __init__(self):
-        self.install_dir = Path("/var/www/homeserver/premium/backup")
+        # All backupTab files stay in /var/www/homeserver/premium/backupTab/
+        # No separate /var/www/homeserver/premium/backup/ directory
+        self.install_dir = Path("/var/www/homeserver/premium/backupTab/backend")
         self.venv_dir = self.install_dir / "venv"
         
-        # Hardcode the correct source directory path
-        # The backupTab backend directory should be at /var/www/homeserver/premium/backupTab/backend
+        # Source directory is the same as install directory (files already installed by premium installer)
         self.source_dir = Path("/var/www/homeserver/premium/backupTab/backend")
         
         # Debug logging to help troubleshoot path issues
         import logging
         logger = logging.getLogger('backend.backupTab.utils')
+        logger.info(f"Install directory set to: {self.install_dir}")
         logger.info(f"Source directory set to: {self.source_dir}")
         logger.info(f"Source directory exists: {self.source_dir.exists()}")
         
@@ -221,57 +223,43 @@ class BackupEnvironmentSetup:
         return True
     
     def copy_source_files(self) -> bool:
-        """Copy source files to installation directory."""
-        self.log("Copying source files...")
+        """Ensure source files are in place (already installed by premium installer)."""
+        self.log("Verifying source files...")
         
         try:
-            # Create installation directory
-            self.install_dir.mkdir(parents=True, exist_ok=True)
-            
-            # Files and directories to copy
-            items_to_copy = [
+            # Files should already be in place from premium installer
+            # Just verify they exist and set permissions
+            required_files = [
                 "backup",
                 "src",
-                "requirements.txt",
-                "export_credentials.sh"
+                "requirements.txt"
             ]
             
-            for item in items_to_copy:
-                source_path = self.source_dir / item
-                dest_path = self.install_dir / item
-                
-                if not source_path.exists():
-                    self.log(f"Source item not found: {source_path}", "WARNING")
-                    continue
-                
-                if source_path.is_dir():
-                    if dest_path.exists():
-                        shutil.rmtree(dest_path)
-                    shutil.copytree(source_path, dest_path)
-                    self.log(f"Copied directory {item}")
+            for item in required_files:
+                file_path = self.source_dir / item
+                if not file_path.exists():
+                    self.log(f"Required file/directory not found: {file_path}", "WARNING")
+                    # Don't fail - files should be there from premium installer
                 else:
-                    shutil.copy2(source_path, dest_path)
-                    self.log(f"Copied file {item}")
-                    
-                    # Ensure backup script is executable after copying
-                    if item == "backup" and dest_path.exists():
+                    # Ensure backup script is executable
+                    if item == "backup":
                         try:
-                            os.chmod(dest_path, 0o755)
-                            self.log(f"Set execute permissions on copied backup script")
+                            os.chmod(file_path, 0o755)
+                            self.log(f"Set execute permissions on backup script")
                         except PermissionError as e:
-                            self.log(f"Permission denied setting execute permissions on copied backup script: {e}", "WARNING")
+                            self.log(f"Permission denied setting execute permissions: {e}", "WARNING")
                             try:
-                                subprocess.run(['/usr/bin/sudo', '/bin/chmod', '755', str(dest_path)], check=True)
-                                self.log(f"Set execute permissions on copied backup script with sudo")
+                                subprocess.run(['/usr/bin/sudo', '/bin/chmod', '755', str(file_path)], check=True)
+                                self.log(f"Set execute permissions with sudo")
                             except subprocess.CalledProcessError as sudo_e:
-                                self.log(f"Failed to set execute permissions with sudo on copied backup script: {sudo_e}", "WARNING")
+                                self.log(f"Failed to set permissions with sudo: {sudo_e}", "WARNING")
                         except Exception as e:
-                            self.log(f"Failed to set execute permissions on copied backup script: {e}", "WARNING")
+                            self.log(f"Failed to set permissions: {e}", "WARNING")
             
             return True
             
         except Exception as e:
-            self.log(f"Failed to copy source files: {e}", "ERROR")
+            self.log(f"Failed to verify source files: {e}", "ERROR")
             return False
     
     def create_wrapper_script(self) -> bool:
@@ -293,7 +281,7 @@ BACKUP_SCRIPT="{backup_script}"
 # Check if virtual environment exists
 if [ ! -f "$VENV_PYTHON" ]; then
     echo "ERROR: Virtual environment not found at $VENV_PYTHON"
-    echo "Please reinstall the backup system using: backup --install"
+    echo "Please install the backup system venv via the UI or: backup install"
     exit 1
 fi
 
@@ -319,11 +307,10 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
         self.log("Ensuring backup script permissions...")
         
         try:
-            # Check both possible locations for the backup script
+            # Check backup script location
             backup_script_paths = [
                 self.source_dir / "backup",
-                Path("/var/www/homeserver/premium/backupTab/backend/backup"),
-                Path("/var/www/homeserver/premium/backup/backup")
+                Path("/var/www/homeserver/premium/backupTab/backend/backup")
             ]
             
             success_count = 0
@@ -372,8 +359,12 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
                 self.install_dir / "backup",
                 self.install_dir / "backup-venv",
                 self.install_dir / "src" / "service" / "backup_service.py",
-                self.install_dir / "export_credentials.sh",
             ]
+            
+            # Check for export_credentials.sh (optional)
+            export_script = self.install_dir / "export_credentials.sh"
+            if export_script.exists():
+                scripts.append(export_script)
             
             success_count = 0
             total_scripts = 0
@@ -732,13 +723,22 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
                 except subprocess.CalledProcessError as e:
                     self.log(f"Failed to remove system link: {e}", "WARNING")
             
-            # Remove installation directory (www-data should have access to this)
-            if self.install_dir.exists():
+            # Remove only venv and wrapper script (not the entire backend directory)
+            # The backend directory contains files installed by premium installer
+            if self.venv_dir.exists():
                 try:
-                    shutil.rmtree(self.install_dir)
-                    self.log("Removed installation directory")
+                    shutil.rmtree(self.venv_dir)
+                    self.log("Removed virtual environment")
                 except Exception as e:
-                    self.log(f"Failed to remove installation directory: {e}", "WARNING")
+                    self.log(f"Failed to remove virtual environment: {e}", "WARNING")
+            
+            wrapper_script = self.install_dir / "backup-venv"
+            if wrapper_script.exists():
+                try:
+                    wrapper_script.unlink()
+                    self.log("Removed wrapper script")
+                except Exception as e:
+                    self.log(f"Failed to remove wrapper script: {e}", "WARNING")
             
             # Clear system configuration to remove sensitive credential fields
             if not self.clear_system_config():
