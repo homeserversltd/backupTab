@@ -9,27 +9,7 @@
   margin-bottom: 2rem;
 }
 
-.repository-card {
-  background: var(--background);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 15px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px var(--primary), 0 2px 4px var(--border);
-}
-
-.repository-card:hover {
-  border-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.repository-card.selected {
-  border-color: var(--accent);
-  background: var(--primaryHover);
-  box-shadow: 0 0 8px var(--accent);
-}
+/* Repository card styles removed - using centralized Card component */
 
 .repository-card-header {
   display: flex;
@@ -48,30 +28,7 @@
   color: var(--text);
 }
 
-.status-badge {
-  display: inline-block;
-  padding: 0.125rem 0.5rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.status-badge.success {
-  background: var(--statusUp);
-  color: var(--background);
-}
-
-.status-badge.warning {
-  background: var(--statusPartial);
-  color: var(--background);
-}
-
-.status-badge.error {
-  background: var(--statusDown);
-  color: var(--background);
-}
+/* Status badge styles removed - using centralized Badge component */
 
 .repository-checkbox {
   margin-left: 1rem;
@@ -121,14 +78,7 @@
   color: var(--text);
 }
 
-.backup-card {
-  background: var(--background);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 4px var(--primary), 0 2px 4px var(--border);
-}
+/* Backup card styles removed - using centralized Card component */
 
 .backup-card-header {
   display: flex;
@@ -174,19 +124,7 @@
   margin-bottom: 0.75rem;
 }
 
-.progress-bar {
-  flex: 1;
-  height: 8px;
-  background: var(--primary);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: var(--accent);
-  transition: width 0.3s ease;
-}
+/* Progress bar styles removed - using centralized ProgressBar component */
 
 .progress-text {
   font-size: 0.85rem;

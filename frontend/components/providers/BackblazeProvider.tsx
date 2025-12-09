@@ -10,6 +10,7 @@ import { CloudProvider } from '../../types';
 // From providers/ directory: ../../../../ goes up 4 levels to reach src/, then down to components/Popup/PopupManager
 // Changing this path will cause "Module not found" errors during npm run build
 import { showToast } from '../../../../components/Popup/PopupManager'; //do not touch this
+import { Input, Select, Button } from '../../../../components/ui';
 
 interface BackblazeProviderProps {
   config: CloudProvider | null;
@@ -90,16 +91,15 @@ export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
         {/* Main Configuration Section */}
         <div className="config-section">
           <div className="form-group">
-            <label htmlFor="application_key_id">
-              Application Key ID <span className="required">*</span>
-            </label>
-            <input
+            <Input
               id="application_key_id"
               type="text"
+              label="Application Key ID"
               value={localConfig.application_key_id || ''}
               onChange={(e) => handleFieldChange('application_key_id', e.target.value)}
               placeholder="K12345678901234567890"
-              className="form-input"
+              required
+              size="medium"
             />
             <small className="field-help">
               Your Backblaze B2 Application Key ID (starts with K, 20 characters)
@@ -107,16 +107,15 @@ export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
           </div>
 
           <div className="form-group">
-            <label htmlFor="application_key">
-              Application Key <span className="required">*</span>
-            </label>
-            <input
+            <Input
               id="application_key"
               type="password"
+              label="Application Key"
               value={localConfig.application_key || ''}
               onChange={(e) => handleFieldChange('application_key', e.target.value)}
               placeholder="K123456789012345678901234567890"
-              className="form-input"
+              required
+              size="medium"
             />
             <small className="field-help">
               Your Backblaze B2 Application Key (starts with K, 32 characters)
@@ -124,16 +123,15 @@ export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
           </div>
 
           <div className="form-group">
-            <label htmlFor="container">
-              Bucket Name <span className="required">*</span>
-            </label>
-            <input
+            <Input
               id="container"
               type="text"
+              label="Bucket Name"
               value={localConfig.container || ''}
               onChange={(e) => handleFieldChange('container', e.target.value)}
               placeholder="homeserver-backups"
-              className="form-input"
+              required
+              size="medium"
             />
             <small className="field-help">
               B2 bucket name (3-63 characters, alphanumeric and hyphens only)
@@ -143,34 +141,36 @@ export const BackblazeProvider: React.FC<BackblazeProviderProps> = ({
 
         <div className="config-section">
           <div className="form-group">
-            <label htmlFor="region">Region</label>
-            <select
+            <Select
               id="region"
+              label="Region"
               value={localConfig.region || 'us-west-000'}
               onChange={(e) => handleFieldChange('region', e.target.value)}
-              className="form-select"
-            >
-              <option value="us-west-000">US West (Oregon)</option>
-              <option value="us-west-001">US West (California)</option>
-              <option value="us-west-002">US West (Nevada)</option>
-              <option value="us-east-000">US East (Virginia)</option>
-              <option value="us-east-001">US East (Ohio)</option>
-              <option value="eu-central-000">EU Central (Frankfurt)</option>
-            </select>
+              options={[
+                { value: 'us-west-000', label: 'US West (Oregon)' },
+                { value: 'us-west-001', label: 'US West (California)' },
+                { value: 'us-west-002', label: 'US West (Nevada)' },
+                { value: 'us-east-000', label: 'US East (Virginia)' },
+                { value: 'us-east-001', label: 'US East (Ohio)' },
+                { value: 'eu-central-000', label: 'EU Central (Frankfurt)' }
+              ]}
+              size="medium"
+            />
           </div>
         </div>
 
 
         {/* Action Buttons */}
         <div className="form-actions">
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="medium"
             onClick={handleSave}
             disabled={isLoading}
-            className="action-button primary"
+            loading={isLoading}
           >
-            {isLoading ? 'Saving...' : 'Save Configuration'}
-          </button>
+            Save Configuration
+          </Button>
         </div>
       </div>
     </div>

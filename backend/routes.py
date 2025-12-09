@@ -638,6 +638,44 @@ def get_backup_statistics():
         }
         stats['backup_type_description'] = backup_type_descriptions.get(backup_type, 'Unknown backup type')
         
+        # Add chunked backup statistics if enabled
+        chunking_config = config.get('chunking', {})
+        if chunking_config.get('enabled', False):
+            try:
+                from .src.chunk_database import ChunkDatabase
+                db_config = config.get('database', {})
+                db_path = db_config.get('path', '/var/lib/homeserver/backup/chunks.db')
+                chunk_db = ChunkDatabase(db_path)
+                
+                # Get recent backups
+                recent_backups = chunk_db.list_backups(limit=10)
+                if recent_backups:
+                    latest_backup = recent_backups[0]
+                    stats['chunked_backup'] = {
+                        'enabled': True,
+                        'latest_backup_id': latest_backup.get('backup_id'),
+                        'total_chunks': latest_backup.get('total_chunks', 0),
+                        'uploaded_bytes': latest_backup.get('uploaded_bytes', 0),
+                        'reused_chunks': latest_backup.get('reused_chunks', 0),
+                        'total_size': latest_backup.get('total_size', 0),
+                        'uploaded_mb': round(latest_backup.get('uploaded_bytes', 0) / (1024*1024), 2),
+                        'total_mb': round(latest_backup.get('total_size', 0) / (1024*1024), 2),
+                        'savings_percent': round((1 - (latest_backup.get('uploaded_bytes', 0) / max(latest_backup.get('total_size', 1), 1))) * 100, 1) if latest_backup.get('total_size', 0) > 0 else 0
+                    }
+                else:
+                    stats['chunked_backup'] = {
+                        'enabled': True,
+                        'latest_backup_id': None,
+                        'total_chunks': 0,
+                        'uploaded_bytes': 0,
+                        'reused_chunks': 0
+                    }
+            except Exception as chunk_error:
+                get_logger().warning(f"Failed to get chunk statistics: {chunk_error}")
+                stats['chunked_backup'] = {'enabled': True, 'error': str(chunk_error)}
+        else:
+            stats['chunked_backup'] = {'enabled': False}
+        
         return create_response(True, stats)
     except Exception as e:
         get_logger().error(f"Statistics retrieval failed: {e}")
@@ -1244,6 +1282,86 @@ def install_backup_system():
         get_logger().error(f"Installation failed with exception: {e}")
         import traceback
         get_logger().error(f"Installation traceback: {traceback.format_exc()}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/restore', methods=['POST'])
+def restore_files():
+    """Restore specific files/directories from chunked backup"""
+    try:
+        data = request.get_json() or {}
+        backup_id = data.get('backup_id')
+        target_paths = data.get('paths', [])
+        restore_location = data.get('location')
+        
+        if not backup_id:
+            return create_response(False, error='backup_id is required', status_code=400)
+        if not target_paths:
+            return create_response(False, error='paths are required', status_code=400)
+        
+        # Use the backup CLI for restore
+        # Import the EnhancedBackupCLI class from the backup script
+        import importlib.util
+        from pathlib import Path
+        backup_script = Path(__file__).parent / 'backup'
+        spec = importlib.util.spec_from_file_location("backup_cli", backup_script)
+        backup_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(backup_module)
+        cli = backup_module.EnhancedBackupCLI()
+        
+        result = cli.restore_files(backup_id, target_paths, restore_location)
+        
+        if result.get('success'):
+            return create_response(True, {
+                'files_restored': result['files_restored'],
+                'chunks_downloaded': result['chunks_downloaded'],
+                'total_bytes': result['total_bytes']
+            })
+        else:
+            return create_response(False, error=result.get('error', 'Restore failed'), status_code=500)
+            
+    except Exception as e:
+        get_logger().error(f"Restore failed: {e}")
+        import traceback
+        get_logger().error(f"Traceback: {traceback.format_exc()}")
+        return create_response(False, error=str(e), status_code=500)
+
+@bp.route('/backups/list', methods=['GET'])
+def list_chunked_backups():
+    """List chunked backups from database"""
+    try:
+        config = config_manager.get_safe_config()
+        chunking_config = config.get('chunking', {})
+        
+        if not chunking_config.get('enabled', False):
+            return create_response(True, {'backups': [], 'chunking_enabled': False})
+        
+        from .src.chunk_database import ChunkDatabase
+        db_config = config.get('database', {})
+        db_path = db_config.get('path', '/var/lib/homeserver/backup/chunks.db')
+        chunk_db = ChunkDatabase(db_path)
+        
+        backups = chunk_db.list_backups(limit=100)
+        
+        # Format backups for frontend
+        formatted_backups = []
+        for backup in backups:
+            formatted_backups.append({
+                'backup_id': backup.get('backup_id'),
+                'created_at': backup.get('created_at'),
+                'total_chunks': backup.get('total_chunks', 0),
+                'uploaded_bytes': backup.get('uploaded_bytes', 0),
+                'reused_chunks': backup.get('reused_chunks', 0),
+                'status': backup.get('status', 'unknown'),
+                'total_size': backup.get('total_size', 0)
+            })
+        
+        return create_response(True, {
+            'backups': formatted_backups,
+            'chunking_enabled': True
+        })
+        
+    except Exception as e:
+        get_logger().error(f"Failed to list backups: {e}")
         return create_response(False, error=str(e), status_code=500)
 
 @bp.route('/uninstall', methods=['POST'])

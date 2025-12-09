@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { showToast } from '../../../components/Popup/PopupManager';
+import { showToast } from '../../../../components/Popup/PopupManager';
+import { Button } from '../../../components/ui';
 
 interface InstallationManagerProps {
   installationStatus: any;
@@ -120,23 +121,27 @@ export const InstallationManager: React.FC<InstallationManagerProps> = ({
         <div className="installation-actions">
           {installationStatus.installed ? (
             installationStatus.can_uninstall && (
-              <button 
+              <Button 
+                variant="danger"
+                size="medium"
                 onClick={handleUninstall}
                 disabled={isUninstalling}
-                className="action-button danger"
+                loading={isUninstalling}
               >
-                {isUninstalling ? 'Disabling...' : 'Disable'}
-              </button>
+                Disable
+              </Button>
             )
           ) : (
             installationStatus.can_install && (
-              <button 
+              <Button 
+                variant="primary"
+                size="medium"
                 onClick={handleInstall}
                 disabled={isInstalling}
-                className="action-button primary"
+                loading={isInstalling}
               >
-                {isInstalling ? 'Installing...' : 'Enable'}
-              </button>
+                Enable
+              </Button>
             )
           )}
         </div>

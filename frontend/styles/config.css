@@ -1312,4 +1312,102 @@
   .summary-grid {
     grid-template-columns: 1fr;
   }
+
+  /* Additional mobile optimizations */
+  .config-section h4::before {
+    font-size: 0.9rem;
+  }
+
+  .recommended-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .recommended-header h5 {
+    font-size: 0.9rem;
+  }
+
+  .file-list-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .file-list-header h5 {
+    font-size: 0.85rem;
+  }
+
+  /* Compact form groups */
+  .form-group {
+    margin-bottom: 12px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Active backup type display mobile */
+  .active-backup-type-display {
+    margin-bottom: 12px;
+  }
+
+  /* Config summary mobile */
+  .config-summary {
+    padding: 12px;
+  }
+
+  .config-summary h6 {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Even more compact on very small screens */
+  .config-section {
+    padding: 12px;
+  }
+
+  .config-section h4 {
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    margin: -12px -12px 12px -12px;
+  }
+
+  .recommended-paths {
+    padding: 12px;
+  }
+
+  .recommended-header h5 {
+    font-size: 0.85rem;
+  }
+
+  .file-list-header h5 {
+    font-size: 0.8rem;
+  }
+
+  .config-summary {
+    padding: 10px;
+  }
+
+  .backup-type-option {
+    padding: 12px;
+  }
+
+  .backup-type-label {
+    font-size: 1rem;
+  }
+
+  .backup-type-description {
+    font-size: 0.85rem;
+  }
+
+  .advanced-config-panel {
+    padding: 12px;
+  }
+
+  .advanced-config-panel h5 {
+    font-size: 0.9rem;
+  }
 }

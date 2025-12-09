@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { BackupConfig, ProviderStatus } from '../../types';
+import { Toggle } from '../../../../components/ui';
 
 interface ProviderSelectorProps {
   config: BackupConfig | null;
@@ -107,17 +108,12 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
 
               {isAvailable && (
                 <div className="provider-controls">
-                  <label className="toggle-switch">
-                    <input
-                      type="checkbox"
-                      checked={isEnabled}
-                      onChange={(e) => handleToggleProvider(providerStatus.name, e.target.checked)}
-                      disabled={isLoading}
-                    />
-                    <span className="toggle-label">
-                      <span className="toggle-slider"></span>
-                    </span>
-                  </label>
+                  <Toggle
+                    checked={isEnabled}
+                    onChange={(checked) => handleToggleProvider(providerStatus.name, checked)}
+                    disabled={isLoading}
+                    size="medium"
+                  />
                 </div>
               )}
 

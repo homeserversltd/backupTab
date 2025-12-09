@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { BackupOperation, Repository } from '../types';
+import { Card, Badge, Button, ProgressBar } from '../../../components/ui';
 
 interface BackupCardProps {
   operation: BackupOperation;
@@ -19,10 +20,10 @@ export const BackupCard: React.FC<BackupCardProps> = ({
   onAction, 
   className = '' 
 }) => {
-  const getStatusColor = (status: string) => {
+  const getStatusVariant = (status: string): 'success' | 'danger' | 'warning' | 'info' => {
     switch (status) {
       case 'completed': return 'success';
-      case 'failed': return 'error';
+      case 'failed': return 'danger';
       case 'running': return 'warning';
       default: return 'info';
     }
@@ -58,14 +59,16 @@ export const BackupCard: React.FC<BackupCardProps> = ({
       .join(', ');
   };
 
+  const cardVariant = operation.status === 'failed' ? 'error' : operation.status === 'completed' ? 'active' : 'default';
+
   return (
-    <div className={`backup-card ${className}`}>
+    <Card variant={cardVariant} className={className}>
       <div className="backup-card-header">
         <div className="backup-card-title">
           <h3>{operation.type.charAt(0).toUpperCase() + operation.type.slice(1)} Backup</h3>
-          <span className={`status-badge ${getStatusColor(operation.status)}`}>
+          <Badge variant={getStatusVariant(operation.status)} size="small">
             {getStatusIcon(operation.status)} {operation.status}
-          </span>
+          </Badge>
         </div>
         <div className="backup-card-meta">
           <span className="timestamp">
@@ -86,13 +89,12 @@ export const BackupCard: React.FC<BackupCardProps> = ({
 
         {operation.progress !== undefined && (
           <div className="backup-progress">
-            <div className="progress-bar">
-              <div 
-                className="progress-fill" 
-                style={{ width: `${operation.progress}%` }}
-              />
-            </div>
-            <span className="progress-text">{operation.progress}%</span>
+            <ProgressBar
+              value={operation.progress}
+              variant="default"
+              size="medium"
+              showPercentage={true}
+            />
           </div>
         )}
 
@@ -114,15 +116,16 @@ export const BackupCard: React.FC<BackupCardProps> = ({
 
       {onAction && (
         <div className="backup-actions">
-          <button 
-            className="action-button primary"
+          <Button 
+            variant="primary"
+            size="medium"
             onClick={() => onAction(operation)}
             disabled={operation.status === 'running'}
           >
             {operation.status === 'running' ? 'Running...' : 'View Details'}
-          </button>
+          </Button>
         </div>
       )}
-    </div>
+    </Card>
   );
 };

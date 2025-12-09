@@ -119,147 +119,34 @@
   margin-top: 8px;
 }
 
-.frequency-option {
-  padding: 12px 16px;
-  border: 2px solid var(--border);
-  border-radius: 8px;
-  background-color: var(--background);
-  color: var(--text);
-  cursor: pointer;
-  text-align: center;
-  font-weight: 500;
-  transition: all 0.3s ease;
+/* Frequency option styles removed - using centralized Button component */
+
+/* Save schedule button styles removed - using centralized Button component */
+
+/* Toggle switch styles removed - using centralized Toggle component */
+
+.schedule-toggle-section {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.frequency-option:hover {
-  border-color: var(--accent);
-  transform: translateY(-2px);
-}
-
-.frequency-option.active {
-  border-color: var(--success);
-  background-color: var(--primaryHover);
-  color: var(--text);
-  transform: translateY(-1px);
-}
-
-.frequency-option.active:hover {
-  transform: translateY(-3px);
-}
-
-.frequency-option .icon {
-  font-size: 1.2rem;
-  margin-bottom: 4px;
-}
-
-.save-schedule-button {
-  padding: 14px 20px;
-  border: none;
-  background-color: var(--accent);
-  color: var(--text);
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  font-weight: 600;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  align-self: flex-start;
-  min-width: 160px;
-}
-
-.save-schedule-button:hover:not(:disabled) {
-  background-color: var(--success);
-  transform: translateY(-2px);
-}
-
-.save-schedule-button:active {
-  transform: translateY(0);
-}
-
-.save-schedule-button:disabled {
-  background-color: var(--secondary);
-  cursor: not-allowed;
-  transform: none;
-  opacity: 0.6;
-}
-
-/* Toggle Switch - Exact match to UpdateManagerModal */
-.update-schedule-toggle {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  gap: 8px;
   padding: 16px;
   background-color: var(--background);
   border-radius: 8px;
   border: 2px solid var(--border);
-  transition: all 0.3s ease;
-  cursor: pointer;
-  user-select: none;
-  min-height: 60px;
-  width: 100%;
 }
 
-.update-schedule-toggle:hover {
-  border-color: var(--accent);
-  transform: translateY(-1px);
-}
-
-.update-schedule-toggle.enabled {
-  border-color: var(--success);
-  background-color: var(--primary);
-}
-
-.schedule-toggle-switch {
-  position: relative;
-  width: 48px;
-  height: 28px;
-  background-color: var(--secondary);
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  flex-shrink: 0;
-  border: 1px solid var(--border);
-}
-
-.schedule-toggle-switch.enabled {
-  background-color: var(--success);
-}
-
-.schedule-toggle-switch::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 20px;
-  height: 20px;
-  background-color: var(--text);
-  border-radius: 50%;
-  transition: all 0.3s ease;
-  border: 1px solid var(--border);
-}
-
-.schedule-toggle-switch.enabled::after {
-  transform: translateX(24px);
-  background-color: var(--background);
-}
-
-.schedule-toggle-label {
-  flex: 1;
-  min-width: 0;
+.schedule-toggle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .schedule-toggle-title {
   font-weight: 600;
   color: var(--text);
   font-size: 1.1rem;
-  margin: 0 0 4px 0;
+  margin: 0;
 }
 
 .schedule-toggle-description {
@@ -290,37 +177,7 @@
   margin-top: 8px;
 }
 
-.day-option {
-  padding: 10px 8px;
-  border: 2px solid var(--border);
-  border-radius: 6px;
-  background-color: var(--background);
-  color: var(--text);
-  cursor: pointer;
-  text-align: center;
-  font-weight: 500;
-  font-size: 0.85rem;
-  transition: all 0.3s ease;
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.day-option:hover {
-  border-color: var(--accent);
-  transform: translateY(-1px);
-}
-
-.day-option.active {
-  border-color: var(--success);
-  background-color: var(--primaryHover);
-  transform: translateY(-2px);
-}
-
-.day-option.active:hover {
-  transform: translateY(-3px);
-}
+/* Day option styles removed - using centralized Button component */
 
 .time-input-group {
   position: relative;
@@ -418,18 +275,6 @@
     gap: 12px;
   }
   
-  .frequency-option {
-    padding: 16px;
-    flex-direction: row;
-    justify-content: center;
-    gap: 8px;
-  }
-  
-  .frequency-option .icon {
-    font-size: 1rem;
-    margin-bottom: 0;
-  }
-  
   .form-row {
     grid-template-columns: 1fr;
     gap: 20px;
@@ -440,18 +285,8 @@
     gap: 8px;
   }
   
-  .day-option {
-    padding: 12px 4px;
-    font-size: 0.8rem;
-  }
-  
   .schedule-preview {
     padding: 12px;
-  }
-  
-  .save-schedule-button {
-    width: 100%;
-    justify-content: center;
   }
 }
 
@@ -473,11 +308,6 @@
   .frequency-selector {
     gap: 8px;
   }
-  
-  .frequency-option {
-    padding: 12px 8px;
-    font-size: 0.9rem;
-  }
 }
 
 /* Removed duplicate styles - all toggle switch and form styles are now above */
@@ -492,37 +322,7 @@
   margin-top: 20px;
 }
 
-.sync-now-button {
-  background: var(--secondary);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 12px 20px;
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 120px;
-  justify-content: center;
-}
-
-.sync-now-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.sync-now-button:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.sync-now-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
+/* Sync now button styles removed - using centralized Button component */
 
 /* Status Display */
 .schedule-status {
@@ -737,293 +537,13 @@
   font-weight: 500;
 }
 
-/* TimePicker Component Styles */
-.time-picker-container {
-  position: relative;
-  display: inline-block;
-}
-
-.time-picker-input {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--background);
-  cursor: pointer;
-  min-width: 120px;
-  transition: all 0.2s ease;
-}
-
-.time-picker-input:hover:not(.disabled) {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(160, 174, 192, 0.1);
-}
-
-.time-picker-input.disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.time-display {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text);
-}
-
-.time-picker-icon {
-  font-size: 16px;
-  margin-left: 8px;
-}
-
-/* Time selection modal styles */
-.time-selection-modal {
-  background: var(--background);
-  border-radius: 8px;
-  min-width: 320px;
-  max-width: 400px;
-}
-
-.time-picker-body {
-  display: flex;
-  padding: 16px;
-  gap: 16px;
-}
-
-.time-picker-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.time-picker-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--secondary);
-  margin-bottom: 8px;
-  text-align: center;
-}
-
-.time-picker-scroll {
-  max-height: 120px;
-  overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--background);
-}
-
-.time-picker-option {
-  display: block;
-  width: 100%;
-  padding: 6px 8px;
-  border: none;
-  background: transparent;
-  color: var(--text);
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-  text-align: center;
-}
-
-.time-picker-option:hover {
-  background: var(--primaryHover);
-}
-
-.time-picker-option.selected {
-  background: var(--primary);
-  color: white;
-}
-
-.time-picker-period {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.time-picker-period-btn {
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  background: var(--background);
-  color: var(--text);
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.time-picker-period-btn:hover {
-  background: var(--primaryHover);
-}
-
-.time-picker-period-btn.selected {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
-
-.time-picker-footer {
-  padding: 12px 16px;
-  border-top: 1px solid var(--border);
-  text-align: right;
-}
-
-.time-picker-confirm {
-  padding: 8px 16px;
-  background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.time-picker-confirm:hover {
-  background: var(--primaryHover);
-}
-
-/* Calendar Component Styles */
-.calendar-container {
-  display: inline-block;
-}
-
-.calendar-input {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--background);
-  cursor: pointer;
-  min-width: 140px;
-  transition: all 0.2s ease;
-}
-
-.calendar-input:hover:not(.disabled) {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(160, 174, 192, 0.1);
-}
-
-.calendar-input.disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.calendar-display {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text);
-}
-
-.calendar-icon {
-  font-size: 16px;
-  margin-left: 8px;
-}
-
-/* Calendar Modal Content Styles */
-.calendar-modal-content {
-  padding: 0;
-  min-width: 320px;
-  max-width: 400px;
-}
-
-.calendar-body {
-  padding: 16px;
-}
-
-/* Weekly Selector Styles */
-.weekly-selector {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-
-.day-of-week-btn {
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  background: var(--background);
-  color: var(--text);
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: center;
-}
-
-.day-of-week-btn:hover {
-  background: var(--primaryHover);
-}
-
-.day-of-week-btn.selected {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
-
-/* Monthly Calendar Styles */
-.monthly-calendar {
-  width: 100%;
-}
-
-.calendar-month {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text);
-  text-align: center;
-  margin-bottom: 16px;
-}
-
-/* Simple Date Grid Styles */
-.simple-date-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.simple-date-btn {
-  padding: 12px 8px;
-  border: 1px solid var(--border);
-  background: var(--background);
-  color: var(--text);
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.simple-date-btn:hover {
-  background: var(--primaryHover);
-  border-color: var(--primary);
-  color: white;
-}
-
-.simple-date-btn.selected {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
+/* TimePicker and Calendar component styles removed - using centralized components */
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .schedule-actions {
     flex-direction: column;
     gap: 12px;
-  }
-  
-  .sync-now-button,
-  .save-schedule-button {
-    width: 100%;
   }
   
   .backup-type-selector {
@@ -1052,16 +572,4 @@
     gap: 16px;
   }
   
-  .time-picker-body {
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .time-picker-scroll {
-    max-height: 80px;
-  }
-  
-  .weekly-selector {
-    grid-template-columns: repeat(3, 1fr);
-  }
 }

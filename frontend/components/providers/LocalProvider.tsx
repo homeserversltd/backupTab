@@ -10,6 +10,7 @@ import { CloudProvider } from '../../types';
 // From providers/ directory: ../../../../ goes up 4 levels to reach src/, then down to components/Popup/PopupManager
 // Changing this path will cause "Module not found" errors during npm run build
 import { showToast } from '../../../../components/Popup/PopupManager';
+import { Input, Button, Collapsible } from '../../../../components/ui';
 
 interface LocalProviderProps {
   config: CloudProvider | null;
@@ -68,16 +69,15 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
         <div className="config-section">
           <h5>Storage Settings</h5>
           <div className="form-group">
-            <label htmlFor="container">
-              NAS Backup Directory <span className="required">*</span>
-            </label>
-            <input
+            <Input
               id="path"
               type="text"
+              label="NAS Backup Directory"
               value={localConfig.container || '/mnt/nas/backups/homeserver'}
               onChange={(e) => handleFieldChange('container', e.target.value)}
               placeholder="/mnt/nas/backups/homeserver"
-              className="form-input"
+              required
+              size="medium"
             />
             <small className="field-help">
               Absolute path to the NAS directory where encrypted backup tarballs will be stored
@@ -88,16 +88,12 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
 
         {/* Backup Process Information */}
         <div className="config-section">
-          <div 
-            className="collapsible-header"
-            onClick={() => setIsBackupProcessExpanded(!isBackupProcessExpanded)}
+          <Collapsible
+            title="Backup Process"
+            defaultCollapsed={!isBackupProcessExpanded}
+            onToggle={(collapsed) => setIsBackupProcessExpanded(!collapsed)}
+            variant="default"
           >
-            <h5>Backup Process</h5>
-            <span className={`collapse-icon ${isBackupProcessExpanded ? 'expanded' : ''}`}>
-              ▼
-            </span>
-          </div>
-          {isBackupProcessExpanded && (
             <div className="collapsible-content expanded">
               <div className="info-box">
                 <div className="info-item">
@@ -123,42 +119,41 @@ export const LocalProvider: React.FC<LocalProviderProps> = ({
                 </div>
               </div>
             </div>
-          )}
+          </Collapsible>
         </div>
 
 
         {/* Storage Requirements */}
         <div className="config-section">
-          <div 
-            className="collapsible-header"
-            onClick={() => setIsStorageRequirementsExpanded(!isStorageRequirementsExpanded)}
+          <Collapsible
+            title="Storage Requirements"
+            defaultCollapsed={!isStorageRequirementsExpanded}
+            onToggle={(collapsed) => setIsStorageRequirementsExpanded(!collapsed)}
+            variant="default"
           >
-            <h5>Storage Requirements</h5>
-            <span className={`collapse-icon ${isStorageRequirementsExpanded ? 'expanded' : ''}`}>
-              ▼
-            </span>
-          </div>
-          <div className={`collapsible-content ${isStorageRequirementsExpanded ? 'expanded' : ''}`}>
-            <div className="warning-box">
-              <div className="warning-icon">⚠</div>
-              <div className="warning-content">
-                <strong>Important:</strong> Ensure sufficient NAS disk space is available for encrypted backup tarballs.
-                NAS backups provide local redundancy but are not protected against site-wide disasters - consider using cloud providers for off-site redundancy.
+            <div className={`collapsible-content ${isStorageRequirementsExpanded ? 'expanded' : ''}`}>
+              <div className="warning-box">
+                <div className="warning-icon">⚠</div>
+                <div className="warning-content">
+                  <strong>Important:</strong> Ensure sufficient NAS disk space is available for encrypted backup tarballs.
+                  NAS backups provide local redundancy but are not protected against site-wide disasters - consider using cloud providers for off-site redundancy.
+                </div>
               </div>
             </div>
-          </div>
+          </Collapsible>
         </div>
 
         {/* Action Buttons */}
         <div className="form-actions">
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="medium"
             onClick={handleSave}
             disabled={isLoading}
-            className="action-button primary"
+            loading={isLoading}
           >
-            {isLoading ? 'Saving...' : 'Save Configuration'}
-          </button>
+            Save Configuration
+          </Button>
         </div>
       </div>
     </div>

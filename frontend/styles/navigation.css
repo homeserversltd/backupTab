@@ -1,5 +1,6 @@
 /**
  * Navigation styles for backup tab
+ * Tab and TabGroup components are now used - only layout styles remain
  */
 
 .backup-tablet-nav {
@@ -8,39 +9,4 @@
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
   border-radius: 12px;
-}
-
-.nav-button {
-  flex: 1;
-  padding: 1rem;
-  background: none;
-  border: none;
-  color: var(--text);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-bottom: 3px solid transparent;
-  white-space: nowrap;
-}
-
-.nav-button:hover {
-  background: var(--primaryHover);
-  color: var(--text);
-}
-
-.nav-button.active {
-  color: var(--text);
-  border-bottom-color: var(--accent);
-  background: var(--primaryHover);
-}
-
-.nav-button.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  color: var(--secondary);
-}
-
-.nav-button.disabled:hover {
-  background: none;
-  color: var(--secondary);
 }

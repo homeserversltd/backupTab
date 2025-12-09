@@ -1,93 +1,247 @@
 import React, { useState, useEffect } from 'react';
+import { showToast } from '../../components/Popup/PopupManager';
+
+interface Backup {
+  backup_id: string;
+  created_at: string;
+  total_chunks: number;
+  uploaded_bytes: number;
+  reused_chunks: number;
+  status: string;
+  total_size: number;
+}
 
 const RestoreTab: React.FC = () => {
-  const [debugEnabled, setDebugEnabled] = useState(false);
-  const [debugMessage, setDebugMessage] = useState('');
+  const [backups, setBackups] = useState<Backup[]>([]);
+  const [selectedBackup, setSelectedBackup] = useState<string>('');
+  const [restorePaths, setRestorePaths] = useState<string>('');
+  const [restoreLocation, setRestoreLocation] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [chunkingEnabled, setChunkingEnabled] = useState(false);
 
-  // Check debug status on component mount
   useEffect(() => {
-    checkDebugStatus();
+    loadBackups();
   }, []);
 
-  const checkDebugStatus = async () => {
+  const loadBackups = async () => {
     try {
-      const response = await fetch('/api/backup/debug/status');
+      setLoading(true);
+      const response = await fetch('/api/backup/backups/list');
       const data = await response.json();
       if (data.success) {
-        setDebugEnabled(data.data.enabled);
-        setDebugMessage(data.data.message || '');
+        setBackups(data.data.backups || []);
+        setChunkingEnabled(data.data.chunking_enabled || false);
+      } else {
+        showToast('Failed to load backups', 'error');
       }
     } catch (error) {
-      console.error('Failed to check debug status:', error);
+      console.error('Failed to load backups:', error);
+      showToast('Failed to load backups', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const toggleDebug = async () => {
-    console.log('Debug button clicked! Current state:', debugEnabled);
+  const handleRestore = async () => {
+    if (!selectedBackup) {
+      showToast('Please select a backup', 'error');
+      return;
+    }
+
+    const paths = restorePaths.split('\n').filter(p => p.trim());
+    if (paths.length === 0) {
+      showToast('Please enter at least one path to restore', 'error');
+      return;
+    }
+
     try {
-      const response = await fetch('/api/backup/debug/toggle', {
+      setRestoring(true);
+      const response = await fetch('/api/backup/restore', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ enabled: !debugEnabled })
+        body: JSON.stringify({
+          backup_id: selectedBackup,
+          paths: paths,
+          location: restoreLocation || undefined
+        })
       });
-      
+
       const data = await response.json();
-      console.log('Debug toggle response:', data);
       if (data.success) {
-        setDebugEnabled(data.data.enabled);
-        setDebugMessage(data.data.message || '');
+        showToast(
+          `Restore completed: ${data.data.files_restored} files restored, ${data.data.chunks_downloaded} chunks downloaded`,
+          'success'
+        );
+        // Reset form
+        setRestorePaths('');
+        setRestoreLocation('');
+      } else {
+        showToast(`Restore failed: ${data.error}`, 'error');
       }
     } catch (error) {
-      console.error('Failed to toggle debug:', error);
+      console.error('Restore failed:', error);
+      showToast('Restore failed', 'error');
+    } finally {
+      setRestoring(false);
     }
   };
 
-  console.log('RestoreTab rendering, debugEnabled:', debugEnabled);
-  
-  return (
-    <div className="restore-tab">
-      {/* Debug Controls */}
-      <div className="debug-controls">
-        <button 
-          onClick={toggleDebug} 
-          className={`debug-toggle ${debugEnabled ? 'enabled' : 'disabled'}`}
-          title={debugEnabled ? 'Disable debug mode' : 'Enable debug mode'}
-          style={{
-            position: 'relative',
-            zIndex: 1000,
-            pointerEvents: 'auto'
-          }}
-        >
-          🐛 Debug {debugEnabled ? 'ON' : 'OFF'}
-        </button>
-        {debugMessage && (
-          <div className="debug-message">
-            {debugMessage}
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString();
+    } catch {
+      return dateString;
+    }
+  };
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+  };
+
+  if (!chunkingEnabled) {
+    return (
+      <div className="restore-tab">
+        <div className="restore-placeholder">
+          <div className="placeholder-content">
+            <h3>Chunked Backups Not Enabled</h3>
+            <p>Selective restore is only available with chunked backups. Please enable chunking in the configuration to use this feature.</p>
           </div>
-        )}
+        </div>
       </div>
-      
-      <div className="restore-placeholder">
-        <div className="placeholder-content">
-          <h3>Coming Soon</h3>
-          <p>Backup restore and decryption features are currently under development.</p>
-          
-          <div className="feature-list">
-            <h4>Planned Features:</h4>
-            <ul>
-              <li>Restore files from backup archives</li>
-              <li>Decrypt backup files without full restore</li>
-              <li>Selective file recovery</li>
-              <li>Backup verification and integrity checks</li>
-              <li>Backup history and version management</li>
-            </ul>
-          </div>
-          
-          <div className="status-note">
-            <p><strong>Note:</strong> Your backups are safely encrypted and stored. This interface will provide easy access to restore functionality once implemented.</p>
-          </div>
+    );
+  }
+
+  return (
+    <div className="restore-tab" style={{ padding: '2rem' }}>
+      <div className="restore-header">
+        <h2>Selective Restore</h2>
+        <p>Restore specific files or directories from chunked backups</p>
+      </div>
+
+      <div className="restore-content" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        {/* Backup Selection */}
+        <div className="restore-section" style={{ background: 'var(--card-background)', padding: '1.5rem', borderRadius: '8px' }}>
+          <h3>Select Backup</h3>
+          {loading ? (
+            <div>Loading backups...</div>
+          ) : backups.length === 0 ? (
+            <div style={{ color: 'var(--text-secondary)' }}>No backups available</div>
+          ) : (
+            <select
+              value={selectedBackup}
+              onChange={(e) => setSelectedBackup(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                marginTop: '1rem',
+                fontSize: '1rem',
+                background: 'var(--background)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '4px'
+              }}
+            >
+              <option value="">-- Select a backup --</option>
+              {backups.map((backup) => (
+                <option key={backup.backup_id} value={backup.backup_id}>
+                  {backup.backup_id} - {formatDate(backup.created_at)} ({formatBytes(backup.total_size)})
+                </option>
+              ))}
+            </select>
+          )}
+          {selectedBackup && (
+            <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--background)', borderRadius: '4px' }}>
+              {(() => {
+                const backup = backups.find(b => b.backup_id === selectedBackup);
+                return backup ? (
+                  <div>
+                    <div><strong>Created:</strong> {formatDate(backup.created_at)}</div>
+                    <div><strong>Total Chunks:</strong> {backup.total_chunks}</div>
+                    <div><strong>Reused Chunks:</strong> {backup.reused_chunks}</div>
+                    <div><strong>Uploaded:</strong> {formatBytes(backup.uploaded_bytes)}</div>
+                    <div><strong>Total Size:</strong> {formatBytes(backup.total_size)}</div>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          )}
+        </div>
+
+        {/* Restore Paths */}
+        <div className="restore-section" style={{ background: 'var(--card-background)', padding: '1.5rem', borderRadius: '8px' }}>
+          <h3>Paths to Restore</h3>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+            Enter one path per line. Examples: /opt/gogs, /etc/postgresql/15/main
+          </p>
+          <textarea
+            value={restorePaths}
+            onChange={(e) => setRestorePaths(e.target.value)}
+            placeholder="/opt/gogs&#10;/etc/postgresql/15/main"
+            rows={6}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              fontSize: '1rem',
+              fontFamily: 'monospace',
+              background: 'var(--background)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '4px',
+              resize: 'vertical'
+            }}
+          />
+        </div>
+
+        {/* Restore Location (Optional) */}
+        <div className="restore-section" style={{ background: 'var(--card-background)', padding: '1.5rem', borderRadius: '8px' }}>
+          <h3>Restore Location (Optional)</h3>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+            Leave empty to restore to original locations, or specify a directory to restore files there
+          </p>
+          <input
+            type="text"
+            value={restoreLocation}
+            onChange={(e) => setRestoreLocation(e.target.value)}
+            placeholder="/tmp/restored"
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              fontSize: '1rem',
+              background: 'var(--background)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '4px'
+            }}
+          />
+        </div>
+
+        {/* Restore Button */}
+        <div className="restore-actions">
+          <button
+            onClick={handleRestore}
+            disabled={!selectedBackup || restoring || restorePaths.trim().length === 0}
+            style={{
+              padding: '0.75rem 2rem',
+              fontSize: '1rem',
+              fontWeight: 'bold',
+              background: 'var(--primary-color)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: (!selectedBackup || restoring || restorePaths.trim().length === 0) ? 'not-allowed' : 'pointer',
+              opacity: (!selectedBackup || restoring || restorePaths.trim().length === 0) ? 0.5 : 1
+            }}
+          >
+            {restoring ? 'Restoring...' : 'Restore Files'}
+          </button>
         </div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import { CloudProvider } from '../../types';
 // From providers/ directory: ../../../../ goes up 4 levels to reach src/, then down to components/Popup/PopupManager
 // Changing this path will cause "Module not found" errors during npm run build
 import { showToast } from '../../../../components/Popup/PopupManager'; //do not touch this
+import { Input, Select, Button } from '../../../../components/ui';
 
 interface GoogleCloudStorageProviderProps {
   config: CloudProvider | null;
@@ -90,16 +91,15 @@ export const GoogleCloudStorageProvider: React.FC<GoogleCloudStorageProviderProp
           </div>
 
           <div className="form-group">
-            <label htmlFor="project_id">
-              Project ID <span className="required">*</span>
-            </label>
-            <input
+            <Input
               id="project_id"
               type="text"
+              label="Project ID"
               value={localConfig.project_id || ''}
               onChange={(e) => handleFieldChange('project_id', e.target.value)}
               placeholder="your-project-id"
-              className="form-input"
+              required
+              size="medium"
             />
             <small className="field-help">
               Google Cloud Project ID where your storage bucket is located
@@ -107,16 +107,15 @@ export const GoogleCloudStorageProvider: React.FC<GoogleCloudStorageProviderProp
           </div>
 
           <div className="form-group">
-            <label htmlFor="container">
-              Bucket Name <span className="required">*</span>
-            </label>
-            <input
+            <Input
               id="container"
               type="text"
+              label="Bucket Name"
               value={localConfig.container || ''}
               onChange={(e) => handleFieldChange('container', e.target.value)}
               placeholder="homeserver-backups"
-              className="form-input"
+              required
+              size="medium"
             />
             <small className="field-help">
               Google Cloud Storage bucket name (3-63 characters, lowercase letters, numbers, hyphens, and periods)
@@ -126,48 +125,50 @@ export const GoogleCloudStorageProvider: React.FC<GoogleCloudStorageProviderProp
 
         <div className="config-section">
           <div className="form-group">
-            <label htmlFor="region">Region</label>
-            <select
+            <Select
               id="region"
+              label="Region"
               value={localConfig.region || 'us-central1'}
               onChange={(e) => handleFieldChange('region', e.target.value)}
-              className="form-select"
-            >
-              <option value="us-central1">US Central (Iowa)</option>
-              <option value="us-east1">US East (South Carolina)</option>
-              <option value="us-east4">US East (N. Virginia)</option>
-              <option value="us-west1">US West (Oregon)</option>
-              <option value="us-west2">US West (Los Angeles)</option>
-              <option value="us-west3">US West (Salt Lake City)</option>
-              <option value="us-west4">US West (Las Vegas)</option>
-              <option value="europe-west1">Europe West (Belgium)</option>
-              <option value="europe-west2">Europe West (London)</option>
-              <option value="europe-west3">Europe West (Frankfurt)</option>
-              <option value="europe-west4">Europe West (Netherlands)</option>
-              <option value="europe-west6">Europe West (Zurich)</option>
-              <option value="asia-east1">Asia East (Taiwan)</option>
-              <option value="asia-east2">Asia East (Hong Kong)</option>
-              <option value="asia-northeast1">Asia Northeast (Tokyo)</option>
-              <option value="asia-northeast2">Asia Northeast (Osaka)</option>
-              <option value="asia-northeast3">Asia Northeast (Seoul)</option>
-              <option value="asia-south1">Asia South (Mumbai)</option>
-              <option value="asia-southeast1">Asia Southeast (Singapore)</option>
-              <option value="asia-southeast2">Asia Southeast (Jakarta)</option>
-              <option value="australia-southeast1">Australia Southeast (Sydney)</option>
-            </select>
+              options={[
+                { value: 'us-central1', label: 'US Central (Iowa)' },
+                { value: 'us-east1', label: 'US East (South Carolina)' },
+                { value: 'us-east4', label: 'US East (N. Virginia)' },
+                { value: 'us-west1', label: 'US West (Oregon)' },
+                { value: 'us-west2', label: 'US West (Los Angeles)' },
+                { value: 'us-west3', label: 'US West (Salt Lake City)' },
+                { value: 'us-west4', label: 'US West (Las Vegas)' },
+                { value: 'europe-west1', label: 'Europe West (Belgium)' },
+                { value: 'europe-west2', label: 'Europe West (London)' },
+                { value: 'europe-west3', label: 'Europe West (Frankfurt)' },
+                { value: 'europe-west4', label: 'Europe West (Netherlands)' },
+                { value: 'europe-west6', label: 'Europe West (Zurich)' },
+                { value: 'asia-east1', label: 'Asia East (Taiwan)' },
+                { value: 'asia-east2', label: 'Asia East (Hong Kong)' },
+                { value: 'asia-northeast1', label: 'Asia Northeast (Tokyo)' },
+                { value: 'asia-northeast2', label: 'Asia Northeast (Osaka)' },
+                { value: 'asia-northeast3', label: 'Asia Northeast (Seoul)' },
+                { value: 'asia-south1', label: 'Asia South (Mumbai)' },
+                { value: 'asia-southeast1', label: 'Asia Southeast (Singapore)' },
+                { value: 'asia-southeast2', label: 'Asia Southeast (Jakarta)' },
+                { value: 'australia-southeast1', label: 'Australia Southeast (Sydney)' }
+              ]}
+              size="medium"
+            />
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="form-actions">
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="medium"
             onClick={handleSave}
             disabled={isLoading}
-            className="action-button primary"
+            loading={isLoading}
           >
-            {isLoading ? 'Saving...' : 'Save Configuration'}
-          </button>
+            Save Configuration
+          </Button>
         </div>
       </div>
     </div>

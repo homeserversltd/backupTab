@@ -10,8 +10,6 @@ export { default as ConfigTab } from './ConfigTab';
 export { default as RestoreTab } from './RestoreTab';
 export { StatusHeaderBar } from './StatusHeaderBar';
 export { InstallationManager } from './InstallationManager';
-export { default as TimePicker } from './TimePicker';
-export { default as Calendar } from './Calendar';
 export { BackupCard } from './BackupCard';
 export { RepositoryCard } from './RepositoryCard';
 export { default as GoogleCloudStorageSetupModal } from './GoogleCloudStorageSetupModal';

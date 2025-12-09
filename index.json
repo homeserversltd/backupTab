@@ -52,6 +52,8 @@
       "backup_handlers": "backend/backup_handlers.py",
       "schedule_handlers": "backend/schedule_handlers.py",
       "backup_manager": "backend/src/backup_manager.py",
+      "chunk_database": "backend/src/chunk_database.py",
+      "chunk_manager": "backend/src/chunk_manager.py",
       "provider_factory": "backend/src/providers/provider_factory.py",
       "keyman_integration": "backend/src/utils/keyman_integration.py",
       "export_credentials": "backend/export_credentials.sh"

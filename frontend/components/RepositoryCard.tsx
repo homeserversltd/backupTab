@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Repository } from '../types';
+import { Card, Badge, Button, Checkbox } from '../../../components/ui';
 
 interface RepositoryCardProps {
   repository: Repository;
@@ -19,7 +20,7 @@ export const RepositoryCard: React.FC<RepositoryCardProps> = ({
   onToggle,
   className = '' 
 }) => {
-  const getStatusColor = (status: string) => {
+  const getStatusVariant = (status: string): 'success' | 'warning' | 'info' => {
     switch (status) {
       case 'active': return 'success';
       case 'inactive': return 'warning';
@@ -66,23 +67,23 @@ export const RepositoryCard: React.FC<RepositoryCardProps> = ({
   };
 
   return (
-    <div 
-      className={`repository-card ${selected ? 'selected' : ''} ${className}`}
+    <Card 
+      variant={selected ? 'active' : 'default'}
       onClick={() => onToggle(repository)}
+      className={className}
     >
       <div className="repository-card-header">
         <div className="repository-card-title">
           <h4>{repository.name}</h4>
-          <span className={`status-badge ${getStatusColor(repository.status)}`}>
+          <Badge variant={getStatusVariant(repository.status)} size="small">
             {getStatusIcon(repository.status)} {repository.status}
-          </span>
+          </Badge>
         </div>
-        <div className="repository-checkbox">
-          <input 
-            type="checkbox" 
+        <div className="repository-checkbox" onClick={(e) => e.stopPropagation()}>
+          <Checkbox
             checked={selected}
             onChange={() => onToggle(repository)}
-            onClick={(e) => e.stopPropagation()}
+            size="medium"
           />
         </div>
       </div>
@@ -103,16 +104,17 @@ export const RepositoryCard: React.FC<RepositoryCardProps> = ({
       </div>
 
       <div className="repository-actions">
-        <button 
-          className="action-button secondary"
+        <Button 
+          variant="secondary"
+          size="medium"
           onClick={(e) => {
             e.stopPropagation();
             // TODO: Implement repository details view
           }}
         >
           View Details
-        </button>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 };

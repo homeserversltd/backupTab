@@ -200,3 +200,53 @@ class EncryptionManager:
     def is_encryption_available(self) -> bool:
         """Check if encryption is available (SUK key exists)."""
         return self.get_suk_key() is not None
+    
+    def encrypt_chunk_data(self, data: bytes) -> bytes:
+        """
+        Encrypt chunk data using SUK key with Fernet.
+        
+        Args:
+            data: Raw chunk data to encrypt
+            
+        Returns:
+            Encrypted chunk data as bytes
+        """
+        suk_key = self.get_suk_key()
+        if not suk_key:
+            raise ValueError("Failed to get SUK key, cannot encrypt chunk")
+        
+        fernet = Fernet(suk_key)
+        encrypted_data = fernet.encrypt(data)
+        return encrypted_data
+    
+    def decrypt_chunk_data(self, encrypted_data: bytes) -> bytes:
+        """
+        Decrypt chunk data using SUK key with Fernet.
+        
+        Args:
+            encrypted_data: Encrypted chunk data
+            
+        Returns:
+            Decrypted chunk data as bytes
+        """
+        suk_key = self.get_suk_key()
+        if not suk_key:
+            raise ValueError("Failed to get SUK key, cannot decrypt chunk")
+        
+        fernet = Fernet(suk_key)
+        decrypted_data = fernet.decrypt(encrypted_data)
+        return decrypted_data
+    
+    def decrypt_chunk_file(self, file_path: Path) -> bytes:
+        """
+        Decrypt a chunk file from disk.
+        
+        Args:
+            file_path: Path to encrypted chunk file
+            
+        Returns:
+            Decrypted chunk data as bytes
+        """
+        with open(file_path, "rb") as f:
+            encrypted_data = f.read()
+        return self.decrypt_chunk_data(encrypted_data)

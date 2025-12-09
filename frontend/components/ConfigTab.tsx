@@ -33,7 +33,8 @@ import {
   convertLegacyToGeneric
 } from '../types';
 import { useTooltip } from '../../../../src/hooks/useTooltip'; //donot touch this
-import { showToast } from '../../../components/Popup/PopupManager'; //donot touch this
+import { showToast } from '../../../../components/Popup/PopupManager'; //donot touch this
+import { Toggle, Input, Select, Button, Card, Collapsible } from '../../../components/ui';
 
 interface ConfigTabProps {
   config: BackupConfig | null;
@@ -484,28 +485,22 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
           {/* Manual Input Section */}
           <div className="file-selection">
             <div className="file-input-group">
-              <input
+              <Input
                 type="text"
                 placeholder="Enter file or directory path (manual entry)"
-                className="file-path-input"
                 value={newFilePath}
                 onChange={(e) => setNewFilePath(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAddFile()}
+                size="medium"
               />
-              <button 
-                className="action-button secondary"
+              <Button 
+                variant="secondary"
+                size="medium"
                 onClick={handleAddFile}
                 disabled={!newFilePath.trim() || isAddingFile}
+                loading={isAddingFile}
               >
-                {isAddingFile ? (
-                  <>
-                    <FontAwesomeIcon icon={faSpinner} spin />
-                    Adding...
-                  </>
-                ) : (
-                  'Add'
-                )}
-              </button>
+                Add
+              </Button>
             </div>
             
             {/* Current Backup Items */}
@@ -517,13 +512,14 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                 <div key={index} className="file-item">
                   <span className="file-icon">{getFileEmoji(item)}</span>
                   <span className="file-path">{item}</span>
-                  <button 
-                    className="remove-button"
+                  <Button 
+                    variant="danger"
+                    size="small"
                     onClick={() => handleRemoveFile(index)}
-                    title="Remove file from backup list"
+                    aria-label="Remove file from backup list"
                   >
                     ×
-                  </button>
+                  </Button>
                 </div>
               ))}
               {(!config.backup_items || config.backup_items.length === 0) && (
@@ -540,43 +536,38 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
           <h4>Encryption Settings</h4>
           <div className="encryption-settings">
             <div className="encryption-toggle">
-              <div className="toggle-switch">
-                <input
-                  id="encryption-enabled"
-                  type="checkbox"
-                  checked={encryptionEnabled}
-                  onChange={(e) => setEncryptionEnabled(e.target.checked)}
-                />
-                <label htmlFor="encryption-enabled" className="toggle-label">
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
               <div className="toggle-text">
-                <label htmlFor="encryption-enabled">Enable Encryption</label>
+                <Toggle
+                  checked={encryptionEnabled}
+                  onChange={setEncryptionEnabled}
+                  label="Enable Encryption"
+                  size="medium"
+                />
                 <small>Encrypts data for cloud providers only</small>
               </div>
             </div>
             
             {encryptionEnabled && (
               <div className="password-field">
-                <label htmlFor="encryption-password">Password:</label>
                 <div className="password-input-group">
-                  <input
+                  <Input
                     id="encryption-password"
                     type="password"
+                    label="Password:"
                     value={encryptionKey}
                     onChange={(e) => setEncryptionKey(e.target.value)}
                     placeholder={status?.key_exists ? "Enter new password" : "Enter password"}
-                    className="password-input"
+                    size="medium"
+                    error={encryptionKey && encryptionKey.length < 8 ? "Password must be at least 8 characters long" : undefined}
                   />
-                  <button 
-                    type="button"
+                  <Button 
+                    variant="primary"
+                    size="medium"
                     onClick={handleSaveEncryption}
                     disabled={!encryptionKey || encryptionKey.length < 8}
-                    className="password-submit"
                   >
                     {encryptionKey ? (status?.key_exists ? 'Update' : 'Set') : (status?.key_exists ? 'Update' : 'Set')}
-                  </button>
+                  </Button>
                 </div>
                 <small className="field-help">
                   Password must be at least 8 characters long
@@ -602,7 +593,7 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                   if (!typeInfo) return null;
                   
                   return (
-                    <div className="backup-type-display-card active">
+                    <Card variant="active">
                       <div className="backup-type-retention">
                         {(() => {
                           const retentionCount = genericBackupConfig[activeBackupType].userConfig.retentionCount;
@@ -654,7 +645,7 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                           })()}
                         </div>
                       </div>
-                    </div>
+                    </Card>
                   );
                 })()}
               </div>
@@ -662,19 +653,14 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
 
             {/* Advanced Configuration Toggle */}
             <div className="form-group">
-              <button
-                type="button"
-                className="advanced-config-toggle"
-                onClick={() => setShowAdvancedConfig(!showAdvancedConfig)}
+              <Collapsible
+                title={`${showAdvancedConfig ? 'Hide' : 'Show'} Configuration for ${activeBackupType.charAt(0).toUpperCase() + activeBackupType.slice(1)} Backup`}
+                defaultCollapsed={!showAdvancedConfig}
+                onToggle={(collapsed) => setShowAdvancedConfig(!collapsed)}
+                variant="default"
               >
-                <FontAwesomeIcon icon={showAdvancedConfig ? faEye : faEdit} />
-                {showAdvancedConfig ? 'Hide' : 'Show'} Configuration for {activeBackupType.charAt(0).toUpperCase() + activeBackupType.slice(1)} Backup
-              </button>
-            </div>
-
-          {/* User Configuration Panel */}
-          {showAdvancedConfig && (
-            <div className="advanced-config-panel">
+                {/* User Configuration Panel */}
+                <div className="advanced-config-panel">
               <h5>Configuration - {activeBackupType.charAt(0).toUpperCase() + activeBackupType.slice(1)} Backup</h5>
               
               
@@ -684,33 +670,34 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                   <h6>Retention Policy</h6>
                   <div className="form-row">
                     <div className="form-group">
-                      <label>Number of Backups to Keep</label>
-                      <input
+                      <Input
                         type="number"
-                        className="form-control"
+                        label="Number of Backups to Keep"
                         value={genericBackupConfig[activeBackupType].userConfig.retentionCount}
-                        onChange={(e) => setGenericBackupConfig(prev => ({
-                          ...prev,
-                          [activeBackupType]: {
-                            ...prev[activeBackupType],
-                            userConfig: {
-                              ...prev[activeBackupType].userConfig,
-                              retentionCount: parseInt(e.target.value) || 1
+                        onChange={(e) => {
+                          const newValue = parseInt(e.target.value) || 1;
+                          const maxValue = (() => {
+                            if (activeBackupType === 'incremental' || activeBackupType === 'differential') {
+                              const interval = genericBackupConfig[activeBackupType].userConfig.fullRefreshInterval || 4;
+                              const unit = genericBackupConfig[activeBackupType].userConfig.fullRefreshIntervalUnit || 'weeks';
+                              const intervalDays = unit === 'weeks' ? interval * 7 : interval * 30;
+                              return Math.min(intervalDays * 2, 365);
                             }
-                          }
-                        }))}
-                        min="1"
-                        max={(() => {
-                          if (activeBackupType === 'incremental' || activeBackupType === 'differential') {
-                            // For incremental/differential, max retention should be reasonable based on frequency
-                            const interval = genericBackupConfig[activeBackupType].userConfig.fullRefreshInterval || 4;
-                            const unit = genericBackupConfig[activeBackupType].userConfig.fullRefreshIntervalUnit || 'weeks';
-                            const intervalDays = unit === 'weeks' ? interval * 7 : interval * 30;
-                            // Allow up to 2x the interval for reasonable retention
-                            return Math.min(intervalDays * 2, 365);
-                          }
-                          return GENERIC_BACKUP_TYPE_INFO.find(t => t.value === activeBackupType)?.constraints.maxRetentionCount || 100;
-                        })()}
+                            return GENERIC_BACKUP_TYPE_INFO.find(t => t.value === activeBackupType)?.constraints.maxRetentionCount || 100;
+                          })();
+                          const clampedValue = Math.max(1, Math.min(newValue, maxValue));
+                          setGenericBackupConfig(prev => ({
+                            ...prev,
+                            [activeBackupType]: {
+                              ...prev[activeBackupType],
+                              userConfig: {
+                                ...prev[activeBackupType].userConfig,
+                                retentionCount: clampedValue
+                              }
+                            }
+                          }));
+                        }}
+                        size="medium"
                       />
                       <small className="field-help">
                         {(() => {
@@ -739,29 +726,31 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                     <h6>Full Backup Frequency</h6>
                     <div className="form-row">
                       <div className="form-group">
-                        <label>Frequency Interval</label>
-                        <input
+                        <Input
                           type="number"
-                          className="form-control"
+                          label="Frequency Interval"
                           value={genericBackupConfig[activeBackupType].userConfig.fullRefreshInterval || 4}
-                          onChange={(e) => setGenericBackupConfig(prev => ({
-                            ...prev,
-                            [activeBackupType]: {
-                              ...prev[activeBackupType],
-                              userConfig: {
-                                ...prev[activeBackupType].userConfig,
-                                fullRefreshInterval: parseInt(e.target.value) || 1
+                          onChange={(e) => {
+                            const newValue = parseInt(e.target.value) || 1;
+                            const maxValue = genericBackupConfig[activeBackupType].userConfig.fullRefreshIntervalUnit === 'months' ? 12 : 52;
+                            const clampedValue = Math.max(1, Math.min(newValue, maxValue));
+                            setGenericBackupConfig(prev => ({
+                              ...prev,
+                              [activeBackupType]: {
+                                ...prev[activeBackupType],
+                                userConfig: {
+                                  ...prev[activeBackupType].userConfig,
+                                  fullRefreshInterval: clampedValue
+                                }
                               }
-                            }
-                          }))}
-                          min="1"
-                          max={genericBackupConfig[activeBackupType].userConfig.fullRefreshIntervalUnit === 'months' ? 12 : 52}
+                            }));
+                          }}
+                          size="medium"
                         />
                       </div>
                       <div className="form-group">
-                        <label>Interval Unit</label>
-                        <select
-                          className="form-control"
+                        <Select
+                          label="Interval Unit"
                           value={genericBackupConfig[activeBackupType].userConfig.fullRefreshIntervalUnit || 'weeks'}
                           onChange={(e) => setGenericBackupConfig(prev => ({
                             ...prev,
@@ -773,10 +762,12 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                               }
                             }
                           }))}
-                        >
-                          <option value="weeks">Weeks</option>
-                          <option value="months">Months</option>
-                        </select>
+                          options={[
+                            { value: 'weeks', label: 'Weeks' },
+                            { value: 'months', label: 'Months' }
+                          ]}
+                          size="medium"
+                        />
                       </div>
                     </div>
                     <small className="field-help">
@@ -786,35 +777,31 @@ export const ConfigTab: React.FC<ConfigTabProps> = ({
                 )}
 
               </div>
+                </div>
+              </Collapsible>
             </div>
-          )}
           </div>
         )}
 
         <div className="config-actions">
-          <button 
-            className="action-button primary"
+          <Button 
+            variant="primary"
+            size="medium"
             onClick={handleSaveConfig}
             disabled={isSaving}
+            loading={isSaving}
+            icon={!isSaving ? <FontAwesomeIcon icon={faSave} /> : undefined}
+            iconPosition="left"
           >
-            {isSaving ? (
-              <>
-                <FontAwesomeIcon icon={faSpinner} spin />
-                Saving...
-              </>
-            ) : (
-              <>
-                <FontAwesomeIcon icon={faSave} />
-                Save Configuration
-              </>
-            )}
-          </button>
-          <button 
-            className="action-button secondary"
+            Save Configuration
+          </Button>
+          <Button 
+            variant="secondary"
+            size="medium"
             onClick={handleResetToDefaults}
           >
             Reset to Defaults
-          </button>
+          </Button>
         </div>
 
 

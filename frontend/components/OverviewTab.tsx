@@ -3,11 +3,12 @@
  * Providers and backup files management
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BackupConfig, ScheduleInfo, HeaderStats } from '../types';
 import { StatusHeaderBar } from './StatusHeaderBar';
 import { InstallationManager } from './InstallationManager';
 import { getFileEmoji } from '../utils/fileIcons';
+import { Card, Badge } from '../../../components/ui';
 
 interface OverviewTabProps {
   config: BackupConfig | null;
@@ -27,6 +28,27 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onStatusChange
 }) => {
   const [clickedProvider, setClickedProvider] = useState<string | null>(null);
+  const [chunkStats, setChunkStats] = useState<any>(null);
+  const [loadingChunkStats, setLoadingChunkStats] = useState(false);
+
+  useEffect(() => {
+    const fetchChunkStats = async () => {
+      try {
+        setLoadingChunkStats(true);
+        const response = await fetch('/api/backup/statistics');
+        const data = await response.json();
+        if (data.success && data.data?.chunked_backup) {
+          setChunkStats(data.data.chunked_backup);
+        }
+      } catch (error) {
+        console.error('Failed to fetch chunk statistics:', error);
+      } finally {
+        setLoadingChunkStats(false);
+      }
+    };
+
+    fetchChunkStats();
+  }, []);
 
   const handleProviderClick = (providerKey: string) => {
     setClickedProvider(providerKey);
@@ -111,11 +133,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               return a.localeCompare(b);
             })
             .map(([key, provider]) => (
-            <div 
-              key={key} 
-              className={`provider-item ${provider.enabled ? 'enabled' : 'disabled'} ${clickedProvider === key ? 'clicked' : ''}`}
+            <Card
+              key={key}
+              variant={provider.enabled ? 'active' : 'inactive'}
               onClick={() => handleProviderClick(key)}
-              style={{ cursor: 'pointer' }}
+              className={clickedProvider === key ? 'clicked' : ''}
             >
               <div className="provider-icon">💾</div>
               <div className="provider-info">
@@ -127,11 +149,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                    provider.container_type === 'backblaze' ? 'Backblaze B2' :
                    provider.container_type || 'Cloud Storage'}
                 </div>
-                <div className={`provider-status ${provider.enabled ? 'enabled' : 'disabled'}`}>
+                <Badge variant={provider.enabled ? 'success' : 'secondary'} size="small">
                   {provider.enabled ? 'ENABLED' : 'DISABLED'}
-                </div>
+                </Badge>
               </div>
-            </div>
+            </Card>
           )) : (
             <div className="empty-state">
               <p>No providers configured</p>
@@ -167,6 +189,54 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
         </div>
       </div>
+
+      {/* Chunk Statistics Section */}
+      {chunkStats && chunkStats.enabled && (
+        <div className="chunk-stats-section" style={{ marginTop: '2rem', padding: '1rem', background: 'var(--card-background)', borderRadius: '8px' }}>
+          <div className="panel-header">
+            <h3>Chunked Backup Statistics</h3>
+            <p className="panel-description">
+              Incremental backup efficiency metrics
+            </p>
+          </div>
+          {loadingChunkStats ? (
+            <div>Loading statistics...</div>
+          ) : chunkStats.error ? (
+            <div style={{ color: 'var(--error-color)' }}>Error loading statistics: {chunkStats.error}</div>
+          ) : chunkStats.latest_backup_id ? (
+            <div className="chunk-metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+              <div className="metric-card" style={{ padding: '1rem', background: 'var(--background)', borderRadius: '4px' }}>
+                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Total Chunks</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: '0.5rem' }}>{chunkStats.total_chunks || 0}</div>
+              </div>
+              <div className="metric-card" style={{ padding: '1rem', background: 'var(--background)', borderRadius: '4px' }}>
+                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Reused Chunks</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: '0.5rem', color: 'var(--success-color)' }}>{chunkStats.reused_chunks || 0}</div>
+              </div>
+              <div className="metric-card" style={{ padding: '1rem', background: 'var(--background)', borderRadius: '4px' }}>
+                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Uploaded</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: '0.5rem' }}>{chunkStats.uploaded_mb || 0} MB</div>
+              </div>
+              <div className="metric-card" style={{ padding: '1rem', background: 'var(--background)', borderRadius: '4px' }}>
+                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Total Size</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: '0.5rem' }}>{chunkStats.total_mb || 0} MB</div>
+              </div>
+              {chunkStats.savings_percent > 0 && (
+                <div className="metric-card" style={{ padding: '1rem', background: 'var(--background)', borderRadius: '4px' }}>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Cost Savings</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: '0.5rem', color: 'var(--success-color)' }}>
+                    {chunkStats.savings_percent}%
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+              No chunked backups yet. Run your first backup to see statistics.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Installation Manager Section */}
       {installationStatus && onStatusChange && (

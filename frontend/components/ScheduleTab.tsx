@@ -19,11 +19,10 @@ import {
   faEye
 } from '@fortawesome/free-solid-svg-icons';
 import { BackupScheduleConfig, ScheduleInfo, BackupConfig } from '../types';
-import { showToast } from '../../../components/Popup/PopupManager'; //donot touch this
+import { showToast } from '../../../../components/Popup/PopupManager'; //donot touch this
 import { useTooltip } from '../../../../src/hooks/useTooltip';
 import { useBackupControls } from '../hooks/useBackupControls';
-import TimePicker from './TimePicker';
-import Calendar from './Calendar';
+import { Calendar, TimePicker, Toggle, Button } from '../../../components/ui';
 import './ScheduleTab.css';
 
 interface ScheduleTabProps {
@@ -353,20 +352,21 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     <div className="update-schedule">
       <div className="schedule-form">
         {/* Toggle Switch */}
-        <div 
-          className={`update-schedule-toggle ${updateSchedule.enabled ? 'enabled' : ''}`}
-          onClick={() => setUpdateSchedule(prev => ({ ...prev, enabled: !prev.enabled }))}
-        >
-          <div className={`schedule-toggle-switch ${updateSchedule.enabled ? 'enabled' : ''}`} />
-          <div className="schedule-toggle-label">
+        <div className="schedule-toggle-section">
+          <div className="schedule-toggle-header">
             <h5 className="schedule-toggle-title">Automatic Backups</h5>
-            <p className="schedule-toggle-description">
-              {updateSchedule.enabled 
-                ? 'Automatic backups are enabled and will run according to your schedule'
-                : 'Enable automatic backups to keep your data protected with scheduled backups'
-              }
-            </p>
+            <Toggle
+              checked={updateSchedule.enabled}
+              onChange={(checked) => setUpdateSchedule(prev => ({ ...prev, enabled: checked }))}
+              size="medium"
+            />
           </div>
+          <p className="schedule-toggle-description">
+            {updateSchedule.enabled 
+              ? 'Automatic backups are enabled and will run according to your schedule'
+              : 'Enable automatic backups to keep your data protected with scheduled backups'
+            }
+          </p>
         </div>
         
         {/* Schedule Options */}
@@ -379,14 +379,16 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 const icon = frequency === 'daily' ? faCalendarDay : frequency === 'weekly' ? faCalendarWeek : faCalendar;
                 
                 return (
-                  <div 
+                  <Button
                     key={frequency}
-                    className={`frequency-option ${isActive ? 'active' : ''}`}
+                    variant={isActive ? 'primary' : 'secondary'}
+                    size="medium"
                     onClick={() => setUpdateSchedule(prev => ({ ...prev, frequency }))}
+                    icon={<FontAwesomeIcon icon={icon} />}
+                    iconPosition="left"
                   >
-                    <FontAwesomeIcon icon={icon} className="icon" />
-                    <span>{frequency.charAt(0).toUpperCase() + frequency.slice(1)}</span>
-                  </div>
+                    {frequency.charAt(0).toUpperCase() + frequency.slice(1)}
+                  </Button>
                 );
               })}
             </div>
@@ -406,13 +408,14 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
               <div className="form-group">
                 <div className="day-selector">
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
-                    <div
+                    <Button
                       key={day}
-                      className={`day-option ${updateSchedule.dayOfWeek === index ? 'active' : ''}`}
+                      variant={updateSchedule.dayOfWeek === index ? 'primary' : 'secondary'}
+                      size="small"
                       onClick={() => setUpdateSchedule(prev => ({ ...prev, dayOfWeek: index }))}
                     >
                       {day}
-                    </div>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -422,11 +425,14 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
               <div className="form-group">
                 <Calendar
                   frequency="monthly"
-                  value={updateSchedule.dayOfMonth?.toString() || '1'}
-                  onChange={(value) => setUpdateSchedule(prev => ({ 
-                    ...prev, 
-                    dayOfMonth: parseInt(value.split('-')[2]) 
-                  }))}
+                  value={updateSchedule.dayOfMonth 
+                    ? new Date(new Date().getFullYear(), 0, updateSchedule.dayOfMonth).toISOString().split('T')[0]
+                    : new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0]
+                  }
+                  onChange={(value) => {
+                    const dayOfMonth = parseInt(value.split('-')[2]);
+                    setUpdateSchedule(prev => ({ ...prev, dayOfMonth }));
+                  }}
                   disabled={!updateSchedule.enabled}
                 />
               </div>
@@ -472,43 +478,29 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         </div>
 
         <div className="schedule-actions">
-          <button
-            type="button"
-            className="sync-now-button"
+          <Button
+            variant="primary"
+            size="medium"
             onClick={runBackupNow}
             disabled={isLoading || apiLoading}
+            loading={isLoading || apiLoading}
+            icon={!isLoading && !apiLoading ? <FontAwesomeIcon icon={faPlay} /> : undefined}
+            iconPosition="left"
           >
-            {(isLoading || apiLoading) ? (
-              <>
-                <FontAwesomeIcon icon={faSpinner} spin />
-                Running...
-              </>
-            ) : (
-              <>
-                <FontAwesomeIcon icon={faPlay} />
-                Sync Now
-              </>
-            )}
-          </button>
+            {isLoading || apiLoading ? 'Running...' : 'Sync Now'}
+          </Button>
           
-          <button
-            type="button"
-            className="save-schedule-button"
+          <Button
+            variant="primary"
+            size="medium"
             onClick={saveSchedule}
             disabled={isLoading || apiLoading}
+            loading={isLoading || apiLoading}
+            icon={!isLoading && !apiLoading ? <FontAwesomeIcon icon={faSave} /> : undefined}
+            iconPosition="left"
           >
-            {(isLoading || apiLoading) ? (
-              <>
-                <FontAwesomeIcon icon={faSpinner} spin />
-                Saving...
-              </>
-            ) : (
-              <>
-                <FontAwesomeIcon icon={faSave} />
-                Save Schedule
-              </>
-            )}
-          </button>
+            {isLoading || apiLoading ? 'Saving...' : 'Save Schedule'}
+          </Button>
         </div>
       </div>
     </div>

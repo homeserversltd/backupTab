@@ -66,24 +66,7 @@
   color: var(--error);
 }
 
-.form-input,
-.form-select {
-  width: 100%;
-  padding: 0.75rem;
-  border: 2px solid var(--border);
-  border-radius: 6px;
-  background: var(--background);
-  color: var(--text);
-  font-size: 0.9rem;
-  transition: border-color 0.2s ease;
-}
-
-.form-input:focus,
-.form-select:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(160, 174, 192, 0.1);
-}
+/* Form input and select styles removed - using centralized Input and Select components */
 
 .checkbox-label {
   display: flex;
@@ -114,47 +97,7 @@
   border-top: 1px solid var(--border);
 }
 
-.action-button {
-  padding: 10px 15px;
-  border: none;
-  border-radius: 5px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.action-button.primary {
-  background: var(--primary);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-
-.action-button.primary:hover:not(:disabled) {
-  background: var(--primaryHover);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.action-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.action-button.secondary {
-  background: var(--primary);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-
-.action-button.secondary:hover:not(:disabled) {
-  background: var(--primaryHover);
-  border-color: var(--accent);
-}
+/* Action button styles removed - using centralized Button component */
 
 .info-box {
   background: var(--primaryHover);

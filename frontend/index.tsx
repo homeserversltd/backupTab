@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useBackupControls, useHeaderStats } from './hooks/useBackupControls';
 import { showToast } from '../../components/Popup/PopupManager'; //donot touch this
+import { Tab, TabGroup } from '../../components/ui';
 import { 
   BackupStatus, 
   CloudProvider,
@@ -116,40 +117,42 @@ const BackupTablet: React.FC = () => {
   return (
     <div className="backup-tablet">
       <div className="backup-tablet-nav">
-        <button 
-          className={`nav-button ${activeTab === 'overview' ? 'active' : ''}`}
-          onClick={() => setActiveTab('overview')}
-        >
-          Overview
-        </button>
-        <button 
-          className={`nav-button ${activeTab === 'providers' ? 'active' : ''} ${!isBackupSystemReady ? 'disabled' : ''}`}
-          onClick={() => isBackupSystemReady && setActiveTab('providers')}
-          disabled={!isBackupSystemReady}
-        >
-          Providers
-        </button>
-        <button 
-          className={`nav-button ${activeTab === 'schedule' ? 'active' : ''} ${!isBackupSystemReady ? 'disabled' : ''}`}
-          onClick={() => isBackupSystemReady && setActiveTab('schedule')}
-          disabled={!isBackupSystemReady}
-        >
-          Schedule
-        </button>
-        <button 
-          className={`nav-button ${activeTab === 'config' ? 'active' : ''} ${!isBackupSystemReady ? 'disabled' : ''}`}
-          onClick={() => isBackupSystemReady && setActiveTab('config')}
-          disabled={!isBackupSystemReady}
-        >
-          Config
-        </button>
-        <button 
-          className={`nav-button ${activeTab === 'restore' ? 'active' : ''} ${!isBackupSystemReady ? 'disabled' : ''}`}
-          onClick={() => isBackupSystemReady && setActiveTab('restore')}
-          disabled={!isBackupSystemReady}
-        >
-          Restore
-        </button>
+        <TabGroup>
+          <Tab
+            active={activeTab === 'overview'}
+            onClick={() => setActiveTab('overview')}
+          >
+            Overview
+          </Tab>
+          <Tab
+            active={activeTab === 'providers'}
+            onClick={() => isBackupSystemReady && setActiveTab('providers')}
+            disabled={!isBackupSystemReady}
+          >
+            Providers
+          </Tab>
+          <Tab
+            active={activeTab === 'schedule'}
+            onClick={() => isBackupSystemReady && setActiveTab('schedule')}
+            disabled={!isBackupSystemReady}
+          >
+            Schedule
+          </Tab>
+          <Tab
+            active={activeTab === 'config'}
+            onClick={() => isBackupSystemReady && setActiveTab('config')}
+            disabled={!isBackupSystemReady}
+          >
+            Config
+          </Tab>
+          <Tab
+            active={activeTab === 'restore'}
+            onClick={() => isBackupSystemReady && setActiveTab('restore')}
+            disabled={!isBackupSystemReady}
+          >
+            Restore
+          </Tab>
+        </TabGroup>
       </div>
 
       <div className="backup-tablet-content">

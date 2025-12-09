@@ -13,6 +13,7 @@ import argparse
 import tempfile
 import shutil
 import tarfile
+import hashlib
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional
@@ -27,12 +28,16 @@ try:
     from .src.providers import get_provider, PROVIDERS
     from .src.utils import get_logger, CronManager, ConfigManager, EncryptionManager
     from .src.utils.config_manager import BACKUP_BASE_DIR
+    from .src.chunk_manager import ChunkManager
+    from .src.chunk_database import ChunkDatabase
 except ImportError:
     try:
         # Fall back to absolute import (when run as script)
         from src.providers import get_provider, PROVIDERS
         from src.utils import get_logger, CronManager, ConfigManager, EncryptionManager
         from src.utils.config_manager import BACKUP_BASE_DIR
+        from src.chunk_manager import ChunkManager
+        from src.chunk_database import ChunkDatabase
     except ImportError as e:
         print(f"ERROR: Failed to import providers: {e}")
         print(f"Current directory: {current_dir}")
@@ -72,6 +77,24 @@ class EnhancedBackupCLI:
         if 'logging' in self.config:
             self.logger.configure_file_logging(self.config['logging'])
         
+        # Initialize chunking system if enabled
+        self.chunking_enabled = self.config.get('chunking', {}).get('enabled', True)
+        if self.chunking_enabled:
+            chunking_config = self.config.get('chunking', {})
+            self.chunk_manager = ChunkManager(
+                target_chunk_size_mb=chunking_config.get('target_chunk_size_mb', 50),
+                min_chunk_size_mb=chunking_config.get('min_chunk_size_mb', 25),
+                max_chunk_size_mb=chunking_config.get('max_chunk_size_mb', 75)
+            )
+            db_config = self.config.get('database', {})
+            db_path = db_config.get('path', '/var/lib/homeserver/backup/chunks.db')
+            self.chunk_db = ChunkDatabase(db_path)
+            self.logger.info("Chunked backup system initialized")
+        else:
+            self.chunk_manager = None
+            self.chunk_db = None
+            self.logger.info("Chunked backup system disabled, using legacy tarball backups")
+        
         # Initialize providers
         self.providers = {}
         self._initialize_providers()
@@ -87,6 +110,30 @@ class EnhancedBackupCLI:
                     print(f"Initialized provider: {provider_name}")
                 except Exception as e:
                     print(f"WARNING: Failed to initialize provider {provider_name}: {e}")
+    
+    def _calculate_file_hash(self, file_path: Path) -> str:
+        """Calculate SHA256 hash of entire file."""
+        sha256 = hashlib.sha256()
+        with open(file_path, 'rb') as f:
+            for chunk in iter(lambda: f.read(8192), b''):
+                sha256.update(chunk)
+        return sha256.hexdigest()
+    
+    def _get_file_size(self, path: Path) -> int:
+        """Get file or directory size."""
+        if path.is_file():
+            return path.stat().st_size
+        elif path.is_dir():
+            total = 0
+            for item in path.rglob('*'):
+                if item.is_file():
+                    total += item.stat().st_size
+            return total
+        return 0
+    
+    def _get_mtime(self, path: Path) -> datetime:
+        """Get file modification time."""
+        return datetime.fromtimestamp(path.stat().st_mtime)
     
     def _update_backup_state(self, backup_path: Optional[Path], backup_type: str = 'manual'):
         """Update the backup state in settings.json with last backup timestamp and size."""
@@ -257,10 +304,273 @@ class EnhancedBackupCLI:
         return encrypted_path
     
     def create_backup(self, items: Optional[List[str]] = None) -> Optional[Path]:
-        """Create a new backup and upload to all enabled providers."""
+        """Create a new backup using chunked incremental system or legacy tarball."""
         backup_items = items or self.config["backup_items"]
-        timestamp = datetime.now().strftime(self.config["timestamp_chains"]["format"])
+        timestamp = datetime.now().strftime(self.config.get("timestamp_chains", {}).get("format", "%Y%m%d_%H%M%S"))
         
+        # Use chunked backup if enabled, otherwise fall back to legacy
+        if self.chunking_enabled and self.chunk_manager and self.chunk_db:
+            return self._create_chunked_backup(backup_items, timestamp)
+        else:
+            return self._create_legacy_backup(backup_items, timestamp)
+    
+    def _create_chunked_backup(self, backup_items: List[str], timestamp: str) -> Optional[Path]:
+        """Create incremental chunked backup."""
+        backup_id = f"backup_{timestamp}"
+        self.logger.log_backup_start(backup_items, list(self.providers.keys()))
+        
+        # Get primary provider (first enabled non-local provider, or local)
+        primary_provider_name = None
+        for name, provider in self.providers.items():
+            if name != "local" or len(self.providers) == 1:
+                primary_provider_name = name
+                break
+        
+        if not primary_provider_name:
+            self.logger.error("No enabled providers found")
+            return None
+        
+        # Initialize backup record
+        if not self.chunk_db.create_backup(backup_id, primary_provider_name):
+            self.logger.error("Failed to create backup record in database")
+            return None
+        
+        unchanged_files = []
+        changed_files = []
+        new_chunks_to_upload = []
+        reused_chunks = []
+        total_uploaded = 0
+        
+        # Step 1: Quick file-level change detection
+        self.logger.info("Analyzing files for changes...")
+        for item_path_str in backup_items:
+            item_path = Path(item_path_str)
+            if not item_path.exists():
+                self.logger.warning(f"Item not found: {item_path_str}")
+                continue
+            
+            # For directories, process each file
+            if item_path.is_dir():
+                for file_path in item_path.rglob('*'):
+                    if file_path.is_file():
+                        self._process_file_for_backup(file_path, backup_id, unchanged_files, 
+                                                    changed_files, new_chunks_to_upload, 
+                                                    reused_chunks, primary_provider_name)
+            else:
+                # Single file
+                self._process_file_for_backup(item_path, backup_id, unchanged_files,
+                                            changed_files, new_chunks_to_upload,
+                                            reused_chunks, primary_provider_name)
+        
+        # Step 2: Upload new chunks
+        self.logger.info(f"Uploading {len(new_chunks_to_upload)} new chunks...")
+        for chunk_info in new_chunks_to_upload:
+            chunk_hash = chunk_info['chunk_hash']
+            encrypted_data = chunk_info['encrypted_data']
+            remote_path = chunk_info['remote_path']
+            
+            # Upload to all enabled providers
+            upload_success = False
+            for provider_name, provider in self.providers.items():
+                if provider_name == "local":
+                    # Local provider: save to local storage
+                    local_chunk_path = Path(self.config.get('providers', {}).get('local', {}).get('container', '/var/backups/homeserver')) / 'chunks' / f"{chunk_hash}.bca"
+                    local_chunk_path.parent.mkdir(parents=True, exist_ok=True)
+                    with open(local_chunk_path, 'wb') as f:
+                        f.write(encrypted_data)
+                    upload_success = True
+                else:
+                    # Cloud providers: upload chunk
+                    temp_chunk_file = self.temp_dir / f"{chunk_hash}.bca"
+                    with open(temp_chunk_file, 'wb') as f:
+                        f.write(encrypted_data)
+                    
+                    try:
+                        if provider.upload(temp_chunk_file, remote_path):
+                            upload_success = True
+                            self.logger.debug(f"Uploaded chunk {chunk_hash[:16]}... to {provider_name}")
+                        else:
+                            self.logger.error(f"Failed to upload chunk {chunk_hash[:16]}... to {provider_name}")
+                    except Exception as e:
+                        self.logger.error(f"Exception uploading chunk to {provider_name}: {e}")
+                    finally:
+                        if temp_chunk_file.exists():
+                            temp_chunk_file.unlink()
+            
+            if upload_success:
+                total_uploaded += len(encrypted_data)
+            else:
+                self.logger.error(f"Failed to upload chunk {chunk_hash[:16]}... to any provider")
+                # Continue with other chunks
+        
+        # Step 3: Update backup statistics
+        total_reused = sum(len(f['chunks']) for f in unchanged_files) + len(reused_chunks)
+        total_chunks = total_reused + len(new_chunks_to_upload)
+        
+        self.chunk_db.update_backup(
+            backup_id=backup_id,
+            total_chunks=total_chunks,
+            uploaded_bytes=total_uploaded,
+            reused_chunks=total_reused,
+            status='completed'
+        )
+        
+        self.logger.info(f"Backup {backup_id} completed:")
+        self.logger.info(f"  - Total chunks: {total_chunks}")
+        self.logger.info(f"  - Uploaded: {total_uploaded / (1024*1024):.2f} MB")
+        self.logger.info(f"  - Reused: {total_reused} chunks")
+        self.logger.info(f"  - New: {len(new_chunks_to_upload)} chunks")
+        
+        # Update backup state
+        self._update_backup_state(None, backup_type='manual')
+        
+        # Increment backup count
+        try:
+            self.config_manager.increment_backup_count()
+        except Exception as e:
+            self.logger.warning(f"Failed to increment backup count: {e}")
+        
+        return None  # Chunked backups don't return a single file path
+    
+    def _process_file_for_backup(self, file_path: Path, backup_id: str, unchanged_files: List,
+                                 changed_files: List, new_chunks_to_upload: List,
+                                 reused_chunks: List, provider_name: str):
+        """Process a single file for chunked backup."""
+        try:
+            current_file_hash = self._calculate_file_hash(file_path)
+            current_size = self._get_file_size(file_path)
+            current_mtime = self._get_mtime(file_path)
+            
+            # Check last known state
+            last_metadata = self.chunk_db.get_file_metadata(str(file_path))
+            
+            if (last_metadata and 
+                last_metadata.get('last_file_hash') == current_file_hash and
+                last_metadata.get('last_size') == current_size):
+                # File completely unchanged - reuse all chunks from last backup
+                last_backup_id = last_metadata.get('last_backup_id')
+                last_chunks = self.chunk_db.get_chunks_for_file(str(file_path), last_backup_id)
+                
+                # Create backup_file record
+                file_record_id = self.chunk_db.create_backup_file(
+                    backup_id=backup_id,
+                    original_path=str(file_path),
+                    size=current_size,
+                    file_hash=current_file_hash,
+                    chunk_count=len(last_chunks),
+                    mtime=current_mtime
+                )
+                
+                # Create mappings for reused chunks
+                for idx, chunk_info in enumerate(last_chunks):
+                    self.chunk_db.create_chunk_mapping(
+                        backup_id=backup_id,
+                        file_id=file_record_id,
+                        chunk_hash=chunk_info['chunk_hash'],
+                        chunk_index=idx
+                    )
+                
+                unchanged_files.append({
+                    'path': str(file_path),
+                    'chunks': last_chunks,
+                    'backup_id': last_backup_id
+                })
+                reused_chunks.extend([c['chunk_hash'] for c in last_chunks])
+                self.logger.info(f"File unchanged: {file_path} - reusing {len(last_chunks)} chunks")
+            else:
+                # File changed - need chunk-level processing
+                changed_files.append(file_path)
+                self._process_changed_file(file_path, backup_id, new_chunks_to_upload, 
+                                         reused_chunks, provider_name, current_file_hash, 
+                                         current_size, current_mtime)
+        except Exception as e:
+            self.logger.error(f"Error processing file {file_path}: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())
+    
+    def _process_changed_file(self, file_path: Path, backup_id: str, new_chunks_to_upload: List,
+                             reused_chunks: List, provider_name: str, file_hash: str,
+                             file_size: int, mtime: datetime):
+        """Process a changed file: chunk it and check for deduplication."""
+        self.logger.info(f"Processing changed file: {file_path}")
+        
+        # Chunk current file
+        current_chunks = self.chunk_manager.chunk_file_with_cdc(file_path)
+        
+        # Create backup_file record
+        file_record_id = self.chunk_db.create_backup_file(
+            backup_id=backup_id,
+            original_path=str(file_path),
+            size=file_size,
+            file_hash=file_hash,
+            chunk_count=len(current_chunks),
+            mtime=mtime
+        )
+        
+        # Process each chunk
+        for idx, chunk in enumerate(current_chunks):
+            chunk_hash = chunk['hash']
+            
+            # Check if chunk exists in storage (any backup)
+            existing_chunk = self.chunk_db.get_chunk_by_hash(chunk_hash)
+            
+            if existing_chunk:
+                # Chunk exists - reuse it (no upload needed!)
+                self.logger.debug(f"Reusing chunk {idx} for {file_path}: {chunk_hash[:16]}...")
+                
+                self.chunk_db.create_chunk_mapping(
+                    backup_id=backup_id,
+                    file_id=file_record_id,
+                    chunk_hash=chunk_hash,
+                    chunk_index=idx
+                )
+                
+                reused_chunks.append(chunk_hash)
+            else:
+                # New chunk - encrypt and prepare for upload
+                self.logger.info(f"New chunk {idx} for {file_path}: {chunk_hash[:16]}...")
+                
+                # Encrypt chunk
+                encrypted_data = self.chunk_manager.encrypt_chunk(chunk['data'])
+                
+                # Store in global chunk registry
+                remote_path = f"chunks/{chunk_hash}.bca"
+                self.chunk_db.store_chunk(
+                    chunk_hash=chunk_hash,
+                    size=chunk['size'],
+                    encrypted_size=len(encrypted_data),
+                    remote_path=remote_path,
+                    provider=provider_name,
+                    first_seen_backup_id=backup_id
+                )
+                
+                # Create mapping
+                self.chunk_db.create_chunk_mapping(
+                    backup_id=backup_id,
+                    file_id=file_record_id,
+                    chunk_hash=chunk_hash,
+                    chunk_index=idx
+                )
+                
+                new_chunks_to_upload.append({
+                    'chunk_hash': chunk_hash,
+                    'encrypted_data': encrypted_data,
+                    'remote_path': remote_path,
+                    'size': chunk['size']
+                })
+        
+        # Update file metadata
+        self.chunk_db.update_file_metadata(
+            original_path=str(file_path),
+            last_backup_id=backup_id,
+            file_hash=file_hash,
+            size=file_size,
+            chunk_count=len(current_chunks),
+            mtime=mtime
+        )
+    
+    def _create_legacy_backup(self, backup_items: List[str], timestamp: str) -> Optional[Path]:
+        """Create legacy tarball backup (fallback when chunking disabled)."""
         self.logger.log_backup_start(backup_items, list(self.providers.keys()))
         
         # Create backup package
@@ -271,7 +581,7 @@ class EnhancedBackupCLI:
         
         # Encrypt if enabled (for cloud providers only)
         encrypted_path = None
-        if self.config["encryption"]["enabled"]:
+        if self.config.get("encryption", {}).get("enabled", False):
             try:
                 encrypted_path = self._encrypt_backup(package_path)
             except Exception as e:
@@ -289,17 +599,14 @@ class EnhancedBackupCLI:
         
         # Upload to all enabled providers
         upload_results = {}
-        # Upload to all enabled providers
         for provider_name, provider in self.providers.items():
             self.logger.info(f"Processing with {provider_name}...")
             
             # Choose which version to upload based on provider type
             if provider_name == "local":
-                # Local provider gets unencrypted version
                 upload_path = package_path
                 self.logger.info("Using unencrypted package for local provider")
             else:
-                # Cloud providers get encrypted version (if encryption is enabled)
                 upload_path = encrypted_path if encrypted_path else package_path
                 if encrypted_path:
                     self.logger.info(f"Using encrypted package for {provider_name} provider")
@@ -308,17 +615,14 @@ class EnhancedBackupCLI:
             
             # Upload to the provider
             if provider_name == "local":
-                # Local provider handles tarball creation internally
                 backup_path = provider.create_backup(backup_items, timestamp)
                 success = backup_path is not None
                 if success:
                     self.logger.info(f"Local backup created: {backup_path}")
             else:
-                # Cloud providers upload the appropriate version (encrypted or unencrypted)
-                # Use consistent filename to overwrite previous backups (space-saving)
                 remote_name = "homeserver_backup_latest.tar.gz"
                 if encrypted_path and upload_path == encrypted_path:
-                    remote_name = "homeserver_backup_latest.tar.gz.enc"  # Mark encrypted files
+                    remote_name = "homeserver_backup_latest.tar.gz.enc"
                 
                 self.logger.info(f"Starting upload to {provider_name}: {upload_path} -> {remote_name}")
                 try:
@@ -342,41 +646,25 @@ class EnhancedBackupCLI:
             shutil.move(str(package_path), str(local_path))
             self.logger.log_backup_success(str(local_path), upload_results)
             
-            # Increment backup count in settings.json
             try:
-                success = self.config_manager.increment_backup_count()
-                if success:
-                    self.logger.info("Backup count incremented successfully")
-                else:
-                    self.logger.warning("Failed to increment backup count, but backup was successful")
+                self.config_manager.increment_backup_count()
             except Exception as count_error:
                 self.logger.warning(f"Failed to increment backup count: {count_error}")
             
-            # Update backup state file with last backup timestamp and size
             self._update_backup_state(local_path, backup_type='manual')
-            
             return local_path
         else:
-            # Local provider already handled storage, clean up temp package
             if package_path.exists():
                 package_path.unlink()
             self.logger.log_backup_success("NAS storage", upload_results)
             
-            # Increment backup count in settings.json
             try:
-                success = self.config_manager.increment_backup_count()
-                if success:
-                    self.logger.info("Backup count incremented successfully")
-                else:
-                    self.logger.warning("Failed to increment backup count, but backup was successful")
+                self.config_manager.increment_backup_count()
             except Exception as count_error:
                 self.logger.warning(f"Failed to increment backup count: {count_error}")
             
-            # Update backup state file with last backup timestamp and size
-            # backup_path was set earlier in the loop when processing local provider
             self._update_backup_state(backup_path, backup_type='manual')
-            
-            return None  # Local provider returns its own path
+            return None
     
     def list_backups(self, provider_name: Optional[str] = None) -> List[Dict[str, Any]]:
         """List available backups from specified provider or all providers."""
@@ -434,6 +722,149 @@ class EnhancedBackupCLI:
             print(f"Failed to download {backup_name} from {provider_name}")
         
         return success
+    
+    def restore_files(self, backup_id: str, target_paths: List[str], restore_location: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Restore specific files/directories from backup by downloading only necessary chunks.
+        
+        Args:
+            backup_id: Backup to restore from
+            target_paths: List of paths to restore (e.g., ["/opt/gogs", "/etc/postgresql/15/main"])
+            restore_location: Where to restore (default: original locations)
+            
+        Returns:
+            Dictionary with restore results
+        """
+        if not self.chunking_enabled or not self.chunk_db:
+            return {
+                'success': False,
+                'error': 'Chunked backup system not enabled'
+            }
+        
+        self.logger.info(f"Restoring from backup {backup_id}: {target_paths}")
+        
+        # Step 1: Query database for required chunks
+        required_chunks = self.chunk_db.get_chunks_for_restore(backup_id, target_paths)
+        
+        if not required_chunks:
+            return {
+                'success': False,
+                'error': f'No chunks found for paths in backup {backup_id}'
+            }
+        
+        self.logger.info(f"Need to download {len(required_chunks)} chunks")
+        
+        # Step 2: Group chunks by provider
+        chunks_by_provider = {}
+        for chunk_info in required_chunks:
+            provider = chunk_info['provider']
+            if provider not in chunks_by_provider:
+                chunks_by_provider[provider] = []
+            chunks_by_provider[provider].append(chunk_info)
+        
+        # Step 3: Download chunks from each provider
+        downloaded_chunks = {}
+        
+        for provider_name, chunks in chunks_by_provider.items():
+            if provider_name not in self.providers:
+                self.logger.error(f"Provider {provider_name} not available for restore")
+                continue
+            
+            provider = self.providers[provider_name]
+            
+            for chunk_info in chunks:
+                chunk_hash = chunk_info['chunk_hash']
+                remote_path = chunk_info['remote_path']
+                
+                self.logger.debug(f"Downloading chunk: {chunk_hash[:16]}...")
+                
+                # Download encrypted chunk
+                temp_encrypted = self.temp_dir / f"{chunk_hash}.bca"
+                
+                if provider_name == "local":
+                    # Local provider: read from local storage
+                    local_chunk_path = Path(self.config.get('providers', {}).get('local', {}).get('container', '/var/backups/homeserver')) / remote_path
+                    if local_chunk_path.exists():
+                        with open(local_chunk_path, 'rb') as f:
+                            encrypted_data = f.read()
+                        with open(temp_encrypted, 'wb') as f:
+                            f.write(encrypted_data)
+                        success = True
+                    else:
+                        self.logger.error(f"Chunk not found locally: {local_chunk_path}")
+                        success = False
+                else:
+                    # Cloud providers: download
+                    success = provider.download(remote_path, temp_encrypted)
+                
+                if not success:
+                    self.logger.error(f"Failed to download chunk {chunk_hash}")
+                    return {
+                        'success': False,
+                        'error': f'Failed to download chunk {chunk_hash[:16]}...'
+                    }
+                
+                # Decrypt chunk
+                try:
+                    decrypted_data = self.chunk_manager.decrypt_chunk_file(temp_encrypted)
+                    downloaded_chunks[chunk_hash] = decrypted_data
+                except Exception as e:
+                    self.logger.error(f"Failed to decrypt chunk {chunk_hash}: {e}")
+                    return {
+                        'success': False,
+                        'error': f'Failed to decrypt chunk {chunk_hash[:16]}...: {e}'
+                    }
+                
+                # Cleanup
+                if temp_encrypted.exists():
+                    temp_encrypted.unlink()
+        
+        # Step 4: Reassemble files
+        files_to_restore = self.chunk_db.get_files_for_restore(backup_id, target_paths)
+        files_restored = 0
+        
+        for file_info in files_to_restore:
+            original_path = file_info['original_path']
+            file_id = file_info['id']
+            chunk_mappings = self.chunk_db.get_chunk_mappings_for_file(backup_id, file_id)
+            
+            # Sort chunks by index
+            chunk_mappings.sort(key=lambda x: x['chunk_index'])
+            
+            # Reassemble file
+            file_data = bytearray()
+            for mapping in chunk_mappings:
+                chunk_hash = mapping['chunk_hash']
+                if chunk_hash not in downloaded_chunks:
+                    self.logger.error(f"Missing chunk {chunk_hash} for file {original_path}")
+                    continue
+                chunk_data = downloaded_chunks[chunk_hash]
+                file_data.extend(chunk_data)
+            
+            # Determine restore path
+            if restore_location:
+                restore_path = Path(restore_location) / Path(original_path).name
+            else:
+                restore_path = Path(original_path)
+            
+            # Ensure parent directory exists
+            restore_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Write restored file
+            with open(restore_path, 'wb') as f:
+                f.write(file_data)
+            
+            files_restored += 1
+            self.logger.info(f"Restored: {original_path} -> {restore_path} ({len(file_data)} bytes)")
+        
+        self.logger.info(f"Restore completed: {files_restored} files restored")
+        
+        return {
+            'success': True,
+            'files_restored': files_restored,
+            'chunks_downloaded': len(required_chunks),
+            'total_bytes': sum(len(d) for d in downloaded_chunks.values())
+        }
     
     def test_backup_cycle(self, items: Optional[List[str]] = None) -> bool:
         """Test complete backup cycle: create, upload, download, verify."""
@@ -809,6 +1240,12 @@ def main():
     download_parser.add_argument("--provider", "-p", required=True, help="Provider to download from")
     download_parser.add_argument("--to", "-t", help="Local path to save to")
     
+    # Restore files command
+    restore_parser = subparsers.add_parser("restore", help="Restore specific files/directories from chunked backup")
+    restore_parser.add_argument("--backup-id", "-b", required=True, help="Backup ID to restore from")
+    restore_parser.add_argument("--paths", "-p", nargs="+", required=True, help="Paths to restore")
+    restore_parser.add_argument("--location", "-l", help="Restore location (default: original paths)")
+    
     # Test backup cycle command
     test_parser = subparsers.add_parser("test-cycle", help="Test complete backup cycle")
     test_parser.add_argument("--items", "-i", nargs="+", help="Items to backup")
@@ -919,6 +1356,16 @@ def main():
         elif args.command == "download":
             success = cli.download_backup(args.backup_name, args.provider, args.to)
             if not success:
+                sys.exit(1)
+        elif args.command == "restore":
+            result = cli.restore_files(args.backup_id, args.paths, args.location)
+            if result.get('success'):
+                print(f"Restore completed successfully:")
+                print(f"  Files restored: {result['files_restored']}")
+                print(f"  Chunks downloaded: {result['chunks_downloaded']}")
+                print(f"  Total bytes: {result['total_bytes'] / (1024*1024):.2f} MB")
+            else:
+                print(f"ERROR: Restore failed: {result.get('error', 'Unknown error')}")
                 sys.exit(1)
         elif args.command == "test-cycle":
             success = cli.test_backup_cycle(args.items)

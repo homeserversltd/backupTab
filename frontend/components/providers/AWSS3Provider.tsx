@@ -10,6 +10,7 @@ import { CloudProvider } from '../../types';
 // From providers/ directory: ../../../../ goes up 4 levels to reach src/, then down to components/Popup/PopupManager
 // Changing this path will cause "Module not found" errors during npm run build
 import { showToast } from '../../../../components/Popup/PopupManager'; //do not touch this
+import { Input, Select, Button } from '../../../../components/ui';
 
 interface AWSS3ProviderProps {
   config: CloudProvider | null;
@@ -72,17 +73,16 @@ export const AWSS3Provider: React.FC<AWSS3ProviderProps> = ({
         {/* Main Configuration Section */}
         <div className="config-section">
           <div className="form-group">
-            <label htmlFor="access_key">
-              Access Key ID <span className="required">*</span>
-            </label>
-            <input
+            <Input
               id="access_key"
               type="text"
+              label="Access Key ID"
               value={isKeymanConfigured ? '********************' : (localConfig.access_key || '')}
               onChange={(e) => handleFieldChange('access_key', e.target.value)}
               placeholder="AKIAIOSFODNN7EXAMPLE"
-              className="form-input"
+              required
               disabled={isKeymanConfigured}
+              size="medium"
             />
             <small className="field-help">
               Your AWS Access Key ID (starts with AKIA, 20 characters)
@@ -90,17 +90,16 @@ export const AWSS3Provider: React.FC<AWSS3ProviderProps> = ({
           </div>
 
           <div className="form-group">
-            <label htmlFor="secret_key">
-              Secret Access Key <span className="required">*</span>
-            </label>
-            <input
+            <Input
               id="secret_key"
               type="password"
+              label="Secret Access Key"
               value={isKeymanConfigured ? '********************************' : (localConfig.secret_key || '')}
               onChange={(e) => handleFieldChange('secret_key', e.target.value)}
               placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-              className="form-input"
+              required
               disabled={isKeymanConfigured}
+              size="medium"
             />
             <small className="field-help">
               Your AWS Secret Access Key (40 characters)
@@ -108,16 +107,15 @@ export const AWSS3Provider: React.FC<AWSS3ProviderProps> = ({
           </div>
 
           <div className="form-group">
-            <label htmlFor="container">
-              Bucket Name <span className="required">*</span>
-            </label>
-            <input
+            <Input
               id="container"
               type="text"
+              label="Bucket Name"
               value={localConfig.container || ''}
               onChange={(e) => handleFieldChange('container', e.target.value)}
               placeholder="homeserver-backups"
-              className="form-input"
+              required
+              size="medium"
             />
             <small className="field-help">
               S3 bucket name (3-63 characters, lowercase letters, numbers, hyphens, and periods)
@@ -127,37 +125,39 @@ export const AWSS3Provider: React.FC<AWSS3ProviderProps> = ({
 
         <div className="config-section">
           <div className="form-group">
-            <label htmlFor="region">Region</label>
-            <select
+            <Select
               id="region"
+              label="Region"
               value={localConfig.region || 'us-east-1'}
               onChange={(e) => handleFieldChange('region', e.target.value)}
-              className="form-select"
-            >
-              <option value="us-east-1">US East (N. Virginia)</option>
-              <option value="us-east-2">US East (Ohio)</option>
-              <option value="us-west-1">US West (N. California)</option>
-              <option value="us-west-2">US West (Oregon)</option>
-              <option value="eu-west-1">Europe (Ireland)</option>
-              <option value="eu-west-2">Europe (London)</option>
-              <option value="eu-central-1">Europe (Frankfurt)</option>
-              <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
-              <option value="ap-southeast-2">Asia Pacific (Sydney)</option>
-              <option value="ap-northeast-1">Asia Pacific (Tokyo)</option>
-            </select>
+              options={[
+                { value: 'us-east-1', label: 'US East (N. Virginia)' },
+                { value: 'us-east-2', label: 'US East (Ohio)' },
+                { value: 'us-west-1', label: 'US West (N. California)' },
+                { value: 'us-west-2', label: 'US West (Oregon)' },
+                { value: 'eu-west-1', label: 'Europe (Ireland)' },
+                { value: 'eu-west-2', label: 'Europe (London)' },
+                { value: 'eu-central-1', label: 'Europe (Frankfurt)' },
+                { value: 'ap-southeast-1', label: 'Asia Pacific (Singapore)' },
+                { value: 'ap-southeast-2', label: 'Asia Pacific (Sydney)' },
+                { value: 'ap-northeast-1', label: 'Asia Pacific (Tokyo)' }
+              ]}
+              size="medium"
+            />
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="form-actions">
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="medium"
             onClick={handleSave}
             disabled={isLoading}
-            className="action-button primary"
+            loading={isLoading}
           >
-            {isLoading ? 'Saving...' : 'Save Configuration'}
-          </button>
+            Save Configuration
+          </Button>
         </div>
       </div>
     </div>

@@ -54,6 +54,23 @@
       }
     },
     "retention_days": 30,
+    "chunking": {
+      "enabled": true,
+      "target_chunk_size_mb": 50,
+      "min_chunk_size_mb": 25,
+      "max_chunk_size_mb": 75,
+      "algorithm": "cdc_rabin",
+      "deduplication": true
+    },
+    "database": {
+      "path": "/var/lib/homeserver/backup/chunks.db",
+      "backup_interval_days": 7
+    },
+    "upload": {
+      "max_concurrent_uploads": 5,
+      "retry_attempts": 3,
+      "retry_delay_seconds": 5
+    },
     "state": {
       "encryption_enabled": true,
       "backup_count": 0,
