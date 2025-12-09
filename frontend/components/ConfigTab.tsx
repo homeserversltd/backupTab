@@ -33,7 +33,7 @@ import {
   convertLegacyToGeneric
 } from '../types';
 import { useTooltip } from '../../../../src/hooks/useTooltip'; //donot touch this
-import { showToast } from '../../../../components/Popup/PopupManager'; //donot touch this
+import { showToast } from '../../../components/Popup/PopupManager'; //donot touch this
 import { Toggle, Input, Select, Button, Card, Collapsible } from '../../../components/ui';
 
 interface ConfigTabProps {

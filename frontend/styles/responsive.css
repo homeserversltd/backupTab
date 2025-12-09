@@ -298,25 +298,40 @@
 
   /* Compact metric items in status header */
   .status-header-bar {
-    padding: 0.5rem;
+    padding: 0.5rem 0.25rem;
   }
 
   .status-header-bar .status-metrics {
     gap: 0.25rem;
+    justify-content: stretch;
+    align-items: stretch;
   }
 
   .status-header-bar .metric-item {
     min-width: 0;
-    flex: 1;
-    padding: 0.25rem;
+    flex: 1 1 calc(50% - 0.125rem);
+    padding: 0.4rem 0.2rem;
+    min-height: 55px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
   .status-header-bar .metric-label {
-    font-size: 0.65rem;
+    font-size: 0.6rem;
+    margin-bottom: 0.15rem;
+    line-height: 1.1;
+    text-align: center;
+    width: 100%;
   }
 
   .status-header-bar .metric-value {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
+    line-height: 1.2;
+    text-align: center;
+    width: 100%;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 
   /* Compact action buttons */

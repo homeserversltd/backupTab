@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { showToast } from '../../components/Popup/PopupManager';
+import { showToast } from '../../../components/Popup/PopupManager';
 
 interface Backup {
   backup_id: string;
@@ -33,11 +33,11 @@ const RestoreTab: React.FC = () => {
         setBackups(data.data.backups || []);
         setChunkingEnabled(data.data.chunking_enabled || false);
       } else {
-        showToast('Failed to load backups', 'error');
+        showToast({ message: 'Failed to load backups', variant: 'error' });
       }
     } catch (error) {
       console.error('Failed to load backups:', error);
-      showToast('Failed to load backups', 'error');
+      showToast({ message: 'Failed to load backups', variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -45,13 +45,13 @@ const RestoreTab: React.FC = () => {
 
   const handleRestore = async () => {
     if (!selectedBackup) {
-      showToast('Please select a backup', 'error');
+      showToast({ message: 'Please select a backup', variant: 'error' });
       return;
     }
 
     const paths = restorePaths.split('\n').filter(p => p.trim());
     if (paths.length === 0) {
-      showToast('Please enter at least one path to restore', 'error');
+      showToast({ message: 'Please enter at least one path to restore', variant: 'error' });
       return;
     }
 
@@ -71,19 +71,19 @@ const RestoreTab: React.FC = () => {
 
       const data = await response.json();
       if (data.success) {
-        showToast(
-          `Restore completed: ${data.data.files_restored} files restored, ${data.data.chunks_downloaded} chunks downloaded`,
-          'success'
-        );
+        showToast({
+          message: `Restore completed: ${data.data.files_restored} files restored, ${data.data.chunks_downloaded} chunks downloaded`,
+          variant: 'success'
+        });
         // Reset form
         setRestorePaths('');
         setRestoreLocation('');
       } else {
-        showToast(`Restore failed: ${data.error}`, 'error');
+        showToast({ message: `Restore failed: ${data.error}`, variant: 'error' });
       }
     } catch (error) {
       console.error('Restore failed:', error);
-      showToast('Restore failed', 'error');
+      showToast({ message: 'Restore failed', variant: 'error' });
     } finally {
       setRestoring(false);
     }

@@ -19,7 +19,7 @@ import {
   faEye
 } from '@fortawesome/free-solid-svg-icons';
 import { BackupScheduleConfig, ScheduleInfo, BackupConfig } from '../types';
-import { showToast } from '../../../../components/Popup/PopupManager'; //donot touch this
+import { showToast } from '../../../components/Popup/PopupManager'; //donot touch this
 import { useTooltip } from '../../../../src/hooks/useTooltip';
 import { useBackupControls } from '../hooks/useBackupControls';
 import { Calendar, TimePicker, Toggle, Button } from '../../../components/ui';
