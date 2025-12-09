@@ -10,9 +10,6 @@ without damaging user's custom configuration.
 import json
 import shutil
 import sys
-import subprocess
-import tempfile
-import os
 from pathlib import Path
 from typing import Dict, Any, List, Set, Union
 from datetime import datetime
@@ -55,69 +52,20 @@ class SettingsUpdater:
     def save_json(self, data: Dict[str, Any], file_path: Path) -> bool:
         """Save JSON file with error handling."""
         try:
-            # Check if we need sudo (writing to /etc/)
-            needs_sudo = str(file_path).startswith('/etc/')
+            # Create backup of existing file
+            if file_path.exists():
+                shutil.copy2(file_path, self.backup_path)
+                self.log(f"Created backup: {self.backup_path}")
             
-            if needs_sudo:
-                # For /etc/ files, use sudo with temp file approach
-                # Create backup of existing file using sudo
-                if file_path.exists():
-                    try:
-                        subprocess.run(
-                            ['/usr/bin/sudo', '/bin/cp', str(file_path), str(self.backup_path)],
-                            check=True,
-                            capture_output=True
-                        )
-                        self.log(f"Created backup: {self.backup_path}")
-                    except subprocess.CalledProcessError as e:
-                        self.log(f"Failed to create backup: {e}", "ERROR")
-                        return False
-                
-                # Write new config to temporary file
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, dir='/tmp') as tmp_file:
-                    temp_path = tmp_file.name
-                    json.dump(data, tmp_file, indent=2)
-                
-                # Copy temp file to final location using sudo
-                try:
-                    subprocess.run(
-                        ['/usr/bin/sudo', '/bin/cp', temp_path, str(file_path)],
-                        check=True,
-                        capture_output=True
-                    )
-                    self.log(f"Updated configuration: {file_path}")
-                    
-                    # Clean up temp file
-                    try:
-                        os.unlink(temp_path)
-                    except Exception:
-                        pass
-                    
-                    return True
-                except subprocess.CalledProcessError as e:
-                    self.log(f"Failed to save {file_path}: {e}", "ERROR")
-                    # Clean up temp file on error
-                    try:
-                        os.unlink(temp_path)
-                    except Exception:
-                        pass
-                    return False
-            else:
-                # For non-/etc/ files, use standard file operations
-                # Create backup of existing file
-                if file_path.exists():
-                    shutil.copy2(file_path, self.backup_path)
-                    self.log(f"Created backup: {self.backup_path}")
-                
-                # Ensure directory exists
-                file_path.parent.mkdir(parents=True, exist_ok=True)
-                
-                # Write new file
-                with open(file_path, 'w') as f:
-                    json.dump(data, f, indent=2)
-                
-                self.log(f"Updated configuration: {file_path}")
-                return True
+            # Ensure directory exists
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Write new file
+            with open(file_path, 'w') as f:
+                json.dump(data, f, indent=2)
+            
+            self.log(f"Updated configuration: {file_path}")
+            return True
             
         except Exception as e:
             self.log(f"Failed to save {file_path}: {e}", "ERROR")

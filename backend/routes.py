@@ -102,29 +102,51 @@ def _is_provider_configured(provider_name: str, provider_config: dict) -> bool:
         keyman_integrated = provider_config.get('keyman_integrated', False)
         get_logger().info(f"Keyman integrated: {keyman_integrated}")
         
+        # Check bucket name (supports both 'bucket' and 'container' fields for backwards compatibility)
+        bucket_name = provider_config.get('bucket') or provider_config.get('container', '').strip()
+        get_logger().info(f"Bucket name: '{bucket_name}' (from bucket field: {bool(provider_config.get('bucket'))}, from container field: {bool(provider_config.get('container'))})")
+        
+        # Check region
+        region = provider_config.get('region', '').strip()
+        get_logger().info(f"Region: '{region}'")
+        
+        # Validate bucket name and region are configured
+        if not bucket_name:
+            get_logger().warning("Backblaze bucket name not configured (missing 'bucket' or 'container' field)")
+            return False
+        
+        if not region:
+            get_logger().warning("Backblaze region not configured (missing 'region' field)")
+            return False
+        
+        # Check credentials (keyman or traditional)
+        credentials_configured = False
         if keyman_integrated:
             keyman_service_name = provider_config.get('keyman_service_name', provider_name)
             get_logger().info(f"Keyman service name: {keyman_service_name}")
             
             try:
-                result = backup_manager.keyman.service_configured(keyman_service_name)
-                get_logger().info(f"Keyman service configured result: {result}")
-                return result
+                credentials_configured = backup_manager.keyman.service_configured(keyman_service_name)
+                get_logger().info(f"Keyman service configured result: {credentials_configured}")
             except (FileNotFoundError, PermissionError) as e:
                 # Key files don't exist or permission denied - treat as not configured
                 get_logger().info(f"Keyman keys not accessible for {provider_name} (normal for new setup): {e}")
-                return False
+                credentials_configured = False
             except Exception as e:
                 get_logger().warning(f"Keyman check failed for {provider_name}: {e}")
-                return False
+                credentials_configured = False
         else:
             # Fallback to traditional config-based credentials
             app_key_id = provider_config.get('application_key_id', '').strip()
             app_key = provider_config.get('application_key', '').strip()
             get_logger().info(f"Fallback check - app_key_id length: {len(app_key_id)}, app_key length: {len(app_key)}")
-            result = bool(app_key_id and app_key)
-            get_logger().info(f"Fallback configuration result: {result}")
-            return result
+            credentials_configured = bool(app_key_id and app_key)
+            get_logger().info(f"Fallback configuration result: {credentials_configured}")
+        
+        # Configuration is complete only if credentials AND bucket/region are configured
+        result = credentials_configured and bool(bucket_name and region)
+        get_logger().info(f"Backblaze configuration complete: {result} (credentials: {credentials_configured}, bucket: {bool(bucket_name)}, region: {bool(region)})")
+        return result
     
     elif provider_name == 'google_cloud_storage':
         # Google Cloud Storage needs credentials_file and project_id
