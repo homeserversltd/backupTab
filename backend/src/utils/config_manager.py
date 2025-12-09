@@ -14,7 +14,7 @@ from .logger import get_logger
 # Centralized configuration paths
 BACKUP_BASE_DIR = "/var/www/homeserver/premium/backupTab/backend"
 BACKUP_SCRIPT_PATH = f"{BACKUP_BASE_DIR}/backup"
-BACKUP_CONFIG_PATH = "/etc/backupTab/settings.json"
+BACKUP_CONFIG_PATH = "/var/www/homeserver/premium/backup/settings.json"
 BACKUP_LOG_PATH = "/var/log/homeserver/backup.log"
 
 
@@ -22,11 +22,11 @@ class ConfigManager:
     """Manages backup configuration operations."""
     
     def __init__(self, config_file: str = None):
-        # Use system config by default, fallback to template
+        # Use installed config by default, fallback to template
         if config_file is None:
-            system_config = Path("/etc/backupTab/settings.json")
+            installed_config = Path("/var/www/homeserver/premium/backup/settings.json")
             template_config = Path("src/config/settings.json")
-            self.config_file = system_config if system_config.exists() else template_config
+            self.config_file = installed_config if installed_config.exists() else template_config
         else:
             self.config_file = Path(config_file)
         self.logger = get_logger()

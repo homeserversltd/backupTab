@@ -111,8 +111,8 @@ const RestoreTab: React.FC = () => {
       <div className="restore-tab">
         <div className="restore-placeholder">
           <div className="placeholder-content">
-            <h3>Chunked Backups Not Enabled</h3>
-            <p>Selective restore is only available with chunked backups. Please enable chunking in the configuration to use this feature.</p>
+            <h3>Restore System Unavailable</h3>
+            <p>Selective restore requires the chunk database to be accessible. The database will be initialized automatically when you create your first backup.</p>
           </div>
         </div>
       </div>

@@ -121,6 +121,7 @@ const BackupTablet: React.FC = () => {
           <Tab
             active={activeTab === 'overview'}
             onClick={() => setActiveTab('overview')}
+            depth={2}
           >
             Overview
           </Tab>
@@ -128,6 +129,7 @@ const BackupTablet: React.FC = () => {
             active={activeTab === 'providers'}
             onClick={() => isBackupSystemReady && setActiveTab('providers')}
             disabled={!isBackupSystemReady}
+            depth={2}
           >
             Providers
           </Tab>
@@ -135,6 +137,7 @@ const BackupTablet: React.FC = () => {
             active={activeTab === 'schedule'}
             onClick={() => isBackupSystemReady && setActiveTab('schedule')}
             disabled={!isBackupSystemReady}
+            depth={2}
           >
             Schedule
           </Tab>
@@ -142,6 +145,7 @@ const BackupTablet: React.FC = () => {
             active={activeTab === 'config'}
             onClick={() => isBackupSystemReady && setActiveTab('config')}
             disabled={!isBackupSystemReady}
+            depth={2}
           >
             Config
           </Tab>
@@ -149,6 +153,7 @@ const BackupTablet: React.FC = () => {
             active={activeTab === 'restore'}
             onClick={() => isBackupSystemReady && setActiveTab('restore')}
             disabled={!isBackupSystemReady}
+            depth={2}
           >
             Restore
           </Tab>

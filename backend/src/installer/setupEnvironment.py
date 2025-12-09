@@ -446,6 +446,93 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
             self.log(f"Failed to create log directory: {e}", "ERROR")
             return False
     
+    def initialize_database(self) -> bool:
+        """Initialize the chunk database file."""
+        import logging
+        logger = logging.getLogger('backend.backupTab.utils')
+        
+        logger.info("Initializing chunk database...")
+        
+        try:
+            # Database path from config
+            db_path = self.install_dir / "chunks.db"
+            
+            # Ensure parent directory exists
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Try to initialize using ChunkDatabase if available
+            # Files should already be copied by this point in the install process
+            try:
+                import sys
+                import importlib.util
+                
+                # Try to import from installed copy first (files should be copied by now)
+                installed_src = self.install_dir / "src"
+                chunk_db_file = installed_src / "chunk_database.py"
+                
+                if chunk_db_file.exists():
+                    # Import from installed copy
+                    spec = importlib.util.spec_from_file_location("chunk_database", chunk_db_file)
+                    chunk_db_module = importlib.util.module_from_spec(spec)
+                    
+                    # Add utils directory to path for logger import
+                    utils_path = installed_src / "utils"
+                    if str(utils_path) not in sys.path:
+                        sys.path.insert(0, str(utils_path))
+                    
+                    # Add src directory to path for relative imports
+                    if str(installed_src) not in sys.path:
+                        sys.path.insert(0, str(installed_src))
+                    
+                    try:
+                        spec.loader.exec_module(chunk_db_module)
+                        ChunkDatabase = chunk_db_module.ChunkDatabase
+                        
+                        # Initialize database (this will create the file and schema)
+                        chunk_db = ChunkDatabase(str(db_path))
+                        logger.info(f"Database initialized with schema: {db_path}")
+                        
+                    finally:
+                        # Clean up path modifications
+                        if str(utils_path) in sys.path:
+                            sys.path.remove(str(utils_path))
+                        if str(installed_src) in sys.path:
+                            sys.path.remove(str(installed_src))
+                else:
+                    # Files not copied yet, create empty file
+                    import sqlite3
+                    conn = sqlite3.connect(str(db_path))
+                    conn.close()
+                    logger.info(f"Created empty database file (will initialize on first use): {db_path}")
+                
+                # Verify file was created
+                if db_path.exists():
+                    logger.info(f"Database file confirmed: {db_path}")
+                    return True
+                else:
+                    logger.error(f"Database file not found after initialization: {db_path}")
+                    return False
+                    
+            except Exception as e:
+                logger.warning(f"Could not initialize database with ChunkDatabase: {e}")
+                # Fallback: create empty SQLite file
+                # The database will be properly initialized on first use
+                try:
+                    import sqlite3
+                    conn = sqlite3.connect(str(db_path))
+                    conn.close()
+                    logger.info(f"Created empty database file (will initialize on first use): {db_path}")
+                    return True
+                except Exception as touch_e:
+                    logger.error(f"Failed to create database file: {touch_e}")
+                    return False
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize database: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return False
+    
     def create_system_config(self) -> bool:
         """Create configuration file in installation directory from template."""
         import logging
@@ -671,6 +758,13 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
             logger.error("Log directory creation failed")
             return False
         logger.info("Log directory created successfully")
+        
+        # Initialize database
+        logger.info("Initializing database...")
+        if not self.initialize_database():
+            logger.error("Database initialization failed")
+            return False
+        logger.info("Database initialized successfully")
         
         # Create system configuration
         logger.info("Creating system configuration...")

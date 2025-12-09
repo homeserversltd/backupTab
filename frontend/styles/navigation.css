@@ -6,6 +6,7 @@
 .backup-tablet-nav {
   display: flex;
   background: var(--primary);
+  padding: 20px;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
   border-radius: 12px;

@@ -63,7 +63,7 @@
       "deduplication": true
     },
     "database": {
-      "path": "/var/lib/homeserver/backup/chunks.db",
+      "path": "/var/www/homeserver/premium/backup/chunks.db",
       "backup_interval_days": 7
     },
     "upload": {

@@ -23,12 +23,8 @@ config_manager = BackupConfigManager()
 provider_handler = ProviderHandler()
 backup_handler = BackupHandler()
 schedule_handler = ScheduleHandler()
-# Use system config path to match BackupConfigManager behavior
-# Config path: /var/www/homeserver/premium/backup/settings.json
-# Fallback to /etc/backupTab/settings.json for backwards compatibility
+# Use installed config path
 _config_path = "/var/www/homeserver/premium/backup/settings.json"
-if not os.path.exists(_config_path):
-    _config_path = "/etc/backupTab/settings.json"
 backup_manager = BackupManager(_config_path)
 
 def create_response(success: bool, data: dict = None, error: str = None, status_code: int = 200):
@@ -653,7 +649,7 @@ def get_backup_statistics():
             try:
                 from .src.chunk_database import ChunkDatabase
                 db_config = config.get('database', {})
-                db_path = db_config.get('path', '/var/lib/homeserver/backup/chunks.db')
+                db_path = db_config.get('path', '/var/www/homeserver/premium/backup/chunks.db')
                 chunk_db = ChunkDatabase(db_path)
                 
                 # Get recent backups
@@ -1200,8 +1196,8 @@ def get_header_stats():
         # Check if backup system is properly installed
         def check_backup_installation():
             """Check if backup system is properly installed"""
-            # Check for config file (new location first, then fallback)
-            config_exists = os.path.exists("/var/www/homeserver/premium/backup/settings.json") or os.path.exists("/etc/backupTab/settings.json")
+            # Check for config file
+            config_exists = os.path.exists("/var/www/homeserver/premium/backup/settings.json")
             
             # Check for backup CLI script (generated files in /var/www/homeserver/premium/backup/)
             cli_exists = os.path.exists("/var/www/homeserver/premium/backup/backup")
@@ -1212,19 +1208,36 @@ def get_header_stats():
             # Check for cron job
             cron_exists = os.path.exists("/etc/cron.d/homeserver-backup")
             
-            # System is considered installed if config exists AND CLI exists
-            is_installed = config_exists and cli_exists
+            # Check for database file
+            db_exists = os.path.exists("/var/www/homeserver/premium/backup/chunks.db")
+            
+            # System is considered installed if config exists AND CLI exists AND venv exists AND database exists
+            is_installed = config_exists and cli_exists and venv_exists and db_exists
             
             return {
                 "is_installed": is_installed,
                 "config_exists": config_exists,
                 "cli_exists": cli_exists,
                 "venv_exists": venv_exists,
-                "cron_exists": cron_exists
+                "cron_exists": cron_exists,
+                "db_exists": db_exists
             }
         
         installation_check = check_backup_installation()
         is_configured = installation_check["is_installed"]
+        
+        # Build list of missing components for better diagnostics
+        missing_components = []
+        if not installation_check["config_exists"]:
+            missing_components.append("config")
+        if not installation_check["cli_exists"]:
+            missing_components.append("cli")
+        if not installation_check["venv_exists"]:
+            missing_components.append("venv")
+        if not installation_check["cron_exists"]:
+            missing_components.append("cron")
+        if not installation_check["db_exists"]:
+            missing_components.append("database")
         
         # Create proper installation status for UI
         installation_status = {
@@ -1233,7 +1246,7 @@ def get_header_stats():
             "installation_method": "cli" if is_configured else None,
             "version": "1.0.0",  # Could be enhanced to read from actual version
             "installation_path": "/var/www/homeserver/premium/backup" if is_configured else None,
-            "missing_components": [] if is_configured else ["config", "cli", "venv", "cron"],
+            "missing_components": missing_components,
             "can_install": not is_configured,
             "can_uninstall": is_configured
         }
@@ -1339,35 +1352,40 @@ def list_chunked_backups():
     """List chunked backups from database"""
     try:
         config = config_manager.get_safe_config()
-        chunking_config = config.get('chunking', {})
-        
-        if not chunking_config.get('enabled', False):
-            return create_response(True, {'backups': [], 'chunking_enabled': False})
-        
         from .src.chunk_database import ChunkDatabase
         db_config = config.get('database', {})
-        db_path = db_config.get('path', '/var/lib/homeserver/backup/chunks.db')
-        chunk_db = ChunkDatabase(db_path)
+        db_path = db_config.get('path', '/var/www/homeserver/premium/backup/chunks.db')
         
-        backups = chunk_db.list_backups(limit=100)
-        
-        # Format backups for frontend
-        formatted_backups = []
-        for backup in backups:
-            formatted_backups.append({
-                'backup_id': backup.get('backup_id'),
-                'created_at': backup.get('created_at'),
-                'total_chunks': backup.get('total_chunks', 0),
-                'uploaded_bytes': backup.get('uploaded_bytes', 0),
-                'reused_chunks': backup.get('reused_chunks', 0),
-                'status': backup.get('status', 'unknown'),
-                'total_size': backup.get('total_size', 0)
+        # Always try to access the chunk database - it will auto-initialize if needed
+        # Chunking is considered enabled if the database can be accessed
+        try:
+            chunk_db = ChunkDatabase(db_path)
+            backups = chunk_db.list_backups(limit=100)
+            
+            # Format backups for frontend
+            formatted_backups = []
+            for backup in backups:
+                formatted_backups.append({
+                    'backup_id': backup.get('backup_id'),
+                    'created_at': backup.get('created_at'),
+                    'total_chunks': backup.get('total_chunks', 0),
+                    'uploaded_bytes': backup.get('uploaded_bytes', 0),
+                    'reused_chunks': backup.get('reused_chunks', 0),
+                    'status': backup.get('status', 'unknown'),
+                    'total_size': backup.get('total_size', 0)
+                })
+            
+            return create_response(True, {
+                'backups': formatted_backups,
+                'chunking_enabled': True
             })
-        
-        return create_response(True, {
-            'backups': formatted_backups,
-            'chunking_enabled': True
-        })
+        except Exception as db_error:
+            # If database cannot be accessed, chunking is not available
+            get_logger().warning(f"Chunk database not accessible: {db_error}")
+            return create_response(True, {
+                'backups': [],
+                'chunking_enabled': False
+            })
         
     except Exception as e:
         get_logger().error(f"Failed to list backups: {e}")
