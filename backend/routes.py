@@ -6,8 +6,9 @@ Professional backup system API endpoints - Refactored version
 
 import os
 import subprocess
+import eventlet
 from datetime import datetime
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app, copy_current_request_context
 from .utils import get_logger, create_backup_timestamp
 from .config_manager import BackupConfigManager
 from .provider_handlers import ProviderHandler
@@ -353,9 +354,45 @@ def _parse_backup_output(stdout: str, stderr: str) -> dict:
     
     return provider_results
 
-@bp.route('/backup/sync-now', methods=['POST'])
+def _run_backup_in_background(backup_script, cwd):
+    """Run backup script in background - logs results but doesn't return to client"""
+    logger = get_logger()
+    logger.info("=== BACKGROUND BACKUP STARTED ===")
+    
+    try:
+        # Run the backup script as root to access protected directories
+        result = subprocess.run(
+            ['/usr/bin/sudo', backup_script, 'create'],
+            capture_output=True,
+            text=True,
+            timeout=None,  # No timeout - let it run as long as needed
+            cwd=cwd
+        )
+        
+        logger.info(f"Background backup completed with return code: {result.returncode}")
+        logger.info(f"STDOUT: {result.stdout}")
+        logger.info(f"STDERR: {result.stderr}")
+        
+        # Parse backup output to determine provider success/failure
+        provider_results = _parse_backup_output(result.stdout, result.stderr)
+        
+        if result.returncode == 0:
+            failed_providers = [provider for provider, success in provider_results.items() if not success]
+            if failed_providers:
+                logger.warning(f"Background backup completed with partial success. Failed providers: {failed_providers}")
+            else:
+                logger.info("Background backup completed successfully")
+        else:
+            logger.error(f"Background backup failed with return code {result.returncode}")
+            
+    except Exception as e:
+        logger.error(f"Background backup failed with exception: {e}", exc_info=True)
+    finally:
+        logger.info("=== BACKGROUND BACKUP COMPLETED ===")
+
+@bp.route('/sync-now', methods=['POST'])
 def sync_now():
-    """Run backup using the installed backup system (Sync Now button)"""
+    """Run backup using the installed backup system (Sync Now button) - returns immediately, runs in background"""
     logger = get_logger()
     logger.info("=== SYNC NOW REQUEST STARTED ===")
     
@@ -401,8 +438,6 @@ def sync_now():
                     logger.error(f"Failed to fix permissions: {e}")
                     return create_response(False, error='Backup script not executable', status_code=500)
         
-        logger.info("Backup script ready, proceeding with execution...")
-        
         # Set working directory based on which script we're using
         if backup_script == installed_backup_script or backup_script == fallback_backup_script:
             cwd = '/var/www/homeserver/premium/backup'
@@ -412,62 +447,18 @@ def sync_now():
         logger.info(f"Working directory: {cwd}")
         logger.info(f"Directory exists: {os.path.exists(cwd)}")
         
-        logger.info("Starting backup script execution...")
+        # Start backup in background using eventlet
+        logger.info("Initiating backup in background...")
+        eventlet.spawn(_run_backup_in_background, backup_script, cwd)
         
-        # Run the backup script as root to access protected directories
-        # The script needs to access /opt/gogs (git:git) and keyman credentials
-        result = subprocess.run(
-            ['/usr/bin/sudo', backup_script, 'create'],
-            capture_output=True,
-            text=True,
-            timeout=300,  # 5 minute timeout
-            cwd=cwd
-        )
-        
-        logger.info(f"Backup script completed with return code: {result.returncode}")
-        logger.info(f"STDOUT: {result.stdout}")
-        logger.info(f"STDERR: {result.stderr}")
-        
-        # Parse backup output to determine provider success/failure
-        provider_results = _parse_backup_output(result.stdout, result.stderr)
-        
-        if result.returncode == 0:
-            # Check if all providers succeeded
-            failed_providers = [provider for provider, success in provider_results.items() if not success]
-            successful_providers = [provider for provider, success in provider_results.items() if success]
+        # Return immediately - backup is running in background
+        logger.info("Backup initiated successfully - running in background")
+        return create_response(True, {
+            'message': 'Backup initiated and running in the background',
+            'timestamp': create_backup_timestamp(),
+            'status': 'initiated'
+        })
             
-            if failed_providers:
-                # Partial success - some providers failed
-                logger.warning(f"Backup completed with partial success. Failed providers: {failed_providers}")
-                return create_response(True, {
-                    'message': f'Backup completed with partial success. Failed providers: {", ".join(failed_providers)}',
-                    'output': result.stdout,
-                    'timestamp': create_backup_timestamp(),
-                    'provider_results': provider_results,
-                    'successful_providers': successful_providers,
-                    'failed_providers': failed_providers,
-                    'partial_success': True
-                })
-            else:
-                # Complete success
-                logger.info("Backup completed successfully")
-                return create_response(True, {
-                    'message': 'Backup completed successfully',
-                    'output': result.stdout,
-                    'timestamp': create_backup_timestamp(),
-                    'provider_results': provider_results,
-                    'successful_providers': successful_providers,
-                    'failed_providers': [],
-                    'partial_success': False
-                })
-        else:
-            error_msg = f'Backup failed with return code {result.returncode}. STDOUT: {result.stdout}. STDERR: {result.stderr}'
-            logger.error(error_msg)
-            return create_response(False, error=error_msg, status_code=500)
-            
-    except subprocess.TimeoutExpired as e:
-        logger.error(f"Backup script timed out after 300 seconds: {e}")
-        return create_response(False, error='Backup timed out', status_code=408)
     except Exception as e:
         logger.error(f"Sync now failed with exception: {e}", exc_info=True)
         return create_response(False, error=f'Sync now failed: {str(e)}', status_code=500)
@@ -685,9 +676,9 @@ def get_backup_statistics():
                         'uploaded_bytes': latest_backup.get('uploaded_bytes', 0),
                         'reused_chunks': latest_backup.get('reused_chunks', 0),
                         'total_size': latest_backup.get('total_size', 0),
-                        'uploaded_mb': round(latest_backup.get('uploaded_bytes', 0) / (1024*1024), 2),
-                        'total_mb': round(latest_backup.get('total_size', 0) / (1024*1024), 2),
-                        'savings_percent': round((1 - (latest_backup.get('uploaded_bytes', 0) / max(latest_backup.get('total_size', 1), 1))) * 100, 1) if latest_backup.get('total_size', 0) > 0 else 0
+                        'uploaded_mb': round((latest_backup.get('uploaded_bytes') or 0) / (1024*1024), 2),
+                        'total_mb': round((latest_backup.get('total_size') or 0) / (1024*1024), 2),
+                        'savings_percent': round((1 - ((latest_backup.get('uploaded_bytes') or 0) / max((latest_backup.get('total_size') or 1), 1))) * 100, 1) if (latest_backup.get('total_size') or 0) > 0 else 0
                     }
                 else:
                     stats['chunked_backup'] = {

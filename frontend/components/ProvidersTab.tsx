@@ -52,23 +52,8 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
           return provider;
         });
         
-        // Apply stable sort order to prevent providers from jumping around when toggled
+        // Sort providers alphabetically by name (ascending)
         const stableSortedStatuses = correctedStatuses.sort((a, b) => {
-          // Define a consistent sort order for providers
-          const sortOrder = ['local', 'backblaze', 'aws_s3', 'google_cloud_storage'];
-          const aIndex = sortOrder.indexOf(a.name);
-          const bIndex = sortOrder.indexOf(b.name);
-          
-          // If both providers are in the sort order, use that order
-          if (aIndex !== -1 && bIndex !== -1) {
-            return aIndex - bIndex;
-          }
-          
-          // If only one is in the sort order, prioritize it
-          if (aIndex !== -1) return -1;
-          if (bIndex !== -1) return 1;
-          
-          // If neither is in the sort order, sort alphabetically
           return a.name.localeCompare(b.name);
         });
         
@@ -107,19 +92,8 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({
             }
           }));
           
-          // Apply the same stable sort order to fallback statuses
+          // Sort fallback providers alphabetically by name (ascending)
           const stableSortedFallback = fallbackStatuses.sort((a, b) => {
-            const sortOrder = ['local', 'backblaze', 'aws_s3', 'google_cloud_storage'];
-            const aIndex = sortOrder.indexOf(a.name);
-            const bIndex = sortOrder.indexOf(b.name);
-            
-            if (aIndex !== -1 && bIndex !== -1) {
-              return aIndex - bIndex;
-            }
-            
-            if (aIndex !== -1) return -1;
-            if (bIndex !== -1) return 1;
-            
             return a.name.localeCompare(b.name);
           });
           

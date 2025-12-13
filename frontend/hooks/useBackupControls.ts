@@ -96,10 +96,10 @@ export function useBackupControls(): UseBackupControlsReturn {
 
   const syncNow = useCallback(async (): Promise<any> => {
     console.log('=== useBackupControls.syncNow() CALLED ===');
-    console.log('Making API call to /backup/sync-now with POST method');
+    console.log('Making API call to /sync-now with POST method');
     
     try {
-      const result = await handleApiCall<any>('/backup/sync-now', {
+      const result = await handleApiCall<any>('/sync-now', {
         method: 'POST',
       });
       console.log('handleApiCall returned successfully:', result);

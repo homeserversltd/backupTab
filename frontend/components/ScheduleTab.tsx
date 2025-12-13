@@ -289,7 +289,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       
       console.log('Showing success toast');
       showToast({
-        message: 'Backup completed successfully',
+        message: 'Backup initiated - running in background',
         variant: 'success',
         duration: 3000
       });

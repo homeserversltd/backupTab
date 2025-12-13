@@ -7,7 +7,6 @@ Handles all configuration operations for the backup system
 import os
 import json
 import yaml
-import subprocess
 from datetime import datetime
 from typing import Dict, Any, Optional
 from .utils import (
@@ -61,15 +60,9 @@ class BackupConfigManager:
             
             # No need to create backups of the configuration file
             
-            # Write new config using /usr/bin/sudo
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as temp_file:
-                json.dump(new_config, temp_file, indent=2)
-                temp_path = temp_file.name
-            
-            # Copy to final location with /usr/bin/sudo
-            subprocess.run(['/usr/bin/sudo', '/bin/cp', temp_path, BACKUP_CONFIG_PATH], check=True)
-            os.unlink(temp_path)  # Clean up temp file
+            # Write new config directly (www-data has write permissions)
+            with open(BACKUP_CONFIG_PATH, 'w') as f:
+                json.dump(new_config, f, indent=2)
             
             self.logger.info("Configuration updated successfully")
             return True
@@ -126,15 +119,9 @@ class BackupConfigManager:
             # Update provider config
             config['providers'][provider_name].update(updates)
             
-            # Write updated config using /usr/bin/sudo
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as temp_file:
-                json.dump(config, temp_file, indent=2)
-                temp_path = temp_file.name
-            
-            # Copy to final location with /usr/bin/sudo
-            subprocess.run(['/usr/bin/sudo', '/bin/cp', temp_path, BACKUP_CONFIG_PATH], check=True)
-            os.unlink(temp_path)  # Clean up temp file
+            # Write updated config directly (www-data has write permissions)
+            with open(BACKUP_CONFIG_PATH, 'w') as f:
+                json.dump(config, f, indent=2)
             
             self.logger.info(f"Provider configuration updated for {provider_name}")
             return True
@@ -450,15 +437,9 @@ class BackupConfigManager:
             current_count = config['state'].get('backup_count', 0)
             config['state']['backup_count'] = current_count + 1
             
-            # Write updated config using /usr/bin/sudo
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as temp_file:
-                json.dump(config, temp_file, indent=2)
-                temp_path = temp_file.name
-            
-            # Copy to final location with /usr/bin/sudo
-            subprocess.run(['/usr/bin/sudo', '/bin/cp', temp_path, BACKUP_CONFIG_PATH], check=True)
-            os.unlink(temp_path)  # Clean up temp file
+            # Write updated config directly (www-data has write permissions)
+            with open(BACKUP_CONFIG_PATH, 'w') as f:
+                json.dump(config, f, indent=2)
             
             self.logger.info(f"Backup count incremented to {config['state']['backup_count']}")
             return True
