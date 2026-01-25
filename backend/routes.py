@@ -25,7 +25,7 @@ provider_handler = ProviderHandler()
 backup_handler = BackupHandler()
 schedule_handler = ScheduleHandler()
 # Use installed config path
-_config_path = "/var/www/homeserver/premium/backup/settings.json"
+_config_path = "/var/www/homeserver/premium/backupTab_settings.json"
 backup_manager = BackupManager(_config_path)
 
 def create_response(success: bool, data: dict = None, error: str = None, status_code: int = 200):
@@ -397,9 +397,9 @@ def sync_now():
     logger.info("=== SYNC NOW REQUEST STARTED ===")
     
     try:
-        # Use the installed backup system (generated files in /var/www/homeserver/premium/backup/)
-        installed_backup_script = '/var/www/homeserver/premium/backup/backup-venv'
-        fallback_backup_script = '/var/www/homeserver/premium/backup/backup'
+        # Use the installed backup system (generated files in /var/www/homeserver/premium/)
+        installed_backup_script = '/var/www/homeserver/premium/backup-venv'
+        fallback_backup_script = '/var/www/homeserver/premium/backup'
         source_backup_script = '/var/www/homeserver/premium/backupTab/backend/backup'
         
         # Check which backup script to use
@@ -440,7 +440,7 @@ def sync_now():
         
         # Set working directory based on which script we're using
         if backup_script == installed_backup_script or backup_script == fallback_backup_script:
-            cwd = '/var/www/homeserver/premium/backup'
+            cwd = '/var/www/homeserver/premium'
         else:
             cwd = '/var/www/homeserver/premium/backupTab/backend'
         
@@ -662,7 +662,7 @@ def get_backup_statistics():
             try:
                 from .src.chunk_database import ChunkDatabase
                 db_config = config.get('database', {})
-                db_path = db_config.get('path', '/var/www/homeserver/premium/backup/chunks.db')
+                db_path = db_config.get('path', '/var/www/homeserver/premium/backupTab_chunks.db')
                 chunk_db = ChunkDatabase(db_path)
                 
                 # Get recent backups
@@ -1210,20 +1210,20 @@ def get_header_stats():
         def check_backup_installation():
             """Check if backup system is properly installed"""
             # Check for config file
-            config_exists = os.path.exists("/var/www/homeserver/premium/backup/settings.json")
-            
-            # Check for backup CLI script (generated files in /var/www/homeserver/premium/backup/)
-            cli_exists = os.path.exists("/var/www/homeserver/premium/backup/backup")
-            
-            # Check for virtual environment (generated files in /var/www/homeserver/premium/backup/)
-            venv_exists = os.path.exists("/var/www/homeserver/premium/backup/venv")
-            
+            config_exists = os.path.exists("/var/www/homeserver/premium/backupTab_settings.json")
+
+            # Check for backup CLI script (generated files in /var/www/homeserver/premium/)
+            cli_exists = os.path.exists("/var/www/homeserver/premium/backup")
+
+            # Check for virtual environment (generated files in /var/www/homeserver/premium/)
+            venv_exists = os.path.exists("/var/www/homeserver/premium/venv")
+
             # Check for cron job
             cron_exists = os.path.exists("/etc/cron.d/homeserver-backup")
-            
+
             # Check for database file
-            db_exists = os.path.exists("/var/www/homeserver/premium/backup/chunks.db")
-            
+            db_exists = os.path.exists("/var/www/homeserver/premium/backupTab_chunks.db")
+
             # System is considered installed if config exists AND CLI exists AND venv exists AND database exists
             is_installed = config_exists and cli_exists and venv_exists and db_exists
             
@@ -1258,7 +1258,7 @@ def get_header_stats():
             "installation_timestamp": None,  # Could be enhanced to read from actual installation log
             "installation_method": "cli" if is_configured else None,
             "version": "1.0.0",  # Could be enhanced to read from actual version
-            "installation_path": "/var/www/homeserver/premium/backup" if is_configured else None,
+            "installation_path": "/var/www/homeserver/premium" if is_configured else None,
             "missing_components": missing_components,
             "can_install": not is_configured,
             "can_uninstall": is_configured
@@ -1341,7 +1341,7 @@ def restore_files():
         spec = importlib.util.spec_from_file_location("backup_cli", backup_script)
         backup_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(backup_module)
-        cli = backup_module.EnhancedBackupCLI()
+        cli = backup_module.EnhancedBackupCLI(_config_path)
         
         result = cli.restore_files(backup_id, target_paths, restore_location)
         
@@ -1367,7 +1367,7 @@ def list_chunked_backups():
         config = config_manager.get_safe_config()
         from .src.chunk_database import ChunkDatabase
         db_config = config.get('database', {})
-        db_path = db_config.get('path', '/var/www/homeserver/premium/backup/chunks.db')
+        db_path = db_config.get('path', '/var/www/homeserver/premium/backupTab_chunks.db')
         
         # Always try to access the chunk database - it will auto-initialize if needed
         # Chunking is considered enabled if the database can be accessed

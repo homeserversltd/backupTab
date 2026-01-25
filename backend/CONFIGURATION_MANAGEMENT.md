@@ -157,8 +157,8 @@ The merged configuration is validated to ensure:
 ## File Locations
 
 - **Template**: `src/config/settings.json`
-- **System Config**: `/etc/backupTab/settings.json`
-- **Backups**: `/etc/backupTab/settings.json.backup.*`
+- **System Config**: `/var/www/homeserver/premium/backupTab_settings.json`
+- **Backups**: `/var/www/homeserver/premium/backupTab_settings.json.backup.*`
 - **Updater Script**: `src/installer/updateSettings.py`
 - **System Command**: `/usr/local/bin/homeserver-backup-update-settings`
 
@@ -181,7 +181,7 @@ The merged configuration is validated to ensure:
 Run the test script to verify the configuration management:
 
 ```bash
-cd /var/www/homeserver/premium/backup
+cd /var/www/homeserver/premium
 python3 test_config_system.py
 ```
 

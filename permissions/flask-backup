@@ -14,10 +14,10 @@ www-data ALL=(root) NOPASSWD: /usr/bin/python3 /opt/homeserver-backup/homeserver
 
 # Allow backup script execution for sync now functionality
 www-data ALL=(root) NOPASSWD: /var/www/homeserver/premium/backupTab/backend/backup
-www-data ALL=(root) NOPASSWD: /var/www/homeserver/premium/backup/backup
-www-data ALL=(root) NOPASSWD: /var/www/homeserver/premium/backup/backup-venv
+www-data ALL=(root) NOPASSWD: /var/www/homeserver/premium/backup
+www-data ALL=(root) NOPASSWD: /var/www/homeserver/premium/backup-venv
 www-data ALL=(root) NOPASSWD: /usr/bin/python3 /var/www/homeserver/premium/backupTab/backend/backup
-www-data ALL=(root) NOPASSWD: /usr/bin/python3 /var/www/homeserver/premium/backup/backup
+www-data ALL=(root) NOPASSWD: /usr/bin/python3 /var/www/homeserver/premium/backup
 
 # Allow configuration file access
 www-data ALL=(root) NOPASSWD: /usr/bin/cp /opt/homeserver-backup/config.yaml*
@@ -57,12 +57,12 @@ www-data ALL=(root) NOPASSWD: /usr/bin/chown -R www-data\:www-data /var/log/home
 
 # Allow file permission management for backup scripts
 www-data ALL=(root) NOPASSWD: /bin/chmod 755 /var/www/homeserver/premium/backupTab/backend/backup
-www-data ALL=(root) NOPASSWD: /bin/chmod 755 /var/www/homeserver/premium/backup/backup
+www-data ALL=(root) NOPASSWD: /bin/chmod 755 /var/www/homeserver/premium/backup
 www-data ALL=(root) NOPASSWD: /bin/chmod +x /var/www/homeserver/premium/backupTab/backend/backup
-www-data ALL=(root) NOPASSWD: /bin/chmod +x /var/www/homeserver/premium/backup/backup
+www-data ALL=(root) NOPASSWD: /bin/chmod +x /var/www/homeserver/premium/backup
 
 # Allow system link creation and removal
-www-data ALL=(root) NOPASSWD: /bin/ln -sf /var/www/homeserver/premium/backup/backup-venv /usr/local/bin/homeserver-backup
+www-data ALL=(root) NOPASSWD: /bin/ln -sf /var/www/homeserver/premium/backup-venv /usr/local/bin/homeserver-backup
 www-data ALL=(root) NOPASSWD: /bin/rm /usr/local/bin/homeserver-backup
 
 # Allow settings.json file removal for clean uninstall

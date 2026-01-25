@@ -18,7 +18,7 @@ from .utils.logger import get_logger
 class ChunkDatabase:
     """Manages SQLite database for chunk tracking and backup metadata."""
     
-    def __init__(self, db_path: str = "/var/www/homeserver/premium/backup/chunks.db"):
+    def __init__(self, db_path: str = "/var/www/homeserver/premium/backupTab_chunks.db"):
         """
         Initialize ChunkDatabase.
         

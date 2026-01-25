@@ -63,7 +63,7 @@
       "deduplication": true
     },
     "database": {
-      "path": "/var/www/homeserver/premium/backup/chunks.db",
+      "path": "/var/www/homeserver/premium/backupTab_chunks.db",
       "backup_interval_days": 7
     },
     "upload": {
@@ -83,7 +83,7 @@
     },
     "logging": {
       "enabled": true,
-      "log_file": "/var/www/homeserver/premium/backup/logs/backup.log",
+      "log_file": "/var/www/homeserver/premium/backupTab.log",
       "log_level": "INFO",
       "max_file_size_mb": 10,
       "backup_count": 5,

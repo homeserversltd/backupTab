@@ -18,7 +18,7 @@ def deploy_backup_service():
     
     # Define paths
     source_dir = Path(__file__).parent.parent.parent  # Go up to backend directory
-    install_dir = Path("/var/www/homeserver/premium/backup")
+    install_dir = Path("/var/www/homeserver/premium")
     cron_file = Path("/etc/cron.d/homeserver-backup")
     
     try:
@@ -53,14 +53,12 @@ def deploy_backup_service():
         with open(cron_file, 'w') as f:
             f.write("# HOMESERVER Backup Cron Job\n")
             f.write("# Daily backup at 2 AM with random delay (0-59 minutes)\n")
-            f.write(f"0 2 * * * www-data sleep $((RANDOM % 3600)) && {install_dir}/backup-venv create >> /var/log/homeserver/backup.log 2>&1\n")
+            f.write(f"0 2 * * * www-data sleep $((RANDOM % 3600)) && {install_dir}/backup-venv create >> {install_dir}/backupTab.log 2>&1\n")
         print(f"Installed cron job: {cron_file}")
         
-        # Create log directory
-        log_dir = Path("/var/log/homeserver")
-        log_dir.mkdir(parents=True, exist_ok=True)
-        os.chown(log_dir, 33, 33)  # www-data user/group
-        print(f"Created log directory: {log_dir}")
+        # Ensure premium directory exists (no logs/ subdir needed)
+        install_dir.mkdir(parents=True, exist_ok=True)
+        print(f"Ensured premium directory exists: {install_dir}")
         
         # Test backup system
         print("Testing backup system...")

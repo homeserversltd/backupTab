@@ -21,9 +21,9 @@ class BackupEnvironmentSetup:
     """Environment setup for HOMESERVER Backup System."""
     
     def __init__(self):
-        # Generated files go in /var/www/homeserver/premium/backup/ (separate from backupTab source)
+        # Generated files go in /var/www/homeserver/premium/ (separate from backupTab source)
         # backupTab/ is the source/manifest directory - we don't modify it
-        self.install_dir = Path("/var/www/homeserver/premium/backup")
+        self.install_dir = Path("/var/www/homeserver/premium")
         self.venv_dir = self.install_dir / "venv"
         
         # Source directory is backupTab backend (for reading requirements, copying files)
@@ -36,9 +36,10 @@ class BackupEnvironmentSetup:
         logger.info(f"Source directory (backupTab source): {self.source_dir}")
         logger.info(f"Source directory exists: {self.source_dir.exists()}")
         
-        self.log_dir = self.install_dir / "logs"
-        self.config_file = self.install_dir / "settings.json"
+        self.log_dir = None  # Log file is now flat at premium root, no logs/ subdir
+        self.config_file = self.install_dir / "backupTab_settings.json"
         self.cron_file = Path("/etc/cron.d/homeserver-backup")
+        self.log_file = self.install_dir / "backupTab.log"
         
         # Requirements files (read from source)
         self.requirements_files = [
@@ -431,19 +432,19 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
             return False
     
     def create_log_directory(self) -> bool:
-        """Create log directory with proper permissions."""
-        self.log("Creating log directory...")
-        
+        """Ensure premium directory exists (no logs/ subdir needed)."""
+        self.log("Ensuring premium directory exists...")
+
         try:
-            self.log_dir.mkdir(parents=True, exist_ok=True)
-            
-            # Log directory created successfully
-            self.log(f"Log directory created: {self.log_dir}")
-            
+            self.install_dir.mkdir(parents=True, exist_ok=True)
+
+            # Premium directory ensured
+            self.log(f"Premium directory exists: {self.install_dir}")
+
             return True
-            
+
         except Exception as e:
-            self.log(f"Failed to create log directory: {e}", "ERROR")
+            self.log(f"Failed to ensure premium directory: {e}", "ERROR")
             return False
     
     def initialize_database(self) -> bool:
@@ -455,7 +456,7 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
         
         try:
             # Database path from config
-            db_path = self.install_dir / "chunks.db"
+            db_path = self.install_dir / "backupTab_chunks.db"
             
             # Ensure parent directory exists
             db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -618,7 +619,7 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
             
             cron_content = f"""# HOMESERVER Backup Cron Job
 # Daily backup at 2 AM with random delay (0-59 minutes)
-0 2 * * * www-data sleep $((RANDOM % 3600)) && {venv_python} {service_script} --backup >> {self.log_dir}/backup.log 2>&1
+0 2 * * * www-data sleep $((RANDOM % 3600)) && {venv_python} {service_script} --backup >> {self.log_file} 2>&1
 """
             
             # Write cron content to temporary file first
@@ -798,9 +799,9 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
         return True
     
     def uninstall(self) -> bool:
-        """Uninstall the backup system."""
+        """Uninstall the backup system - remove ONLY backup-specific paths."""
         self.log("Uninstalling HOMESERVER Backup System...")
-        
+
         try:
             # Remove cron job using sudo (www-data has permission for this)
             if self.cron_file.exists():
@@ -809,7 +810,7 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
                     self.log("Removed cron job")
                 except subprocess.CalledProcessError as e:
                     self.log(f"Failed to remove cron job: {e}", "WARNING")
-            
+
             # Remove system links using sudo
             system_link = Path("/usr/local/bin/homeserver-backup")
             if system_link.exists():
@@ -818,22 +819,47 @@ exec "$VENV_PYTHON" "$BACKUP_SCRIPT" "$@"
                     self.log("Removed system link")
                 except subprocess.CalledProcessError as e:
                     self.log(f"Failed to remove system link: {e}", "WARNING")
-            
-            # Remove installation directory (all generated files in /var/www/homeserver/premium/backup/)
-            if self.install_dir.exists():
+
+            # Remove ONLY backup-specific paths (do NOT rmtree install_dir which is premium/)
+            backup_specific_paths = [
+                self.install_dir / "backupTab_chunks.db",
+                self.install_dir / "backupTab_settings.json",
+                self.install_dir / "backupTab.log",
+                self.install_dir / "venv",
+                self.install_dir / "src",
+                self.install_dir / "backup",
+                self.install_dir / "backup-venv",
+                self.install_dir / "export_credentials.sh",
+                self.install_dir / "requirements.txt"
+            ]
+
+            # Remove rotated log files (backupTab.log.1, .2, ...)
+            for rot in self.install_dir.glob("backupTab.log.*"):
                 try:
-                    shutil.rmtree(self.install_dir)
-                    self.log("Removed installation directory")
+                    rot.unlink()
+                    self.log(f"Removed rotated log: {rot}")
                 except Exception as e:
-                    self.log(f"Failed to remove installation directory: {e}", "WARNING")
-            
+                    self.log(f"Failed to remove {rot}: {e}", "WARNING")
+
+            for path in backup_specific_paths:
+                if path.exists():
+                    try:
+                        if path.is_file():
+                            path.unlink()
+                            self.log(f"Removed file: {path}")
+                        elif path.is_dir():
+                            shutil.rmtree(path)
+                            self.log(f"Removed directory: {path}")
+                    except Exception as e:
+                        self.log(f"Failed to remove {path}: {e}", "WARNING")
+
             # Clear system configuration to remove sensitive credential fields
             if not self.clear_system_config():
                 self.log("Failed to clear system configuration", "WARNING")
-            
+
             self.log("Uninstallation completed successfully!")
             return True
-            
+
         except Exception as e:
             self.log(f"Uninstallation failed: {e}", "ERROR")
             return False

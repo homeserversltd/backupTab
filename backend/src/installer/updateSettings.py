@@ -20,7 +20,7 @@ class SettingsUpdater:
     
     def __init__(self, template_path: str = None, system_path: str = None):
         self.template_path = Path(template_path or "src/config/settings.json")
-        self.system_path = Path(system_path or "/var/www/homeserver/premium/backup/settings.json")
+        self.system_path = Path(system_path or "/var/www/homeserver/premium/backupTab_settings.json")
         self.backup_path = self.system_path.with_suffix(f".backup.{datetime.now().strftime('%Y%m%d_%H%M%S')}")
         
     def log(self, message: str, level: str = "INFO") -> None:

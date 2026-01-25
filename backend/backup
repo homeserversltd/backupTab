@@ -50,7 +50,7 @@ class EnhancedBackupCLI:
     def __init__(self, config_file: Optional[str] = None):
         # Use installed config by default, fallback to template
         if config_file is None:
-            installed_config = "/var/www/homeserver/premium/backup/settings.json"
+            installed_config = "/var/www/homeserver/premium/backupTab_settings.json"
             template_config = "src/config/settings.json"
             if os.path.exists(installed_config):
                 self.config_file = installed_config
@@ -90,7 +90,7 @@ class EnhancedBackupCLI:
                 max_chunk_size_mb=chunking_config.get('max_chunk_size_mb', 75)
             )
             db_config = self.config.get('database', {})
-            db_path = db_config.get('path', '/var/www/homeserver/premium/backup/chunks.db')
+            db_path = db_config.get('path', '/var/www/homeserver/premium/backupTab_chunks.db')
             self.chunk_db = ChunkDatabase(db_path)
             self.logger.info("Chunked backup system initialized")
         else:

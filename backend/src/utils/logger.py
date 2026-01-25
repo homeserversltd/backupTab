@@ -55,7 +55,7 @@ class BackupLogger:
         if not log_config.get('enabled', True):
             return
         
-        log_file = log_config.get('log_file', '/var/log/homeserver/backup.log')
+        log_file = log_config.get('log_file', '/var/www/homeserver/premium/backupTab.log')
         log_level = getattr(logging, log_config.get('log_level', 'INFO').upper())
         max_bytes = log_config.get('max_file_size_mb', 10) * 1024 * 1024
         backup_count = log_config.get('backup_count', 5)
