@@ -12,6 +12,7 @@ import logging
 import os
 import subprocess
 from .base import BaseProvider
+from backend.utils.utils import is_system_partition
 
 class LocalProvider(BaseProvider):
     """Local file system provider."""
@@ -47,7 +48,7 @@ class LocalProvider(BaseProvider):
                 self.logger.warning(f"No mount information returned for {path}")
                 return False
 
-            # findmnt returns: SOURCE TARGET (e.g., "/dev/mapper/sdc_crypt /mnt/nas")
+            # findmnt returns: SOURCE TARGET (e.g., "/dev/mapper/homeserver-backup-nas_crypt /mnt/nas")
             lines = output.split('\n')
             for line in lines:
                 parts = line.split()
@@ -59,9 +60,9 @@ class LocalProvider(BaseProvider):
                         self.logger.warning(f"Path {path} is on root filesystem mount: {mount_source} -> {mount_target}")
                         return False
                     
-                    # Treat system drive (/dev/sda*) as non-external
-                    if mount_source.startswith('/dev/sda'):
-                        self.logger.warning(f"Path {path} is on system drive mount: {mount_source} -> {mount_target}")
+                    # Treat system partitions as non-external
+                    if is_system_partition(mount_source):
+                        self.logger.warning(f"Path {path} is on system partition mount: {mount_source} -> {mount_target}")
                         return False
                     
                     # Found valid external mount
